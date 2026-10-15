@@ -124,7 +124,7 @@ public class SimulationIngestService {
                 rs.getLong("originated"), rs.getLong("acknowledged"),
                 rs.getDouble("delivery_rate"),
                 nullableLong(rs, "median_latency_ms"), nullableLong(rs, "p95_latency_ms"),
-                nullableDouble(rs, "amplification"), rs.getInt("partitions")), limit);
+                nullableDouble(rs, "amplification"), rs.getInt("partitions"), true), limit);
     }
 
     /** Events for a run, oldest first, capped. */

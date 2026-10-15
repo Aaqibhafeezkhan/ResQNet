@@ -51,6 +51,8 @@ public final class SimulatorCli {
               --partitioned        start with the busiest relay offline
               --out <file>         write the full JSON report to a file
               --gateway <url>      POST the event stream to a running backend
+              --gateway-token <t>  shared device token for --gateway (or set
+                                    RESQNET_GATEWAY_TOKEN)
               --quiet              only print the summary
               --help               show this message
 
@@ -109,7 +111,8 @@ public final class SimulatorCli {
                 System.out.println("Wrote " + options.output.toAbsolutePath());
             }
             if (options.gateway != null) {
-                GatewayPublisher publisher = new GatewayPublisher(options.gateway);
+                GatewayPublisher publisher = new GatewayPublisher(options.gateway,
+                        options.gatewayToken);
                 GatewayPublisher.Result result = publisher.publish(report);
                 if (result.success()) {
                     System.out.println("Published " + result.acceptedEvents()
@@ -164,6 +167,7 @@ public final class SimulatorCli {
             boolean partitioned,
             Path output,
             String gateway,
+            String gatewayToken,
             boolean quiet
     ) {
 
@@ -183,6 +187,7 @@ public final class SimulatorCli {
             boolean partitioned = false;
             Path output = null;
             String gateway = null;
+            String gatewayToken = System.getenv("RESQNET_GATEWAY_TOKEN");
             boolean quiet = false;
 
             for (int i = 0; i < args.length; i++) {
@@ -207,11 +212,18 @@ public final class SimulatorCli {
                     case "--quiet" -> quiet = true;
                     case "--out" -> output = Path.of(value(args, ++i, "--out"));
                     case "--gateway" -> gateway = value(args, ++i, "--gateway");
+                    case "--gateway-token" -> gatewayToken = value(args, ++i,
+                            "--gateway-token");
                     default -> throw new IllegalArgumentException("unknown option: " + arg);
                 }
             }
+            if (gateway != null && (gatewayToken == null || gatewayToken.isBlank())) {
+                throw new IllegalArgumentException(
+                        "--gateway needs the shared device token: pass --gateway-token or set"
+                                + " RESQNET_GATEWAY_TOKEN");
+            }
             return new Options(shape, nodes, degree, messages, broadcast, rounds, step, seed,
-                    drop, churn, hops, lifetime, partitioned, output, gateway, quiet);
+                    drop, churn, hops, lifetime, partitioned, output, gateway, gatewayToken, quiet);
         }
 
         private static Topology.Shape parseShape(String value) {
@@ -265,9 +277,11 @@ public final class SimulatorCli {
     static final class GatewayPublisher {
 
         private final URI endpoint;
+        private final String token;
         private final HttpClient client;
 
-        GatewayPublisher(String endpoint) {
+        GatewayPublisher(String endpoint, String token) {
+            this.token = token == null ? "" : token;
             this.endpoint = URI.create(endpoint);
             this.client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(5))
@@ -281,6 +295,7 @@ public final class SimulatorCli {
                         .timeout(Duration.ofSeconds(15))
                         .header("Content-Type", "application/json")
                         .header("X-ResQNet-Source", "simulator")
+                        .header("Authorization", "Bearer " + token)
                         .POST(HttpRequest.BodyPublishers.ofString(body))
                         .build();
                 HttpResponse<String> response = client.send(request,

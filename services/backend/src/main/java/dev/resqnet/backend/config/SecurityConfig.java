@@ -104,6 +104,13 @@ public class SecurityConfig {
                         // check and returns 401 itself; permitting it here only
                         // means it reaches the controller at all.
                         .requestMatchers("/api/v1/gateway/**").permitAll()
+                        // The simulator posts as a device, not as a responder, so
+                        // it cannot pass through the JWT filter either. The
+                        // controller accepts a responder session or the shared
+                        // device token and rejects everything else with 401;
+                        // permitting the path here only lets the request reach
+                        // that check. Reads stay authenticated below.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/simulations").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(requestIdFilter, UsernamePasswordAuthenticationFilter.class)

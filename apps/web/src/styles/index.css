@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Global base styles.
+
+  `color-scheme: dark` on the root is what makes native scrollbars, form
+  controls and the selection highlight match the surface rather than
+  flashing a white bar during scroll momentum on macOS.
+*/
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --mesh-surface: theme('colors.base.850');
+    --mesh-ink: theme('colors.ink.primary');
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-base-900 text-ink-primary font-sans antialiased;
+    /* Reserve the scrollbar gutter so navigating between routes does not
+       shift the layout by a few pixels. */
+    scrollbar-gutter: stable;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgba(46, 211, 230, 0.28);
+  }
+
+  /* A single, visible focus treatment everywhere. The default outline is
+     removed only where this replaces it, never on an element that can take
+     focus. */
+  :focus-visible {
+    outline: 2px solid theme('colors.network.DEFAULT');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: theme('colors.base.900');
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.base.600');
+    border-radius: 999px;
+    border: 2px solid theme('colors.base.900');
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.base.500');
+  }
+
+  /*
+    Reduced motion is honoured globally rather than per component. Animations
+    are disabled rather than shortened: a person who has asked the operating
+    system for less motion should not receive a faster version of the same
+    thing.
+
+    Transitions on colour and opacity are kept, because they carry state
+    change rather than decoration. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* A restrained surface. Shadows on near-black read as mud; a hairline edge
+     reads as an edge. */
+  .surface {
+    @apply rounded-2xl border border-base-600 bg-base-800;
+  }
+
+  .surface-raised {
+    @apply rounded-2xl border border-base-600 bg-base-750 shadow-lift;
+  }
+
+  /* Uppercase micro-label. Used for section headers and metric captions. */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-widest text-ink-tertiary;
+  }
+
+  /* Body copy that is measured, not squeezed. */
+  .prose-measure {
+    @apply max-w-[62ch] text-ink-secondary leading-relaxed;
+  }
+
+  /* Numerals in a metric should not jitter as they change. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* GPU-friendly promotion for elements that animate transforms. Applied
+     narrowly: a blanket will-change on a page full of nodes costs memory and
+     defeats the reason it exists. */
+  .gpu {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  }
+}

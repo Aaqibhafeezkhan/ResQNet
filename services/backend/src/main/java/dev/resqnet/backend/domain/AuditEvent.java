@@ -54,10 +54,38 @@ public class AuditEvent {
         // for JPA
     }
 
+    /**
+     * An audit row for an actor that is not a responder at all.
+     *
+     * <p>Recorded as {@code DEVICE} rather than as any responder role. Writing
+     * a role a device does not hold would overstate its authority in the one
+     * record an investigator is guaranteed to read after an incident.
+     */
+    public static final String DEVICE_ROLE = "DEVICE";
+
     public AuditEvent(String actor, ResponderRole role, String action, String targetType,
                       String targetId, String detail, String requestId) {
         this.actor = actor;
         this.actorRole = role.name();
+        this.action = action;
+        this.targetType = targetType;
+        this.targetId = targetId;
+        this.detail = detail;
+        this.requestId = requestId;
+        this.occurredAt = Instant.now();
+    }
+
+    /**
+     * An audit row attributed to a device.
+     *
+     * <p>Takes the role label as a string because a device has no responder
+     * role to derive: {@link ResQNetPrincipal#gateway} deliberately carries a
+     * null role, and manufacturing one here would defeat that decision.
+     */
+    public AuditEvent(String actor, String roleLabel, boolean deviceActor, String action,
+                      String targetType, String targetId, String detail, String requestId) {
+        this.actor = actor;
+        this.actorRole = roleLabel;
         this.action = action;
         this.targetType = targetType;
         this.targetId = targetId;

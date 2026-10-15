@@ -62,6 +62,56 @@ class ApiSecurityTest {
     }
 
     @Test
+    @DisplayName("rejects simulation ingest with no device token")
+    void rejectsAnonymousSimulationIngest() throws Exception {
+        mvc.perform(post("/api/v1/simulations")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"runId\":\"t1\",\"topology\":\"RING\",\"nodeCount\":4}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("rejects simulation ingest with the wrong device token")
+    void rejectsWrongGatewayTokenForSimulationIngest() throws Exception {
+        mvc.perform(post("/api/v1/simulations")
+                        .header("Authorization", "Bearer wrong-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"runId\":\"t1\",\"topology\":\"RING\",\"nodeCount\":4}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("accepts simulation ingest from a device holding the shared token")
+    void acceptsDeviceTokenForSimulationIngest() throws Exception {
+        mvc.perform(post("/api/v1/simulations")
+                        .header("Authorization", "Bearer test-gateway-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"runId\":\"t1\",\"topology\":\"RING\",\"nodeCount\":4}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.simulated").value(true));
+    }
+
+    @Test
+    @DisplayName("accepts simulation ingest from a responder session")
+    void acceptsResponderSessionForSimulationIngest() throws Exception {
+        mvc.perform(post("/api/v1/simulations")
+                        .header("Authorization", "Bearer " + tokenFor(ResponderRole.ADMIN, "sim"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"runId\":\"t2\",\"topology\":\"MESH\",\"nodeCount\":6}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("keeps simulation reads behind a responder session")
+    void keepsSimulationReadsAuthenticated() throws Exception {
+        // A device may publish a run but must not be able to read the history
+        // back, which is responder-only operational data.
+        mvc.perform(get("/api/v1/simulations")
+                        .header("Authorization", "Bearer test-gateway-token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("rejects a forged bearer token")
     void rejectsForgedToken() throws Exception {
         mvc.perform(get("/api/v1/incidents")

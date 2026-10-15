@@ -42,6 +42,7 @@ release/
 # ---- Node / Frontend -------------------------------------------------------
 node_modules/
 dist/
+*.tsbuildinfo
 dist-ssr/
 .vite/
 *.local

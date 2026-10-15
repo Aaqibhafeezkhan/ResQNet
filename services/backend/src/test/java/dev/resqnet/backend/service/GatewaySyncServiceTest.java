@@ -141,4 +141,21 @@ class GatewaySyncServiceTest {
                 category.name(), 0.7, origin, null,
                 1_700_000_000_000L, 1_700_000_900_000L, 1, "confirmed", null);
     }
+
+    @Test
+    @DisplayName("records a device-created incident without inventing a responder role")
+    void auditsDeviceActionsAsDeviceNotResponder() {
+        sync.ingest(new Dtos.GatewaySyncRequest("android", "rqn1_gw_device",
+                List.of(report("m1", "rqn1_origin", "ACKNOWLEDGED", Category.MEDICAL))),
+                "req-device-audit");
+
+        var rows = auditRepository.findAll();
+        assertThat(rows).hasSize(1);
+        var row = rows.get(0);
+        assertThat(row.getActor()).startsWith("gateway:");
+        assertThat(row.getActorRole())
+                .as("a gateway synchronises data; it does not hold or exercise a responder role")
+                .isEqualTo("DEVICE");
+    }
+
 }

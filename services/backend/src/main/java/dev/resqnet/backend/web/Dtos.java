@@ -185,10 +185,22 @@ public final class Dtos {
     }
 
     /** Stored simulation run. */
+    /**
+     * One stored simulation run.
+     *
+     * <p>{@code simulated} is a constant {@code true}. It is carried
+     * explicitly rather than implied by the containing endpoint so that a
+     * dashboard merging generated runs with field incidents cannot lose the
+     * distinction further downstream.
+     */
     public record SimulationRunSummary(String runId, String topology, int nodeCount, long seed,
                                        Instant startedAt, long originated, long acknowledged,
                                        double deliveryRate, Long medianLatencyMillis,
                                        Long p95LatencyMillis, Double amplification,
-                                       int partitions) {
+                                       int partitions, boolean simulated) {
+
+        public SimulationRunSummary {
+            simulated = true;
+        }
     }
 }

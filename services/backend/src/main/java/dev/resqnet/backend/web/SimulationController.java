@@ -6,14 +6,19 @@ import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import dev.resqnet.backend.security.AuthTokenService;
+import dev.resqnet.backend.security.ResQNetPrincipal;
 import dev.resqnet.backend.service.SimulationIngestService;
 
 /**
@@ -28,20 +33,46 @@ import dev.resqnet.backend.service.SimulationIngestService;
 public class SimulationController {
 
     private final SimulationIngestService simulations;
+    private final AuthTokenService authTokens;
 
-    public SimulationController(SimulationIngestService simulations) {
+    public SimulationController(SimulationIngestService simulations, AuthTokenService authTokens) {
         this.simulations = simulations;
+        this.authTokens = authTokens;
     }
 
     /**
      * Accepts a run report.
      *
-     * <p>Open to the simulator CLI. It writes only to simulation tables, so an
-     * unauthenticated caller cannot create an incident or touch a responder
-     * account. Generation must never be able to impersonate field data.
+     * <p>Authenticated as a device rather than as a responder. The simulator is
+     * a generator, not a handset, and giving it a human session would imply an
+     * accountability model that does not exist: a responder's actions are
+     * attributable, a simulator's are not and should not pretend to be.
+     *
+     * <p>A responder JWT is also accepted so an operator can post a captured
+     * run without leaving the dashboard session.
+     *
+     * <p>Neither path can reach an incident or a responder account. Ingest
+     * writes only to simulation tables, which is what keeps generated traffic
+     * from ever being mistaken for field data.
      */
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> ingest(@RequestBody String body) {
+    public ResponseEntity<?> ingest(@RequestBody String body,
+                                    @RequestHeader(value = "Authorization", required = false)
+                                    String authorization) {
+        Authentication existing = SecurityContextHolder.getContext().getAuthentication();
+        boolean responderSession = existing != null && existing.isAuthenticated()
+                && existing.getPrincipal() instanceof ResQNetPrincipal principal
+                && principal.canReadAudit();
+        if (!responderSession) {
+            String token = authorization != null && authorization.startsWith("Bearer ")
+                    ? authorization.substring(7).trim() : "";
+            // Any non-empty device id: the simulator reports which run and which
+            // topology produced the data, and that is the whole audit value here.
+            if (authTokens.authenticateGateway(token, "simulator").isEmpty()) {
+                return ResponseEntity.status(401)
+                        .body(java.util.Map.of("error", "simulation ingestion authentication failed"));
+            }
+        }
         return ResponseEntity.ok(simulations.ingest(body));
     }
 

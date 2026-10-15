@@ -1,0 +1,185 @@
+import { useEffect, useState } from 'react';
+
+import { CommandHeader } from '@/components/command/CommandHeader';
+import { IncidentDetailPanel } from '@/components/command/IncidentDetailPanel';
+import { IncidentQueue } from '@/components/command/IncidentQueue';
+import { MapPanel } from '@/components/command/MapPanel';
+import { OverviewTiles } from '@/components/command/OverviewTiles';
+import { TopologyPanel } from '@/components/command/TopologyPanel';
+import { api, type IncidentDetail, type IncidentStatus } from '@/lib/api';
+import { useAuthStore } from '@/state/auth';
+import { useIncidentStore } from '@/state/incidents';
+import { useSimulationStore } from '@/state/simulation';
+
+const POLL_INTERVAL_MS = 15_000;
+
+/**
+ * Responder command centre.
+ *
+ * <p>Three panels, each answering one question: what needs attention, what
+ * happened to a specific message, and what the network is doing. Polling is
+ * deliberately interval-based rather than socket-driven for the incident list;
+ * a responder watching a queue does not need sub-second updates, and a quiet
+ * socket that reconnects in a loop is worse than a fifteen second poll.
+ */
+export function CommandPage() {
+  const identity = useAuthStore((state) => state.identity);
+  const signOut = useAuthStore((state) => state.signOut);
+
+  const incidents = useIncidentStore((state) => state.items);
+  const overview = useIncidentStore((state) => state.overview);
+  const loading = useIncidentStore((state) => state.loading);
+  const unreachable = useIncidentStore((state) => state.unreachable);
+  const refresh = useIncidentStore((state) => state.refresh);
+  const updateStatus = useIncidentStore((state) => state.updateStatus);
+  const setStatusFilter = useIncidentStore((state) => state.setStatusFilter);
+  const setQuery = useIncidentStore((state) => state.setQuery);
+
+  const { runs, activeRun, events, loadRuns, selectRun } = useSimulationStore();
+
+  const [selected, setSelected] = useState<string | null>(null);
+  const [detail, setDetail] = useState<IncidentDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  useEffect(() => {
+    if (!identity) return;
+    void refresh();
+    void loadRuns();
+  }, [identity, refresh, loadRuns]);
+
+  useEffect(() => {
+    if (!identity) return undefined;
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void refresh();
+    }, POLL_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [identity, refresh]);
+
+  useEffect(() => {
+    if (!selected) {
+      setDetail(null);
+      return;
+    }
+    let cancelled = false;
+    setDetailLoading(true);
+    api
+      .incident(selected)
+      .then((result) => {
+        if (!cancelled) setDetail(result);
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null);
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, incidents]);
+
+  if (!identity) {
+    return <SignInGate onSignIn={(ok) => (ok ? undefined : undefined)} />;
+  }
+
+  const handleStatusChange = async (
+    reference: string,
+    status: IncidentStatus,
+    note?: string,
+  ) => {
+    await updateStatus(reference, status, note);
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col bg-base-900">
+      <CommandHeader connected={!unreachable && !loading} unreachable={unreachable} />
+
+      <main className="mx-auto w-full max-w-[1600px] flex-1 px-5 py-6 sm:px-8">
+        <OverviewTiles
+          overview={overview}
+          nodeCount={activeRun?.nodeCount ?? null}
+          eventCount={events.length || null}
+        />
+
+        <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(320px,380px)_minmax(0,1fr)]">
+          <div className="surface flex max-h-[calc(100vh-15rem)] flex-col p-4">
+            <IncidentQueue
+              incidents={incidents}
+              selected={selected}
+              loading={loading}
+              unreachable={unreachable}
+              onSelect={setSelected}
+              onFilterChange={(patch) => {
+                if (patch.status !== undefined) setStatusFilter(patch.status);
+                if (patch.query !== undefined) setQuery(patch.query);
+              }}
+            />
+          </div>
+
+          <div className="grid min-w-0 gap-5">
+            <div className="min-h-[26rem]">
+              <IncidentDetailPanel
+                detail={detail}
+                loading={detailLoading}
+                role={identity.role}
+                onStatusChange={handleStatusChange}
+              />
+            </div>
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <MapPanel incidents={incidents} selected={selected} onSelect={setSelected} />
+              <div className="flex flex-col gap-5">
+                {runs.length > 1 ? (
+                  <div className="surface p-4">
+                    <label className="eyebrow" htmlFor="run-select">
+                      Simulation run
+                    </label>
+                    <select
+                      id="run-select"
+                      value={activeRun?.runId ?? ''}
+                      onChange={(event) => void selectRun(event.target.value)}
+                      className="mt-2 w-full rounded-lg border border-base-600 bg-base-850 px-3 py-2 text-[13px] text-ink-primary focus-visible:border-network focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-network"
+                    >
+                      {runs.map((run) => (
+                        <option key={run.runId} value={run.runId}>
+                          {run.topology} · {run.nodeCount} nodes · seed {run.seed}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <TopologyPanel run={activeRun} events={events} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+
+  // Unreachable in practice; kept explicit so a failed sign-in cannot fall
+  // through to a half-authenticated console.
+  function SignInGate(_props: { onSignIn: (ok: boolean) => void }): React.ReactElement {
+    return (
+      <div className="grid min-h-screen place-items-center px-6">
+        <div className="surface max-w-sm p-8 text-center">
+          <h1 className="text-lg font-semibold text-ink-primary">Sign in required</h1>
+          <p className="mt-2 text-sm text-ink-secondary">
+            Your session ended. Sign in again to continue.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              signOut();
+              window.location.reload();
+            }}
+            className="mt-6 min-h-[44px] w-full rounded-xl bg-network px-4 text-sm font-medium text-base-900"
+          >
+            Return to sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
+}

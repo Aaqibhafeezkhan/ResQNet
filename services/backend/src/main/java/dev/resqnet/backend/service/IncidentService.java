@@ -61,9 +61,12 @@ public class IncidentService {
                 gatewayDeviceId, confidence);
         incident.setLocation(latitude, longitude);
         Incident saved = incidents.save(incident);
-        audit.record(gatewayDeviceId == null ? "gateway" : "gateway:" + gatewayDeviceId,
-                "ADMIN", simulated ? "INCIDENT_CREATED_FROM_SIMULATION"
-                        : "INCIDENT_CREATED_FROM_GATEWAY",
+        // Recorded as a device, never as a responder role. A gateway
+        // synchronises; it does not triage, and the audit trail must not imply
+        // that someone made this call.
+        audit.recordDevice(
+                gatewayDeviceId == null ? "gateway" : "gateway:" + gatewayDeviceId,
+                simulated ? "INCIDENT_CREATED_FROM_SIMULATION" : "INCIDENT_CREATED_FROM_GATEWAY",
                 "incident", saved.getReference(),
                 "category=" + saved.getCategory() + " severity=" + saved.getSeverity(),
                 requestId);

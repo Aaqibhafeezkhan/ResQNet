@@ -43,6 +43,19 @@ public class AuditService {
                 targetId, detail, requestId));
     }
 
+    /**
+     * Records an action taken by a device rather than a person.
+     *
+     * <p>Deliberately separate from the role-taking overload: a device has no
+     * responder role to pass, and coercing one in would invent authority.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordDevice(String actor, String action, String targetType, String targetId,
+                             String detail, String requestId) {
+        auditEvents.save(new AuditEvent(actor, AuditEvent.DEVICE_ROLE, true,
+                action, targetType, targetId, detail, requestId));
+    }
+
     @Transactional(readOnly = true)
     public List<AuditEvent> recent(int limit) {
         return auditEvents.findAllByOrderByOccurredAtDesc(PageRequest.of(0, limit)).getContent();
