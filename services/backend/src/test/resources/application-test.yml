@@ -1,0 +1,35 @@
+# Test configuration.
+#
+# H2 in PostgreSQL compatibility mode so the real Flyway migrations and the
+# real JPA mappings run in CI. Using a different database in tests would mean
+# the schema under test is not the schema that ships.
+spring:
+  datasource:
+    url: jdbc:h2:mem:resqnet;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+resqnet:
+  security:
+    # Long enough to satisfy the production length check, so the test suite
+    # exercises the same startup path a deployment does.
+    jwt-secret: "resqnet-test-secret-that-is-definitely-long-enough-32"
+    token-ttl-minutes: 30
+    gateway-token: "test-gateway-token"
+  gateway:
+    max-batch-size: 200
+
+logging:
+  level:
+    root: WARN
+    dev.resqnet.backend: INFO

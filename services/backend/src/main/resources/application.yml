@@ -1,0 +1,68 @@
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    # Never leak a stack trace to a caller. Emergency tooling must not become
+    # an information disclosure channel about the responder infrastructure.
+    include-stacktrace: never
+    include-message: never
+
+spring:
+  application:
+    name: resqnet-gateway
+  datasource:
+    url: ${RESQNET_DB_URL:jdbc:postgresql://localhost:5432/resqnet}
+    username: ${RESQNET_DB_USER:resqnet}
+    password: ${RESQNET_DB_PASSWORD:resqnet}
+    hikari:
+      maximum-pool-size: 10
+      pool-name: resqnet-pool
+  jpa:
+    hibernate:
+      # Flyway owns the schema. Hibernate validates rather than mutates, so a
+      # missing migration is a loud startup failure rather than silent drift.
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  jackson:
+    default-property-inclusion: non_null
+
+resqnet:
+  security:
+    # Fail-closed: the application refuses to start without a signing secret
+    # unless it is explicitly run in a development profile.
+    jwt-secret: ${RESQNET_JWT_SECRET:}
+    token-ttl-minutes: ${RESQNET_TOKEN_TTL_MINUTES:720}
+    require-https: ${RESQNET_REQUIRE_HTTPS:true}
+    # Shared token a gateway device presents when it synchronises. Distinct
+    # from any responder credential: a device may report, never act.
+    gateway-token: ${RESQNET_GATEWAY_TOKEN:}
+  gateway:
+    # Gateways are issued their own token. The backend decides what a token may
+    # do; a device never claims a role for itself.
+    max-batch-size: 200
+    retention-days: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: INFO
+    dev.resqnet.backend: INFO
+    org.springframework.security: WARN
+  pattern:
+    # Structured, machine-parseable, and free of secrets.
+    console: '{"ts":"%d{yyyy-MM-dd''T''HH:mm:ss.SSS''Z''}","level":"%p","logger":"%logger{36}","msg":"%replace(%m){''"'',''\\"''}"}%n'

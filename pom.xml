@@ -26,6 +26,7 @@
   <modules>
     <module>packages/mesh-core</module>
     <module>packages/mesh-simulator</module>
+    <module>services/backend</module>
   </modules>
 
   <properties>
@@ -76,6 +77,22 @@
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven.compiler.plugin.version}</version>
+          <configuration>
+            <!--
+              -parameters is required, not optional. Spring resolves @RequestParam
+              and @PathVariable by parameter name at runtime; without it the
+              compiled classes do not retain those names and every such endpoint
+              fails at request time with a 400.
+            -->
+            <compilerArgs>
+              <arg>-parameters</arg>
+            </compilerArgs>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${maven.surefire.plugin.version}</version>
           <configuration>
@@ -97,5 +114,12 @@
         </plugin>
       </plugins>
     </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+    </plugins>
   </build>
 </project>
