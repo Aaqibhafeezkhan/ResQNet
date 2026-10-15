@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.ResQNet" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/network_cyan</item>
+        <item name="colorOnPrimary">@color/surface_base</item>
+        <item name="colorSecondary">@color/delivered_emerald</item>
+        <item name="colorOnSecondary">@color/surface_base</item>
+        <item name="colorError">@color/emergency_red</item>
+        <item name="colorOnError">@color/text_primary</item>
+        <item name="android:colorBackground">@color/surface_base</item>
+        <item name="colorSurface">@color/surface_raised</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="android:statusBarColor">@color/surface_sunken</item>
+        <item name="android:navigationBarColor">@color/surface_sunken</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+    </style>
+
+    <!--
+      The SOS control. Large, high contrast, and flat rather than glossy: it has
+      to be findable and pressable by someone shaking, soaked or in the dark.
+      No animation is required to understand it.
+    -->
+    <style name="Widget.ResQNet.SosButton" parent="Widget.Material3.Button">
+        <item name="android:backgroundTint">@color/emergency_red</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:minHeight">96dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">20dp</item>
+        <item name="rippleColor">@color/ripple_light</item>
+    </style>
+
+    <style name="TextAppearance.ResQNet.Display" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <style name="TextAppearance.ResQNet.Section" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:letterSpacing">0.12</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <style name="TextAppearance.ResQNet.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:lineSpacingMultiplier">1.25</item>
+    </style>
+
+    <style name="TextAppearance.ResQNet.Status" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:letterSpacing">0.04</item>
+    </style>
+
+    <style name="Widget.ResQNet.StatusChip" parent="">
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:letterSpacing">0.06</item>
+    </style>
+</resources>

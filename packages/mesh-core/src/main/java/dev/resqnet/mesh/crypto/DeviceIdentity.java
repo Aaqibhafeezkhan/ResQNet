@@ -5,7 +5,6 @@ import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.util.Base64;
-import java.util.HexFormat;
 
 /**
  * Stable device identifiers derived from public keys.
@@ -46,7 +45,7 @@ public final class DeviceIdentity {
         requireEc(publicKey);
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(publicKey.getEncoded()));
+            return toHex(digest.digest(publicKey.getEncoded()));
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("SHA-256 unavailable", e);
         }
@@ -77,6 +76,23 @@ public final class DeviceIdentity {
         byte[] der = Base64.getDecoder().decode(base64);
         return java.security.KeyFactory.getInstance(KEY_ALGORITHM)
                 .generatePublic(new java.security.spec.X509EncodedKeySpec(der));
+    }
+
+    /**
+     * Lowercase hex encoding.
+     *
+     * <p>Hand-rolled because {@code java.util.HexFormat} is a Java 17 API that the
+     * Android platform does not ship.
+     */
+    static String toHex(byte[] bytes) {
+        char[] out = new char[bytes.length * 2];
+        char[] digits = "0123456789abcdef".toCharArray();
+        for (int i = 0; i < bytes.length; i++) {
+            int value = bytes[i] & 0xFF;
+            out[i * 2] = digits[value >>> 4];
+            out[i * 2 + 1] = digits[value & 0x0F];
+        }
+        return new String(out);
     }
 
     private static void requireEc(PublicKey publicKey) {

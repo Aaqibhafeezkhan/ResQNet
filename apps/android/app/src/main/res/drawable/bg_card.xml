@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A raised surface. Kept as a flat fill with a hairline outline rather than an
+     elevation shadow: shadows read as noise on a near-black background, and a
+     visible edge is a clearer affordance. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/surface_raised" />
+    <corners android:radius="@dimen/corner_m" />
+    <stroke
+        android:width="1dp"
+        android:color="@color/outline" />
+</shape>

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ResQNet</string>
+    <string name="tagline">Offline emergency messaging</string>
+
+    <!-- Welcome -->
+    <string name="welcome_headline">When the network is gone, this still works.</string>
+    <string name="welcome_body">ResQNet lets phones in radio range pass emergency messages to each
+        other directly, with no internet, no cell tower and no account. If someone is out of range,
+        their phone relays for you.</string>
+    <string name="welcome_permissions_title">Two permissions, and why</string>
+    <string name="welcome_permission_nearby">Nearby devices — ResQNet connects directly to phones
+        around you. Nothing is sent to a server.</string>
+    <string name="welcome_permission_location">Location — optional. Only attached when you choose to
+        attach it to a specific message.</string>
+    <string name="welcome_continue">Continue</string>
+    <string name="welcome_not_now">Not now</string>
+    <string name="welcome_emergency_notice">If someone is in immediate danger, call your local
+        emergency number. ResQNet is not a replacement for emergency services.</string>
+
+    <!-- Home -->
+    <string name="home_sos">Send SOS</string>
+    <string name="home_nearby">Nearby devices</string>
+    <string name="home_inbox">Inbox</string>
+    <string name="home_history">Delivery history</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_mesh_on">Mesh running</string>
+    <string name="home_mesh_off">Mesh stopped</string>
+    <string name="home_mesh_degraded">Mesh degraded — check permissions</string>
+    <string name="home_status_peers">%1$d nearby · %2$d queued</string>
+    <string name="home_unread">%d unread</string>
+
+    <!-- SOS composer -->
+    <string name="sos_title">Emergency message</string>
+    <string name="sos_hint">What is happening?</string>
+    <string name="sos_broadcast">Everyone in range</string>
+    <string name="sos_direct">One device</string>
+    <string name="sos_attach_location">Attach my location to this message</string>
+    <string name="sos_send">Send</string>
+    <string name="sos_confirm_title">Send this emergency message?</string>
+    <string name="sos_confirm_body">It will go to every phone in range and be relayed onwards by
+        anyone who can. Anyone nearby will see it as an SOS.</string>
+    <string name="sos_confirm_yes">Send now</string>
+    <string name="sos_confirm_no">Go back</string>
+    <string name="sos_sent">Message sent to the mesh</string>
+    <string name="sos_sent_no_peers">No devices in range yet — the message is saved and goes out the
+        moment someone appears</string>
+    <string name="sos_character_count">%1$d / %2$d</string>
+    <string name="sos_triage_label">Advisory triage</string>
+
+    <!-- Inbox -->
+    <string name="inbox_title">Messages</string>
+    <string name="inbox_empty">No messages yet. Anything relayed to this device will appear
+        here.</string>
+    <string name="inbox_empty_action">Send an SOS</string>
+
+    <!-- Message detail -->
+    <string name="detail_title">Message</string>
+    <string name="detail_state">Status: %s</string>
+    <string name="detail_from">From %s</string>
+    <string name="detail_to">To %s</string>
+    <string name="detail_hops">Travelled %d hop(s)</string>
+    <string name="detail_location">Location shared: %s</string>
+    <string name="detail_no_location">No location was shared with this message.</string>
+    <string name="detail_retry">Retry now</string>
+
+    <!-- History -->
+    <string name="history_title">Delivery history</string>
+    <string name="history_empty">Delivery transitions appear here as they happen.</string>
+
+    <!-- Nearby -->
+    <string name="nearby_title">Nearby devices</string>
+    <string name="nearby_scanning">Looking for devices in range…</string>
+    <string name="nearby_empty">No other ResQNet devices nearby yet. Keep this screen open, or
+        turn the mesh on from Home.</string>
+    <string name="nearby_unverified">Unverified</string>
+    <string name="nearby_verified">Verified</string>
+    <string name="nearby_verify_action">Verify</string>
+    <string name="nearby_block_action">Block</string>
+    <string name="nearby_compare_code">Compare this code</string>
+    <string name="nearby_verify_title">Compare both screens</string>
+    <string name="nearby_verify_body">Ask the other person to read out the code on their screen. If
+        the two match, tap Verify. If they do not, do not send anything sensitive.</string>
+    <string name="nearby_verify_confirm">Codes match — verify</string>
+    <string name="nearby_verify_cancel">Cancel</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_mesh_running">Mesh running</string>
+    <string name="settings_mesh_stopped">Mesh stopped</string>
+    <string name="settings_identity">This device</string>
+    <string name="settings_identity_code">Your verification code</string>
+    <string name="settings_identity_fingerprint">Key fingerprint</string>
+    <string name="settings_hardware_backed">Key held in secure hardware</string>
+    <string name="settings_hardware_software">Key held in the system keystore (no hardware backing
+        detected)</string>
+    <string name="settings_location">Attach location to messages</string>
+    <string name="settings_location_summary">Off by default. Location is only sent when you attach
+        it to a specific message.</string>
+    <string name="settings_triage">Advisory triage suggestions</string>
+    <string name="settings_triage_summary">Classifies message text on this device. Suggestions only
+        — never used to dispatch anyone.</string>
+    <string name="settings_reset_identity">Reset this device identity</string>
+    <string name="settings_reset_identity_summary">Generates a new key. Every verification you have
+        made will need to be repeated.</string>
+    <string name="settings_reset_confirm_title">Reset this device identity?</string>
+    <string name="settings_reset_confirm_body">A new key means a new device identity. Other devices
+        will stop recognising this one and you will need to verify again. Messages that have already
+        been sent cannot be recalled.</string>
+    <string name="settings_about_limitations">Limitations</string>
+    <string name="settings_about_limitations_body">Android can suspend or stop any app, including
+        this one. Messages you have sent are saved on this device and go out when the mesh is running
+        again, but ResQNet cannot promise to be always connected. It is experimental software and
+        is not a replacement for emergency services.</string>
+
+    <!-- Notification -->
+    <string name="notification_channel_mesh">Mesh status</string>
+    <string name="notification_channel_mesh_description">Shown while ResQNet is keeping your device
+        connected to nearby phones.</string>
+    <string name="notification_mesh_title">ResQNet is keeping your device connected</string>
+    <string name="notification_mesh_text">%1$d nearby · %2$d message(s) queued</string>
+
+    <!-- Delivery states, shown in lists and detail screens -->
+    <string name="state_created">Composed</string>
+    <string name="state_queued">Waiting for a nearby device</string>
+    <string name="state_sent_to_peer">Handed to a nearby device</string>
+    <string name="state_relayed">Relayed on behalf of someone else</string>
+    <string name="state_delivered">Received</string>
+    <string name="state_acknowledged">Confirmed received</string>
+    <string name="state_expired">Too old to send</string>
+    <string name="state_failed">Could not be sent</string>
+
+    <string name="action_back">Back</string>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+</resources>

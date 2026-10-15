@@ -84,12 +84,12 @@ class RetryPolicyTest {
     @Test
     @DisplayName("rejects nonsensical configuration")
     void rejectsBadConfiguration() {
-        assertThat(catchThrowable(() -> new RetryPolicy(0L, 10L, 3, new java.util.Random(1L))))
+        assertThat(catchThrowable(() -> new RetryPolicy(0L, 10L, 3, RetryPolicy.JitterSource.seededJitter(1L))))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThat(catchThrowable(() -> new RetryPolicy(100L, 10L, 3, new java.util.Random(1L))))
+        assertThat(catchThrowable(() -> new RetryPolicy(100L, 10L, 3, RetryPolicy.JitterSource.seededJitter(1L))))
                 .as("the ceiling may not be below the base delay")
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThat(catchThrowable(() -> new RetryPolicy(10L, 100L, 0, new java.util.Random(1L))))
+        assertThat(catchThrowable(() -> new RetryPolicy(10L, 100L, 0, RetryPolicy.JitterSource.seededJitter(1L))))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

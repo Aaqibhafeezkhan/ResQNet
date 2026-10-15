@@ -52,7 +52,8 @@ public final class SimulatedNode implements AutoCloseable {
                         4 * 1024 * 1024),
                 config.retryPolicy());
         // The simulator seeds message ids deterministically so a run replays.
-        this.router.setIdSource(new java.util.Random(config.seed() * 31 + index));
+        java.util.Random idRandom = new java.util.Random(config.seed() * 31L + index);
+        this.router.setIdSource(idRandom::nextLong);
         this.router.addEventListener(event ->
                 events.add(SimulationEvent.from(event, round, index, network::labelOf)));
         this.router.setDeliveryListener((envelope, via, hops) -> inbox.add(envelope.messageId()));

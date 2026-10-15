@@ -76,8 +76,12 @@ public final class MeshRouter implements AutoCloseable {
     private volatile LocalDeliveryListener deliveryListener;
     private volatile IdentityAnnouncementListener identityListener;
     private final AtomicLong localSequence = new AtomicLong(1);
-    private volatile java.util.random.RandomGenerator idSource =
-            new java.security.SecureRandom();
+    private volatile MessageIdSource idSource = defaultIdSource();
+
+    private static MessageIdSource defaultIdSource() {
+        java.util.Random random = new java.util.Random(new java.security.SecureRandom().nextLong());
+        return () -> random.nextLong();
+    }
 
     /**
      * @param self this device's signing identity; its key-derived id is the only
@@ -299,8 +303,21 @@ public final class MeshRouter implements AutoCloseable {
      * are visible to peers, and a predictable id space invites collisions under
      * concurrent generation across a shared clock.
      */
-    public void setIdSource(java.util.random.RandomGenerator idSource) {
+    public void setIdSource(MessageIdSource idSource) {
         this.idSource = java.util.Objects.requireNonNull(idSource, "idSource");
+    }
+
+    /**
+     * Entropy source for message identifiers.
+     *
+     * <p>A plain {@code long} supplier rather than
+     * {@code java.util.random.RandomGenerator}, because that package does not
+     * exist on the Android platform. See {@link RetryPolicy.JitterSource} for the
+     * same reasoning.
+     */
+    @FunctionalInterface
+    public interface MessageIdSource {
+        long nextLong();
     }
 
     // ------------------------------------------------------------------ receive

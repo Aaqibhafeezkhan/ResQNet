@@ -92,6 +92,22 @@ public final class TrustStore {
         }
     }
 
+    /**
+     * Rebuilds an entry from persisted fields.
+     *
+     * <p>Exposed so platform adapters can reload the trust store from their own
+     * storage. The device id is recomputed from the key rather than accepted from
+     * the caller, so a tampered database cannot claim an identity it holds no key
+     * for.
+     */
+    public static Entry entryOf(PublicKey publicKey, String label, Trust trust,
+                                Instant firstSeen, Instant lastSeen) {
+        Objects.requireNonNull(publicKey, "publicKey");
+        return new Entry(DeviceIdentity.deviceId(publicKey), publicKey,
+                label == null ? "unknown" : label,
+                trust == null ? Trust.UNVERIFIED : trust, firstSeen, lastSeen);
+    }
+
     /** Persistence hook. The Android app writes entries to SQLite. */
     public interface Persistence {
         void save(Entry entry);

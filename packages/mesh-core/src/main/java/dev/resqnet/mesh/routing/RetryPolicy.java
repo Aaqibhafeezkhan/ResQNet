@@ -11,8 +11,8 @@ package dev.resqnet.mesh.routing;
  * night. So: exponential growth, full jitter, a hard cap, and an attempt limit
  * that ends the retry rather than looping forever.
  *
- * <p>Deterministic when given a deterministic {@link java.util.random.RandomGenerator},
- * which is what makes simulator runs reproducible.
+ * <p>Deterministic when given a deterministic {@link JitterSource}, which is what
+ * makes simulator runs reproducible.
  */
 public final class RetryPolicy {
 
@@ -23,19 +23,18 @@ public final class RetryPolicy {
     /** Attempts after which the message is marked {@code FAILED}. */
     private final int maxAttempts;
     /** Randomness source for jitter. */
-    private final java.util.random.RandomGenerator random;
+    private final JitterSource random;
 
     /** Sensible defaults for a battery-powered handset. */
     public static RetryPolicy defaultMobile() {
-        return new RetryPolicy(2_000L, 5L * 60_000L, 12,
-                java.util.random.RandomGenerator.getDefault());
+        return new RetryPolicy(2_000L, 5L * 60_000L, 12, JitterSource.secureJitter());
     }
 
     /** Deterministic policy for simulation. */
     public static RetryPolicy deterministic(long baseDelayMillis, long maxDelayMillis,
                                             int maxAttempts, long seed) {
         return new RetryPolicy(baseDelayMillis, maxDelayMillis, maxAttempts,
-                new java.util.Random(seed));
+                JitterSource.seededJitter(seed));
     }
 
     /**
@@ -44,7 +43,7 @@ public final class RetryPolicy {
      * @param maxAttempts total attempts, including the first
      */
     public RetryPolicy(long baseDelayMillis, long maxDelayMillis, int maxAttempts,
-                       java.util.random.RandomGenerator random) {
+                       JitterSource random) {
         if (baseDelayMillis <= 0 || maxDelayMillis < baseDelayMillis || maxAttempts <= 0) {
             throw new IllegalArgumentException("Invalid retry policy bounds");
         }
@@ -90,5 +89,43 @@ public final class RetryPolicy {
 
     public long maxDelayMillis() {
         return maxDelayMillis;
+    }
+
+    /**
+     * Bounded random source for jitter.
+     *
+     * <p>Deliberately not {@code java.util.random.RandomGenerator}: that package
+     * is Java 17 and is not part of the Android platform, so depending on it
+     * would make the engine impossible to run on the handset it exists to serve.
+     * {@code java.util.Random} exists on every Android release and implements
+     * everything needed here.
+     */
+    @FunctionalInterface
+    public interface JitterSource {
+
+        /**
+         * @param bound exclusive upper bound, must be positive
+         * @return a value in {@code [0, bound)}
+         */
+        long nextLong(long bound);
+
+        /** Cryptographically seeded source for production use. */
+        static JitterSource secureJitter() {
+            java.util.Random random = new java.util.Random(
+                    new java.security.SecureRandom().nextLong());
+            return bound -> bound <= 0 ? 0L : Math.floorMod(random.nextLong(), bound);
+        }
+
+        /** Reproducible source for simulation and tests. */
+        static JitterSource seededJitter(long seed) {
+            java.util.Random random = new java.util.Random(seed);
+            return bound -> {
+                if (bound <= 0) {
+                    return 0L;
+                }
+                long value = Math.floorMod(random.nextLong(), bound);
+                return value;
+            };
+        }
     }
 }

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ResQNet's Android palette mirrors the web dashboard: a near-black emergency
+  surface, restrained red reserved exclusively for life-safety actions, cyan for
+  active networking, emerald for confirmed delivery. Colour is never the only
+  signal; every state also carries a label, because colour alone fails for
+  colour-blind users exactly when the screen matters most.
+-->
+<resources>
+    <color name="surface_base">#FF0B0E11</color>
+    <color name="surface_raised">#FF14181D</color>
+    <color name="surface_sunken">#FF07090B</color>
+    <color name="outline">#FF2A323B</color>
+
+    <color name="text_primary">#FFF3F6F8</color>
+    <color name="text_secondary">#FF9BA7B4</color>
+    <color name="text_disabled">#FF5C6773</color>
+
+    <color name="emergency_red">#FFE03B3B</color>
+    <color name="emergency_red_pressed">#FFB72C2C</color>
+    <color name="emergency_red_soft">#33E03B3B</color>
+
+    <color name="network_cyan">#FF2ED3E6</color>
+    <color name="network_cyan_soft">#332ED3E6</color>
+
+    <color name="delivered_emerald">#FF35C98A</color>
+    <color name="delivered_emerald_soft">#3335C98A</color>
+
+    <color name="warning_amber">#FFE8A33D</color>
+
+    <color name="ripple_light">#22FFFFFF</color>
+</resources>
