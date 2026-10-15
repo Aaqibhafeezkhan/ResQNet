@@ -214,6 +214,17 @@ public final class RoutingMetrics {
         return latency.max();
     }
 
+    /**
+     * Raw end-to-end delivery latency samples collected by this node.
+     *
+     * <p>Exposed so the simulator and the benchmark harness can aggregate
+     * percentiles across the whole mesh instead of only within one node. The
+     * reservoir is bounded, so this never grows with uptime.
+     */
+    public long[] deliveryLatencySamples() {
+        return latency.snapshot();
+    }
+
     public int deliveryLatencySampleCount() {
         return latency.size();
     }
@@ -249,6 +260,42 @@ public final class RoutingMetrics {
     public double dropRatio() {
         long total = accepted.sum() + totalDropCount();
         return total == 0 ? 0.0 : (double) totalDropCount() / total;
+    }
+
+    /**
+     * Folds another instance's counters into this one.
+     *
+     * <p>Used by the simulator and the benchmark harness to aggregate a
+     * mesh-wide view from per-node instances without inventing a second
+     * accounting path.
+     */
+    public void accumulate(RoutingMetrics other) {
+        if (other == null || other == this) {
+            return;
+        }
+        originated.add(other.originated.sum());
+        accepted.add(other.accepted.sum());
+        delivered.add(other.delivered.sum());
+        forwarded.add(other.forwarded.sum());
+        duplicateSuppressed.add(other.duplicateSuppressed.sum());
+        expired.add(other.expired.sum());
+        hopLimitDrops.add(other.hopLimitDrops.sum());
+        rateLimitDrops.add(other.rateLimitDrops.sum());
+        untrustedDrops.add(other.untrustedDrops.sum());
+        malformedDrops.add(other.malformedDrops.sum());
+        otherDrops.add(other.otherDrops.sum());
+        acknowledgementsSent.add(other.acknowledgementsSent.sum());
+        acknowledgementsReceived.add(other.acknowledgementsReceived.sum());
+        duplicateAcknowledgements.add(other.duplicateAcknowledgements.sum());
+        relayQueueEvictions.add(other.relayQueueEvictions.sum());
+        hopTotal.add(other.hopTotal.sum());
+        synchronized (hopHistogram) {
+            for (int i = 0; i < hopHistogram.length; i++) {
+                hopHistogram[i] += other.hopHistogram[i];
+            }
+        }
+        latency.mergeFrom(other.latency);
+        acknowledgementLatency.mergeFrom(other.acknowledgementLatency);
     }
 
     /** Resets every counter. Used between simulation runs. */
@@ -322,6 +369,17 @@ public final class RoutingMetrics {
             cursor = 0;
             count = 0;
             max = Long.MIN_VALUE;
+        }
+
+        synchronized long[] snapshot() {
+            return count == 0 ? new long[0] : Arrays.copyOf(samples, count);
+        }
+
+        synchronized void mergeFrom(LatencyReservoir other) {
+            long[] incoming = other.snapshot();
+            for (long value : incoming) {
+                add(value);
+            }
         }
     }
 

@@ -272,9 +272,21 @@ public final class MeshRouter implements AutoCloseable {
         return envelope.toBuilder().buildSigned(signature, self.signatureAlgorithm());
     }
 
-    /** Generates a fresh, collision-resistant message identifier. */
+    /**
+     * Generates a fresh, collision-resistant message identifier.
+     *
+     * <p>The identifier is built from the clock, a per-router counter and a
+     * random suffix. It deliberately does <em>not</em> embed the device id: ids
+     * are sorted by the durable store, so a device-derived component would make
+     * store iteration order depend on the freshly generated key pair and would
+     * destroy run-to-run reproducibility in the simulator.
+     *
+     * <p>Uniqueness across nodes comes from the random suffix, and a collision
+     * would merely cause a spurious duplicate suppression, which is the safe
+     * direction to fail.
+     */
     public String newMessageId(long nowMillis) {
-        return self.deviceId().substring(5) + "-" + Long.toHexString(nowMillis)
+        return "m" + Long.toHexString(nowMillis)
                 + "-" + Long.toHexString(localSequence.getAndIncrement())
                 + "-" + Long.toHexString(idSource.nextLong() & 0xFFFFFFFFL);
     }
@@ -341,7 +353,7 @@ public final class MeshRouter implements AutoCloseable {
         if (originEntry.isEmpty()) {
             metrics.recordUntrustedDrop();
             reject(now, envelope, RejectReason.UNTRUSTED_ORIGIN,
-                    "no key on file for origin " + shortDevice(envelope.originDeviceId()),
+                    "no key on file for the claimed origin",
                     fromPeerDeviceId);
             return RoutingOutcome.DROPPED_UNTRUSTED;
         }
@@ -362,8 +374,8 @@ public final class MeshRouter implements AutoCloseable {
         if (!authentic) {
             metrics.recordUntrustedDrop();
             reject(now, envelope, RejectReason.INVALID_SIGNATURE,
-                    "signature did not verify against the pinned key for "
-                            + shortDevice(envelope.originDeviceId()), fromPeerDeviceId);
+                    "signature did not verify against the pinned key for the origin",
+                    fromPeerDeviceId);
             return RoutingOutcome.DROPPED_UNTRUSTED;
         }
 
@@ -374,7 +386,7 @@ public final class MeshRouter implements AutoCloseable {
             metrics.recordDuplicate();
             emit(new MeshEvent.Rejected(now, self.deviceId(), envelope.messageId(),
                     envelope.originDeviceId(), RejectReason.DUPLICATE,
-                    "already processed"));
+                    "already processed", fromPeerDeviceId));
             return RoutingOutcome.DUPLICATE;
         }
 
@@ -534,8 +546,15 @@ public final class MeshRouter implements AutoCloseable {
                 }
             }
         }
+        // The transport's peer order is preserved rather than re-sorted here.
+        // Which peers are chosen when the fan-out cap bites must be a stable
+        // function of the link table, or two identical runs can disagree about
+        // who relayed what and a routing bug becomes unreplayable. Sorting by
+        // device id would not achieve that: identity is a hash of a freshly
+        // generated key, so its order differs between runs. Transports are
+        // therefore required to expose a deterministic order.
         return candidates.size() <= config.maxFanOut()
-                ? candidates : candidates.subList(0, config.maxFanOut());
+                ? candidates : new ArrayList<>(candidates.subList(0, config.maxFanOut()));
     }
 
     // ---------------------------------------------------------- acknowledgement
@@ -590,7 +609,8 @@ public final class MeshRouter implements AutoCloseable {
         if (stored.isEmpty()) {
             metrics.recordOtherDrop();
             reject(now, ack, RejectReason.MALFORMED,
-                    "acknowledgement for an unknown message " + shortDevice(target), fromPeerDeviceId);
+                    "acknowledgement references a message this device does not hold",
+                    fromPeerDeviceId);
             return RoutingOutcome.DROPPED_MALFORMED;
         }
         if (stored.get().state() == DeliveryState.ACKNOWLEDGED) {
@@ -609,14 +629,14 @@ public final class MeshRouter implements AutoCloseable {
         }
 
         store.updateState(target, DeliveryState.ACKNOWLEDGED,
-                "acknowledged by " + shortDevice(ack.originDeviceId()));
+                "acknowledged end-to-end by the intended recipient");
         metrics.recordAcknowledgementReceived();
         metrics.recordDeliveryLatency(Math.max(0, now - stored.get().createdAt()));
         emit(new MeshEvent.AcknowledgementReceived(now, self.deviceId(), target,
                 ack.originDeviceId()));
         emit(new MeshEvent.DeliveryStateChanged(now, self.deviceId(), target,
                 stored.get().state(), DeliveryState.ACKNOWLEDGED,
-                "acknowledged by " + shortDevice(ack.originDeviceId())));
+                "acknowledged end-to-end by the intended recipient"));
         return RoutingOutcome.ACKNOWLEDGED;
     }
 
@@ -641,7 +661,7 @@ public final class MeshRouter implements AutoCloseable {
         } catch (RuntimeException e) {
             emit(new MeshEvent.Rejected(now, self.deviceId(), envelope.messageId(),
                     envelope.originDeviceId(), RejectReason.MALFORMED,
-                    "delivery listener threw " + e.getClass().getSimpleName()));
+                    "delivery listener threw " + e.getClass().getSimpleName(), null));
         }
     }
 
@@ -655,7 +675,7 @@ public final class MeshRouter implements AutoCloseable {
             return;
         }
         store.upsert(StoredMessage.of(envelope, encoded, now)
-                .withState(DeliveryState.DELIVERED, "received from " + shortDevice(fromPeerDeviceId)));
+                .withState(DeliveryState.DELIVERED, "received over the mesh"));
         metrics.recordDelivered();
         emit(new MeshEvent.Delivered(now, self.deviceId(), envelope));
 
@@ -667,7 +687,8 @@ public final class MeshRouter implements AutoCloseable {
                 // A misbehaving UI listener must never break routing.
                 emit(new MeshEvent.Rejected(now, self.deviceId(), envelope.messageId(),
                         envelope.originDeviceId(), RejectReason.MALFORMED,
-                        "delivery listener threw " + e.getClass().getSimpleName()));
+                        "delivery listener threw " + e.getClass().getSimpleName(),
+                        fromPeerDeviceId));
             }
         }
 
@@ -752,9 +773,8 @@ public final class MeshRouter implements AutoCloseable {
                 // writing the stale QUEUED state back would erase real progress
                 // and make the UI show a message as "not sent" after it was.
                 store.find(message.messageId())
-                        .ifPresent(latest -> store.upsert(latest.withAttempt(
-                                attempts, nextAttempt, latest.state(),
-                                "attempt " + attempts + " at " + now)));
+                        .ifPresent(latest -> store.upsert(latest.withRetry(
+                                attempts, nextAttempt)));
                 if (outcome == RoutingOutcome.RELAYED) {
                     sent++;
                 }
@@ -918,7 +938,7 @@ public final class MeshRouter implements AutoCloseable {
         emit(new MeshEvent.Rejected(now, self.deviceId(),
                 envelope == null ? "undecodable" : envelope.messageId(),
                 envelope == null ? null : envelope.originDeviceId(),
-                reason, detail + " (via " + shortDevice(fromPeerDeviceId) + ")"));
+                reason, detail, fromPeerDeviceId));
     }
 
     private static RoutingOutcome outcomeFor(RejectReason reason) {
@@ -941,10 +961,6 @@ public final class MeshRouter implements AutoCloseable {
                 // Observability must never break the data path.
             }
         }
-    }
-
-    private static String shortDevice(String id) {
-        return id == null ? "?" : id.substring(0, Math.min(8, id.length()));
     }
 
     @Override

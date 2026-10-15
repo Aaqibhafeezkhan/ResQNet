@@ -77,9 +77,20 @@ public sealed interface MeshEvent {
         }
     }
 
-    /** An envelope was refused. */
+    /**
+     * An envelope was refused.
+     *
+     * <p>Identities are carried as structured fields rather than interpolated
+     * into {@code detail}. Free-text identity strings leak a 69 character key
+     * derived id into every log line and make otherwise reproducible reports
+     * differ between runs.
+     *
+     * @param originDeviceId origin as claimed by the envelope, may be null
+     * @param fromPeerDeviceId the neighbour that delivered the frame, may be null
+     */
     record Rejected(long atEpochMillis, String relayNodeId, String messageId, String originDeviceId,
-                    dev.resqnet.mesh.protocol.RejectReason reason, String detail)
+                    dev.resqnet.mesh.protocol.RejectReason reason, String detail,
+                    String fromPeerDeviceId)
             implements MeshEvent {
         @Override
         public String toString() {

@@ -25,7 +25,14 @@ public interface MeshTransport {
      */
     Optional<Long> send(String peerDeviceId, byte[] encodedPayload);
 
-    /** Ids of peers that are connected right now. */
+    /**
+     * Ids of peers that are connected right now, in a deterministic order.
+     *
+     * <p>Implementations must return a stable ordering. The router uses it to
+     * decide which peers receive a copy when the fan-out cap bites, and
+     * acknowledgement broadcasts follow it, so an implementation backed by a
+     * {@code HashSet} would make forwarding unreproducible between runs.
+     */
     java.util.Set<String> connectedPeerIds();
 
     /**

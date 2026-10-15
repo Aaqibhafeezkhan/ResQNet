@@ -1,0 +1,396 @@
+package dev.resqnet.mesh.simulator;
+
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import dev.resqnet.mesh.routing.RoutingMetrics;
+import dev.resqnet.mesh.simulator.json.JsonObject;
+
+/**
+ * Everything a simulation run measured.
+ *
+ * <p>Every number here was produced by a real {@code MeshRouter} during the run.
+ * Nothing is modelled, extrapolated or benchmarked from a previous experiment.
+ * When a value could not be measured it is reported as {@code -1} rather than
+ * replaced with a plausible guess, because a fabricated figure on an emergency
+ * dashboard is worse than a missing one.
+ */
+public final class SimulationReport {
+
+    private final SimulationConfig config;
+    private final int nodeCount;
+    private final long originatedCount;
+    private final long deliveredCount;
+    private final long acknowledgedCount;
+    private final long expiredCount;
+    private final long failedCount;
+    private final long queuedCount;
+    private final long duplicateSuppressed;
+    private final long rejectedCount;
+    private final long relayedCount;
+    private final double deliveryRate;
+    private final double acknowledgementRate;
+    private final long medianLatencyMillis;
+    private final long p95LatencyMillis;
+    private final long p99LatencyMillis;
+    private final long maxLatencyMillis;
+    private final double amplificationFactor;
+    private final Map<Integer, Long> hopDistribution;
+    private final Map<Integer, Long> hopLatencySum;
+    private final long framesSent;
+    private final long framesDelivered;
+    private final long framesDropped;
+    private final long linkChanges;
+    private final int partitions;
+    private final List<NodeReport> nodes;
+    private final List<SimulationEvent> events;
+    private final long simulatedDurationMillis;
+    private final long wallClockMillis;
+
+    SimulationReport(SimulationConfig config, List<NodeReport> nodes, List<SimulationEvent> events,
+                     long framesSent, long framesDelivered, long framesDropped,
+                     long linkChanges, int partitions, long simulatedDurationMillis,
+                     long wallClockMillis, long[] latencySamples, RoutingMetrics aggregate,
+                     Map<Integer, Long> hopDistribution, Map<Integer, Long> hopLatencySum) {
+        this.config = config;
+        this.nodes = List.copyOf(nodes);
+        this.events = List.copyOf(events);
+        this.nodeCount = nodes.size();
+        this.framesSent = framesSent;
+        this.framesDelivered = framesDelivered;
+        this.framesDropped = framesDropped;
+        this.linkChanges = linkChanges;
+        this.partitions = partitions;
+        this.simulatedDurationMillis = simulatedDurationMillis;
+        this.wallClockMillis = wallClockMillis;
+        this.hopDistribution = Map.copyOf(hopDistribution);
+        this.hopLatencySum = Map.copyOf(hopLatencySum);
+
+        this.originatedCount = aggregate.originatedCount();
+        this.acknowledgedCount = aggregate.acknowledgementReceivedCount();
+        this.deliveredCount = countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.DELIVERED)
+                + countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.ACKNOWLEDGED);
+        this.expiredCount = countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.EXPIRED);
+        this.failedCount = countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.FAILED);
+        this.queuedCount = countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.QUEUED)
+                + countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.SENT_TO_PEER)
+                + countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.RELAYED);
+        this.duplicateSuppressed = aggregate.duplicateSuppressedCount();
+        this.rejectedCount = aggregate.totalDropCount();
+        this.relayedCount = aggregate.forwardedCount();
+
+        this.deliveryRate = originatedCount == 0 ? 0
+                : (double) acknowledgedCount / originatedCount;
+        this.acknowledgementRate = originatedCount == 0 ? 0
+                : (double) acknowledgedCount / originatedCount;
+        this.amplificationFactor = aggregate.amplificationFactor();
+
+        this.medianLatencyMillis = percentile(latencySamples, 50);
+        this.p95LatencyMillis = percentile(latencySamples, 95);
+        this.p99LatencyMillis = percentile(latencySamples, 99);
+        this.maxLatencyMillis = latencySamples.length == 0
+                ? -1 : Arrays.stream(latencySamples).max().orElse(-1);
+    }
+
+    private long countNodesByState(dev.resqnet.mesh.protocol.DeliveryState state) {
+        long total = 0;
+        for (NodeReport node : nodes) {
+            total += node.countByState(state);
+        }
+        return total;
+    }
+
+    /** Nearest-rank percentile, or -1 when there are no samples. */
+    static long percentile(long[] samples, int percentile) {
+        if (samples.length == 0) {
+            return -1;
+        }
+        long[] sorted = samples.clone();
+        Arrays.sort(sorted);
+        int index = (int) Math.ceil(percentile / 100.0 * sorted.length) - 1;
+        return sorted[Math.max(0, Math.min(index, sorted.length - 1))];
+    }
+
+    public SimulationConfig config() {
+        return config;
+    }
+
+    public int nodeCount() {
+        return nodeCount;
+    }
+
+    /** Messages composed on origin devices during the run. */
+    public long originatedCount() {
+        return originatedCount;
+    }
+
+    /** Messages confirmed end-to-end by an acknowledgement from the recipient. */
+    public long acknowledgedCount() {
+        return acknowledgedCount;
+    }
+
+    /** Records that reached a destination inbox, whether or not they were confirmed. */
+    public long deliveredCount() {
+        return deliveredCount;
+    }
+
+    public long expiredCount() {
+        return expiredCount;
+    }
+
+    public long failedCount() {
+        return failedCount;
+    }
+
+    /** Still queued at the end of the run. */
+    public long queuedCount() {
+        return queuedCount;
+    }
+
+    public long duplicateSuppressed() {
+        return duplicateSuppressed;
+    }
+
+    public long rejectedCount() {
+        return rejectedCount;
+    }
+
+    /** Total forwards performed across every node. */
+    public long relayedCount() {
+        return relayedCount;
+    }
+
+    /** Fraction of originated messages that were confirmed delivered. */
+    public double deliveryRate() {
+        return deliveryRate;
+    }
+
+    public double amplificationFactor() {
+        return amplificationFactor;
+    }
+
+    public long medianLatencyMillis() {
+        return medianLatencyMillis;
+    }
+
+    public long p95LatencyMillis() {
+        return p95LatencyMillis;
+    }
+
+    public long p99LatencyMillis() {
+        return p99LatencyMillis;
+    }
+
+    public long maxLatencyMillis() {
+        return maxLatencyMillis;
+    }
+
+    public Map<Integer, Long> hopDistribution() {
+        return hopDistribution;
+    }
+
+    public long framesSent() {
+        return framesSent;
+    }
+
+    public long framesDelivered() {
+        return framesDelivered;
+    }
+
+    public long framesDropped() {
+        return framesDropped;
+    }
+
+    public long linkChanges() {
+        return linkChanges;
+    }
+
+    /** Number of distinct partitions the topology experienced. */
+    public int partitions() {
+        return partitions;
+    }
+
+    public long simulatedDurationMillis() {
+        return simulatedDurationMillis;
+    }
+
+    /** Real CPU time to execute the run, for throughput measurement. */
+    public long wallClockMillis() {
+        return wallClockMillis;
+    }
+
+    /** Messages per second of real CPU time. Honest about being a simulation. */
+    public double simulatedThroughputPerSecond() {
+        return wallClockMillis == 0 ? 0 : (originatedCount * 1000.0) / wallClockMillis;
+    }
+
+    public List<NodeReport> nodes() {
+        return nodes;
+    }
+
+    public List<SimulationEvent> events() {
+        return events;
+    }
+
+    /** Average simulated latency observed for messages that took N hops. */
+    public long averageLatencyForHopCount(int hops) {
+        Long sum = hopLatencySum.get(hops);
+        long count = hopDistribution.getOrDefault(hops, 0L);
+        return sum == null || count == 0 ? -1 : sum / count;
+    }
+
+    /** Full report as JSON, suitable for the gateway or a CI artefact. */
+    public JsonObject toJson() {
+        return JsonObject.object()
+                .put("simulation", JsonObject.object()
+                        .put("topology", config.topology().shape().name())
+                        .put("nodeCount", config.topology().nodeCount())
+                        .put("linkCount", config.topology().linkCount())
+                        .put("seed", config.seed())
+                        .put("messageCount", config.messageCount())
+                        .put("rounds", config.rounds())
+                        .put("stepMillis", config.stepMillis())
+                        .put("hopLimit", config.hopLimit())
+                        .put("linkDropProbability", config.linkDropProbability())
+                        .put("broadcastRatio", config.broadcastRatio())
+                        .put("churnEveryRounds", config.churnEveryRounds()))
+                .put("outcome", JsonObject.object()
+                        .put("originated", originatedCount)
+                        .put("acknowledged", acknowledgedCount)
+                        .put("deliveredRecords", deliveredCount)
+                        .put("expired", expiredCount)
+                        .put("failed", failedCount)
+                        .put("stillQueued", queuedCount)
+                        .put("duplicatesSuppressed", duplicateSuppressed)
+                        .put("rejected", rejectedCount)
+                        .put("forwards", relayedCount))
+                .put("deliveryRate", deliveryRate)
+                .put("amplificationFactor", amplificationFactor)
+                .put("latencyMillis", JsonObject.object()
+                        .put("median", medianLatencyMillis)
+                        .put("p95", p95LatencyMillis)
+                        .put("p99", p99LatencyMillis)
+                        .put("max", maxLatencyMillis))
+                .put("hopDistribution", JsonObject.ofCounts(hopDistribution))
+                .put("radio", JsonObject.object()
+                        .put("framesSent", framesSent)
+                        .put("framesDelivered", framesDelivered)
+                        .put("framesDropped", framesDropped)
+                        .put("linkChanges", linkChanges)
+                        .put("partitions", partitions))
+                .put("timing", JsonObject.object()
+                        .put("simulatedMillis", simulatedDurationMillis)
+                        .put("wallClockMillis", wallClockMillis)
+                        .put("throughputPerSecond", simulatedThroughputPerSecond()))
+                .putObjects("nodes", nodes.stream().map(NodeReport::toJson).toList())
+                .putObjects("events", events.stream().map(SimulationEvent::toJson).toList());
+    }
+
+    /** A concise one-screen summary for a terminal. */
+    public String toSummary() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ResQNet simulation — ").append(config.topology().shape())
+                .append(", ").append(nodeCount).append(" nodes, seed ").append(config.seed())
+                .append('\n');
+        sb.append("─".repeat(64)).append('\n');
+        sb.append(String.format("  originated            %d%n", originatedCount));
+        sb.append(String.format("  acknowledged          %d%n", acknowledgedCount));
+        sb.append(String.format("  delivery rate         %.2f%%%n", deliveryRate * 100));
+        sb.append(String.format("  median latency        %d ms%n", medianLatencyMillis));
+        sb.append(String.format("  p95 latency           %d ms%n", p95LatencyMillis));
+        sb.append(String.format("  forwards              %d%n", relayedCount));
+        sb.append(String.format("  amplification         %.3f%n", amplificationFactor));
+        sb.append(String.format("  duplicates suppressed %d%n", duplicateSuppressed));
+        sb.append(String.format("  expired / failed      %d / %d%n", expiredCount, failedCount));
+        sb.append(String.format("  still queued          %d%n", queuedCount));
+        sb.append(String.format("  radio frames          %d sent, %d dropped%n",
+                framesSent, framesDropped));
+        sb.append(String.format("  partitions observed   %d%n", partitions));
+        sb.append(String.format("  simulated / cpu time  %d ms / %d ms%n",
+                simulatedDurationMillis, wallClockMillis));
+        sb.append(String.format("  throughput            %.1f msg/s of CPU time%n",
+                simulatedThroughputPerSecond()));
+        return sb.toString();
+    }
+
+    /**
+     * Per-node measurements.
+     *
+     * @param stateCounts how many stored records currently sit in each delivery
+     *     state, including the relay copies this node is holding for others
+     */
+    public record NodeReport(
+            int index,
+            String label,
+            String deviceId,
+            String keyFingerprint,
+            long originated,
+            long accepted,
+            long forwarded,
+            long delivered,
+            long duplicatesSuppressed,
+            long rejected,
+            long untrustedDrops,
+            long rateLimitDrops,
+            long hopLimitDrops,
+            long stillQueued,
+            long medianLatencyMillis,
+            long p95LatencyMillis,
+            int degreeAtEnd,
+            Map<dev.resqnet.mesh.protocol.DeliveryState, Integer> stateCounts
+    ) {
+
+        /** Builds a report for one node from its live router and store. */
+        static NodeReport of(SimulatedNode node, int degreeAtEnd) {
+            RoutingMetrics metrics = node.router().metrics();
+            Map<dev.resqnet.mesh.protocol.DeliveryState, Integer> stateCounts =
+                    new LinkedHashMap<>();
+            for (dev.resqnet.mesh.protocol.DeliveryState state
+                    : dev.resqnet.mesh.protocol.DeliveryState.values()) {
+                int count = node.store().countByState(state);
+                if (count > 0) {
+                    stateCounts.put(state, count);
+                }
+            }
+            return new NodeReport(node.index(), node.label(), node.deviceId(),
+                    node.keyFingerprint(), metrics.originatedCount(), metrics.acceptedCount(),
+                    metrics.forwardedCount(), metrics.deliveredCount(),
+                    metrics.duplicateSuppressedCount(), metrics.totalDropCount(),
+                    metrics.untrustedDropCount(), metrics.rateLimitDropCount(),
+                    metrics.hopLimitDropCount(), node.store().pendingCount(),
+                    metrics.medianDeliveryLatencyMillis(), metrics.p95DeliveryLatencyMillis(),
+                    degreeAtEnd, Map.copyOf(stateCounts));
+        }
+
+        long countByState(dev.resqnet.mesh.protocol.DeliveryState state) {
+            return stateCounts.getOrDefault(state, 0);
+        }
+
+        public JsonObject toJson() {
+            JsonObject stateJson = JsonObject.object();
+            stateCounts.forEach((state, count) -> stateJson.put(state.name(), count));
+            return JsonObject.object()
+                    .put("index", index)
+                    .put("label", label)
+                    .put("deviceId", deviceId)
+                    .put("keyFingerprint", keyFingerprint)
+                    .put("originated", originated)
+                    .put("accepted", accepted)
+                    .put("forwarded", forwarded)
+                    .put("delivered", delivered)
+                    .put("duplicatesSuppressed", duplicatesSuppressed)
+                    .put("rejected", rejected)
+                    .put("untrustedDrops", untrustedDrops)
+                    .put("rateLimitDrops", rateLimitDrops)
+                    .put("hopLimitDrops", hopLimitDrops)
+                    .put("stillQueued", stillQueued)
+                    .put("medianLatencyMillis", medianLatencyMillis)
+                    .put("p95LatencyMillis", p95LatencyMillis)
+                    .put("degreeAtEnd", degreeAtEnd)
+                    .put("stateCounts", stateJson);
+        }
+    }
+
+}

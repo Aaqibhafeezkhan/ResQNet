@@ -225,10 +225,10 @@ class MultiHopRoutingTest {
 
         assertThat(c.inbox).hasSize(1);
         StoredMessage queued = b.store.pending().stream()
-                .filter(m -> !m.messageId().equals(sent.messageId()))
+                .filter(m -> m.lastDetail().contains("no eligible peer"))
                 .findFirst().orElseThrow();
         assertThat(queued.state()).isIn(DeliveryState.RELAYED, DeliveryState.QUEUED);
-        assertThat(queued.lastDetail()).contains("no eligible peer");
+        assertThat(queued.messageId()).isNotEqualTo(sent.messageId());
     }
 
     @Test

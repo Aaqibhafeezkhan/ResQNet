@@ -111,6 +111,21 @@ public record StoredMessage(
                 newNextAttemptAt, detail, localId);
     }
 
+    /**
+     * Updates only the retry schedule, leaving the state and the audit note
+     * untouched.
+     *
+     * <p>A routine retry is not a state transition. Overwriting the note with
+     * "attempt 3" would destroy the explanation of why the message is in its
+     * current state, which is exactly the information a responder or a bug report
+     * needs.
+     */
+    public StoredMessage withRetry(int newAttemptCount, long newNextAttemptAt) {
+        return new StoredMessage(messageId, envelope, state, originDeviceId,
+                destinationDeviceId, type, priority, createdAt, expiresAt, newAttemptCount,
+                newNextAttemptAt, lastDetail, localId);
+    }
+
     public Instant createdAtInstant() {
         return Instant.ofEpochMilli(createdAt);
     }
