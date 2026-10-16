@@ -9,179 +9,197 @@
 #
 # Run from the repository root:
 #   scripts/build_release_artifacts.sh
+#   scripts/build_release_artifacts.sh --exclude-android
+#
+# --exclude-android skips Gradle entirely and emits no APK. Used for the
+# v0.1.0-alpha release, because physical-device networking has never been
+# tested and no Android binary may be published until it has been.
 #
 # Writes to dist/. Nothing outside dist/ and the build directories is
-# touched, and no signing material is read: a checkout without a keystore
-# produces an unsigned APK and says so rather than substituting the debug key.
+# touched, and no signing material is read from the repository.
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 DIST="$ROOT/dist"
-JARS="$DIST/jars"
-APKS="$DIST/apk"
-CHECKSUMS="$DIST/SHA256SUMS.txt"
-NOTES="$DIST/release-notes.md"
 
+INCLUDE_ANDROID=1
+for arg in "$@"; do
+    case "$arg" in
+        --exclude-android) INCLUDE_ANDROID=0 ;;
+        -h|--help) sed -n '3,17p' "$0"; exit 0 ;;
+        *) echo "error: unknown argument '$arg'" >&2; exit 2 ;;
+    esac
+done
 
 if [ ! -d "$ROOT/.git" ]; then
-    echo "error: run this from a ResQNet checkout, not from docs/" >&2
+    echo "error: run this from a ResQNet checkout" >&2
     exit 2
 fi
 
-VERSION="$(grep -oE "versionName '[^']+'" apps/android/app/build.gradle | head -1 | sed "s/versionName '//;s/'//")"
-VERSION_CODE="$(grep -oE 'versionCode [0-9]+' apps/android/app/build.gradle | head -1 | awk '{print $2}')"
+# The version comes from the root pom, which every module inherits. Deriving it
+# from the Android build file instead would have made the Android app the
+# version authority for a release that ships no Android binary.
+VERSION="$(sed -n 's|.*<version>\(0[^<]*\)</version>.*|\1|p' pom.xml | head -1)"
+if [ -z "$VERSION" ]; then
+    echo "error: could not read the project version from pom.xml" >&2
+    exit 2
+fi
+
 GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+NOTES_SRC="$ROOT/docs/release/$VERSION"
 
-mkdir -p "$JARS" "$APKS"
-rm -f "$CHECKSUMS" "$NOTES"
+JARS="$DIST/jars"
+WEB="$DIST/web"
+APKS="$DIST/apk"
+CHECKSUMS="$DIST/SHA256SUMS"
+MANIFEST="$DIST/ARTIFACTS.md"
 
+echo "==> ResQNet $VERSION (commit $GIT_SHA)"
+
+# The whole directory goes, not just the known subdirectories. A stale file
+# left by an earlier build would be picked up by the checksum sweep and
+# published as if it belonged to this release, which is exactly the kind of
+# mistake that is invisible until somebody downloads it.
+rm -rf "$DIST"
+mkdir -p "$JARS" "$WEB"
+
+# ---------------------------------------------------------------- Java ----
 echo "==> Building Java modules"
 mvn -q clean package -DskipTests
 
-echo "==> Building the Android app"
-# Signing properties, if the developer has them, come from the user's
-# Gradle home and are never read from the repository.
-(cd apps/android && ./gradlew --quiet assembleDebug assembleRelease)
-
-echo "==> Collecting artifacts"
-cp packages/mesh-simulator/target/*-runnable.jar "$JARS/" 2>/dev/null || true
-cp services/backend/target/backend-*.jar "$JARS/" 2>/dev/null || true
-
-APK_SRC_RELEASE="apps/android/app/build/outputs/apk/release/app-release.apk"
-APK_SRC_UNSIGNED="apps/android/app/build/outputs/apk/release/app-release-unsigned.apk"
-APK_SRC_DEBUG="apps/android/app/build/outputs/apk/debug/app-debug.apk"
-
-if [ -f "$APK_SRC_RELEASE" ]; then
-    cp "$APK_SRC_RELEASE" "$APKS/resqnet-$VERSION-release.apk"
-elif [ -f "$APK_SRC_UNSIGNED" ]; then
-    cp "$APK_SRC_UNSIGNED" "$APKS/resqnet-$VERSION-release-UNSIGNED.apk"
+# ----------------------------------------------------------------- Web ----
+echo "==> Building the web command center"
+if [ ! -d apps/web/node_modules ]; then
+    (cd apps/web && npm ci --no-audit --no-fund)
 fi
-cp "$APK_SRC_DEBUG" "$APKS/resqnet-$VERSION-debug.apk"
+(cd apps/web && npm run build)
 
+# ---------------------------------------------------------------- Docs ----
+# Hand-authored release notes and installation guide, copied verbatim when the
+# repository carries them for this version. The generated manifest below is
+# separate: it describes the files in THIS build directory, and is therefore
+# regenerated on every run rather than committed.
+NOTES_BODY="No RELEASE_NOTES.md was found for $VERSION in docs/release/."
+INSTALL_BODY="No INSTALLATION.md was found for $VERSION in docs/release/."
+if [ -f "$NOTES_SRC/RELEASE_NOTES.md" ]; then
+    cp "$NOTES_SRC/RELEASE_NOTES.md" "$DIST/RELEASE_NOTES.md"
+    NOTES_BODY="$(cat "$DIST/RELEASE_NOTES.md")"
+fi
+if [ -f "$NOTES_SRC/INSTALLATION.md" ]; then
+    cp "$NOTES_SRC/INSTALLATION.md" "$DIST/INSTALLATION.md"
+    INSTALL_BODY="$(cat "$DIST/INSTALLATION.md")"
+fi
+
+# ------------------------------------------------------------ Packages ----
+echo "==> Collecting artifacts"
+cp packages/mesh-simulator/target/*-runnable.jar \
+   "$JARS/resqnet-simulator-v$VERSION.jar" 2>/dev/null \
+   || { echo "error: runnable simulator jar was not produced" >&2; exit 1; }
+cp services/backend/target/backend-*.jar \
+   "$JARS/resqnet-backend-v$VERSION.jar" 2>/dev/null \
+   || { echo "error: backend jar was not produced" >&2; exit 1; }
+
+# A flat archive of the built assets plus the instructions needed to serve
+# them, because someone who unzips this is holding the only copy. Staged in a
+# temp directory so the document is inside the archive rather than beside it.
+STAGE="$(mktemp -d)"
+trap 'rm -rf "$STAGE"' EXIT
+cp -R apps/web/dist/. "$STAGE/"
+cp "$NOTES_SRC/INSTALLATION.md" "$STAGE/INSTALLATION.md"
+
+# Compression is stored rather than deflated: the JavaScript inside is already
+# gzip-servable and a command centre is often deployed to a small device over a
+# slow link, where inflating an already-compressed bundle is wasted work.
+(cd "$STAGE" && zip -q -0 -r "$WEB/resqnet-web-v$VERSION.zip" . -x '.*')
+
+# ------------------------------------------------------------- Android ----
+APK_NOTE="**No APK in this release.** Physical-device networking has never
+been tested, so no Android binary is published. Source is in the repository."
+
+if [ "$INCLUDE_ANDROID" -eq 1 ]; then
+    echo "==> Building the Android app"
+    # Signing properties, if the developer has them, come from the user's
+    # Gradle home and are never read from the repository.
+    (cd apps/android && ./gradlew --quiet assembleDebug assembleRelease)
+    mkdir -p "$APKS"
+    APK_SRC_RELEASE="apps/android/app/build/outputs/apk/release/app-release.apk"
+    APK_SRC_UNSIGNED="apps/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+    if [ -f "$APK_SRC_RELEASE" ]; then
+        cp "$APK_SRC_RELEASE" "$APKS/resqnet-$VERSION-release.apk"
+    elif [ -f "$APK_SRC_UNSIGNED" ]; then
+        cp "$APK_SRC_UNSIGNED" "$APKS/resqnet-$VERSION-release-UNSIGNED.apk"
+    fi
+    cp apps/android/app/build/outputs/apk/debug/app-debug.apk \
+       "$APKS/resqnet-$VERSION-debug.apk"
+else
+    echo "==> Skipping Android (--exclude-android)"
+fi
+
+# ----------------------------------------------------------- Manifest -----
+JAVA_MIN=21
+cat > "$MANIFEST" <<EOF
+# Artifact manifest — ResQNet $VERSION
+
+Generated by \`scripts/build_release_artifacts.sh\` at commit $GIT_SHA.
+This file is **generated** and describes the contents of this build
+directory. The human-written documents are \`RELEASE_NOTES.md\` and
+\`INSTALLATION.md\`.
+
+## Files
+
+| File | What it is | Verified |
+|---|---|---|
+| \`jars/resqnet-simulator-v$VERSION.jar\` | Self-contained simulator and the demonstration. Java $JAVA_MIN+. | Deterministic; demonstration exits 0 |
+| \`jars/resqnet-backend-v$VERSION.jar\` | Spring Boot coordination gateway. Needs PostgreSQL $JAVA_MIN+. No bundled H2 driver. | Unit + integration + real PostgreSQL |
+| \`web/resqnet-web-v$VERSION.zip\` | Production static assets for the command centre, plus serving instructions. | lint, typecheck, unit tests, production build |
+$(if [ "$INCLUDE_ANDROID" -eq 1 ]; then echo "| \`apk/*\` | Android app. | Unit tests only — **never run on hardware** |"; else echo "| _(none)_ | $APK_NOTE | — |"; fi)
+
+## Integrity
+
+\`\`\`sh
+sha256sum -c SHA256SUMS     # Linux
+shasum -a 256 -c SHA256SUMS # macOS
+\`\`\`
+
+The jars are byte-reproducible: two builds of the same commit produce the
+same digest. \`web/*.zip\` is not, because zip records its own modification
+time. APK digests are not reproducible either, because the Android
+toolchain embeds build timestamps.
+
+## Not verified
+
+- **Two physical Android phones have never exchanged a message.** The
+  Android app has never been run on hardware at all. Defects that would
+  each have prevented it were found by reading the code and fixed; none of
+  that is evidence that the radio path works. The procedure is
+  \`apps/android/DEVICE_TESTING.md\` and the result does not exist.
+- Every benchmark figure in \`docs/benchmarks/results.md\` describes the
+  routing engine against a **modelled radio**. Nothing here measures real
+  range, real latency through rubble, or real battery life.
+- No load, soak, or battery testing.
+- PostgreSQL under concurrent writes and replication is untested;
+  migrations and the incident lifecycle are tested.
+
+## Security posture
+
+Read \`docs/security/threat-model.md\`. The shared gateway token is a
+bearer secret: revocable by rotation, but not attributable, and every
+device holding it shares one identity.
+EOF
+
+# ----------------------------------------------------------- Checksums ----
 echo "==> Checksums"
-( cd "$DIST" && find jars apk -type f | sort | while read -r f; do
-    # -b keeps the digest on one line with a two-space separator, which is
-    # what sha256sum --check expects.
+# -b keeps the digest on one line with a two-space separator, which is what
+# both `sha256sum --check` and `shasum --check` expect. SHA256SUMS cannot
+# contain its own digest, so it is written last and excluded.
+( cd "$DIST" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | while read -r f; do
     printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f"
 done ) > "$CHECKSUMS"
 cat "$CHECKSUMS"
 
-release_apk="$APKS/resqnet-$VERSION-release.apk"
-unsigned_apk="$APKS/resqnet-$VERSION-release-UNSIGNED.apk"
-debug_apk="$APKS/resqnet-$VERSION-debug.apk"
-
-if [ -f "$release_apk" ]; then
-    SIGNING="Signed with the keystore supplied via RESQNET_KEYSTORE_FILE.
-That keystore is not in this repository and was not created by it."
-else
-    SIGNING="UNSIGNED. No release keystore was supplied, so the APK cannot be
-installed. Build one first:
-
-  keytool -genkeypair -v -keystore ~/resqnet-release.jks -storetype JKS \\
-      -keyalg RSA -keysize 2048 -validity 10000 -alias resqnet
-
-  # Add to ~/.gradle/gradle.properties, which is never committed:
-  #   RESQNET_KEYSTORE_FILE=/absolute/path/to/resqnet-release.jks
-  #   RESQNET_KEYSTORE_PASSWORD=...
-  #   RESQNET_KEY_ALIAS=resqnet
-  #   RESQNET_KEY_PASSWORD=...
-
-The debug APK below is installable now and is for internal hardware
-testing only. It is signed with the shared Android debug key, which is
-published in the Android SDK, and must not be treated as a release."
-fi
-
-cat > "$NOTES" <<EOF
-# ResQNet $VERSION (experimental beta)
-
-Generated by \`scripts/build_release_artifacts.sh\` at $GIT_SHA.
-
-**This is an experimental beta.** It is software that has been tested
-automatically and simulated, and that has **not** been run between physical
-devices. Read "Not verified" below before trusting it with anything.
-
-## Artifacts
-
-| File | What it is |
-|---|---|
-| \`jars/mesh-simulator-*-runnable.jar\` | Deterministic mesh simulator and the seven-stage demonstration. Self-contained. |
-| \`jars/backend-*.jar\` | Spring Boot coordination gateway. Needs PostgreSQL; it has no bundled H2 driver. |
-| \`apk/resqnet-$VERSION-release.apk\` | Android app. $SIGNING |
-| \`apk/resqnet-$VERSION-debug.apk\` | Android app, debug-signed. **Internal hardware testing only.** |
-
-Verify with:
-
-\`\`\`sh
-cd dist && shasum -a 256 -c SHA256SUMS.txt   # macOS
-sha256sum -c SHA256SUMS.txt                 # Linux
-\`\`\`
-
-The jars are byte-reproducible: two builds of the same commit produce the same
-digest. APK digests are not, because the Android toolchain embeds build
-timestamps in the zip.
-
-## Running
-
-\`\`\`sh
-# Demonstration, no infrastructure needed:
-java -jar jars/mesh-simulator-*-runnable.jar \\
-  --help
-java -cp jars/mesh-simulator-*-runnable.jar \\
-  dev.resqnet.mesh.simulator.demo.DemoScenario
-
-# A simulation:
-java -jar jars/mesh-simulator-*-runnable.jar \\
-  --topology mesh --nodes 12 --messages 40 --seed 7 --rounds 60 --quiet
-
-# The gateway, against PostgreSQL:
-export RESQNET_DB_URL=jdbc:postgresql://localhost:5432/resqnet
-export RESQNET_DB_USER=resqnet RESQNET_DB_PASSWORD=...
-export RESQNET_JWT_SECRET=\$(openssl rand -base64 48)
-export RESQNET_GATEWAY_TOKEN=\$(openssl rand -hex 24)
-java -jar jars/backend-*.jar --spring.profiles.active=dev
-\`\`\`
-
-## Implemented and automatically tested
-
-- Mesh core: signed envelopes, controlled flooding, split horizon, bounded
-  duplicate suppression, durable store-and-forward, end-to-end acknowledgements.
-- Deterministic simulator, reproducible from a seed.
-- Coordination gateway: incident lifecycle, audit trail, separated device and
-  responder credentials, live event stream.
-- Android app: Nearby Connections transport, foreground service, durable queue,
-  diagnostics screen.
-- Web: landing page, responder console, live updates with polling as fallback.
-
-## Simulated, not measured
-
-Every benchmark figure describes the routing engine against a **modelled
-radio**. Nothing in this repository is evidence about how far a message travels
-through rubble, how long a battery lasts, or how a real phone behaves under
-load. Delivery is limited by graph topology and hop budget, which is a property
-of the simulation, not a field measurement.
-
-## Not verified
-
-- **Two physical Android phones have never exchanged a message.** The app has
-  never been run on hardware. Seven defects that would each have prevented it
-  were found by reading the code and fixed, but nothing proves it works.
-  The procedure is \`apps/android/DEVICE_TESTING.md\`; the result does not exist.
-- No P2P_CLUSTER authentication token is used. Trust is enforced by envelope
-  signature verification against a key a person confirmed, not by connection
-  authentication.
-- No load, soak, or battery testing.
-- PostgreSQL under concurrent writes and replication is untested; migrations
-  and the incident lifecycle are.
-
-## Security posture
-
-Read \`docs/security/threat-model.md\`. The most important limitations: the
-shared gateway token is a bearer secret, so it is revocable by rotation but not
-attributable, and every device holding it shares one identity.
-EOF
-
 echo
-echo "==> Release notes written to $NOTES"
+echo "==> Manifest written to $MANIFEST"
+echo "==> Release notes: $( [ -f "$DIST/RELEASE_NOTES.md" ] && echo "$DIST/RELEASE_NOTES.md" || echo 'none for this version' )"
 echo "==> Artifacts in $DIST"
