@@ -10,7 +10,12 @@ import { useState } from 'react';
 
 import { StatusChip } from '@/components/primitives/StatusChip';
 import { deliveryStateLabel, relativeTime, severityLabel } from '@/lib/format';
-import { ApiError, type IncidentDetail, type IncidentStatus } from '@/lib/api';
+import {
+  ApiError,
+  type IncidentDetail,
+  type IncidentStatus,
+  type ResponderAccount,
+} from '@/lib/api';
 import { canMutate } from '@/state/auth';
 
 interface IncidentDetailPanelProps {
@@ -18,12 +23,21 @@ interface IncidentDetailPanelProps {
   loading: boolean;
   role: string | undefined;
   onStatusChange: (reference: string, status: IncidentStatus, note?: string) => Promise<void>;
+  /** Assigns the incident to an account, or clears the assignment. */
+  onAssign?: (reference: string, accountId: number | null) => Promise<void>;
+  /** Accounts that may be assigned work. */
+  accounts?: ResponderAccount[];
 }
 
 const NEXT_STATUSES: { status: IncidentStatus; label: string }[] = [
   { status: 'TRIAGED', label: 'Mark triaged' },
   { status: 'IN_PROGRESS', label: 'Take ownership' },
   { status: 'RESOLVED', label: 'Resolve' },
+  // Dismissed was reachable through the API and from the filter chips but not
+  // from the detail panel, which is the one place somebody looking at a
+  // spurious report would go. A false alarm that cannot be dismissed from
+  // where it is being read stays in the queue forever.
+  { status: 'DISMISSED', label: 'Dismiss' },
 ];
 
 /**
@@ -38,9 +52,12 @@ export function IncidentDetailPanel({
   loading,
   role,
   onStatusChange,
+  onAssign,
+  accounts = [],
 }: IncidentDetailPanelProps) {
   const [pending, setPending] = useState<IncidentStatus | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [assignPending, setAssignPending] = useState(false);
   const [note, setNote] = useState('');
 
   if (loading && !detail) {
@@ -65,6 +82,21 @@ export function IncidentDetailPanel({
   const { incident, messages, audit } = detail;
   const allowed = canMutate(role);
   const closed = incident.status === 'RESOLVED' || incident.status === 'DISMISSED';
+
+  const assign = async (accountId: number | null) => {
+    if (!onAssign) return;
+    setAssignPending(true);
+    setFailure(null);
+    try {
+      await onAssign(incident.reference, accountId);
+    } catch (cause) {
+      setFailure(cause instanceof ApiError
+        ? cause.message
+        : 'The assignment could not be saved.');
+    } finally {
+      setAssignPending(false);
+    }
+  };
 
   const change = async (status: IncidentStatus) => {
     setPending(status);
@@ -236,6 +268,40 @@ export function IncidentDetailPanel({
               silently failed status change is worse than no control at all: the
               responder believes the incident was triaged when it was not.
             */}
+            {/*
+              Assignment. Present only where somebody can actually act on it:
+              an unassigned incident is a report nobody owns, and the endpoint
+              existed, was audited and was tested, with no control anywhere to
+              reach it.
+            */}
+            {allowed && onAssign ? (
+              <div className="mb-3">
+                <label
+                  htmlFor="assignee"
+                  className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-ink-tertiary"
+                >
+                  Assigned to
+                </label>
+                <select
+                  id="assignee"
+                  value={incident.assignedTo ?? ''}
+                  disabled={assignPending || closed}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    void assign(value === '' ? null : Number(value));
+                  }}
+                  className="w-full rounded-lg border border-base-600 bg-base-850 px-3 py-2 text-[13px] text-ink-primary focus-visible:border-network focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-network disabled:opacity-50"
+                >
+                  <option value="">Unassigned</option>
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.username} ({account.role.toLowerCase()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
             {failure ? (
               <p
                 role="alert"

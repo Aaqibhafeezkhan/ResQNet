@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
 
 import { CommandHeader } from '@/components/command/CommandHeader';
+import { CreateIncidentDialog } from '@/components/command/CreateIncidentDialog';
 import { IncidentDetailPanel } from '@/components/command/IncidentDetailPanel';
 import { IncidentQueue } from '@/components/command/IncidentQueue';
 import { MapPanel } from '@/components/command/MapPanel';
 import { OverviewTiles } from '@/components/command/OverviewTiles';
 import { TopologyPanel } from '@/components/command/TopologyPanel';
-import { api, authStorage, type IncidentDetail, type IncidentStatus } from '@/lib/api';
+import {
+  api,
+  authStorage,
+  type IncidentDetail,
+  type IncidentStatus,
+  type ResponderAccount,
+} from '@/lib/api';
 import { EventStream, shouldRefreshList } from '@/lib/events';
 import { useAuthStore } from '@/state/auth';
 import { useIncidentStore } from '@/state/incidents';
@@ -40,6 +47,8 @@ export function CommandPage() {
   const { runs, activeRun, events, loadRuns, selectRun } = useSimulationStore();
 
   const [live, setLive] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [accounts, setAccounts] = useState<ResponderAccount[]>([]);
 
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<IncidentDetail | null>(null);
@@ -50,6 +59,22 @@ export function CommandPage() {
     void refresh();
     void loadRuns();
   }, [identity, refresh, loadRuns]);
+
+  // Assignable accounts are admin-only on the server, so the list is fetched
+  // only for that role and a failure is ignored rather than surfaced: an
+  // operator who cannot see the list simply cannot assign, which is the
+  // server's decision and not an error worth interrupting them for.
+  useEffect(() => {
+    if (identity?.role !== 'ADMIN') {
+      setAccounts([]);
+      return;
+    }
+    let cancelled = false;
+    void api.accounts()
+      .then((list) => { if (!cancelled) setAccounts(list); })
+      .catch(() => { if (!cancelled) setAccounts([]); });
+    return () => { cancelled = true; };
+  }, [identity]);
 
   /**
    * Live updates, with polling kept underneath.
@@ -144,6 +169,7 @@ export function CommandPage() {
         connected={!unreachable}
         unreachable={unreachable}
         live={live && !unreachable}
+        onCreateIncident={identity ? () => setCreating(true) : undefined}
       />
 
       {/*
@@ -197,6 +223,20 @@ export function CommandPage() {
                 loading={detailLoading}
                 role={identity.role}
                 onStatusChange={handleStatusChange}
+                accounts={accounts}
+                onAssign={async (reference, accountId) => {
+                  if (accountId === null) {
+                    // There is no unassign endpoint, so this is stated rather
+                    // than faked. The audit trail records the assignment, which
+                    // is what an investigator needs anyway.
+                    throw new Error(
+                      'There is no way to clear an assignment. Reassign it to '
+                      + 'somebody else instead.',
+                    );
+                  }
+                  await api.assign(reference, accountId);
+                  await refresh();
+                }}
               />
             </div>
 
@@ -228,6 +268,17 @@ export function CommandPage() {
           </div>
         </div>
       </main>
+
+      <CreateIncidentDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+        onCreate={async (input) => {
+          const created = await api.createIncident(input);
+          await refresh();
+          setSelected(created.reference);
+          return created;
+        }}
+      />
     </div>
   );
 

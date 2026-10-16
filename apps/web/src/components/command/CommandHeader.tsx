@@ -1,4 +1,4 @@
-import { LogOut, ShieldAlert, Wifi, WifiOff } from 'lucide-react';
+import { LogOut, Plus, ShieldAlert, Wifi, WifiOff } from 'lucide-react';
 
 import { StatusChip } from '@/components/primitives/StatusChip';
 import { useAuthStore } from '@/state/auth';
@@ -18,6 +18,8 @@ interface CommandHeaderProps {
    * the indicator is decorative.
    */
   live?: boolean;
+  /** Opens the manual incident reporter. */
+  onCreateIncident?: (() => void) | undefined;
 }
 
 /**
@@ -27,7 +29,12 @@ interface CommandHeaderProps {
  * red is not a sufficient signal that the whole data source is unavailable,
  * which is the one thing an operator most needs to notice immediately.
  */
-export function CommandHeader({ connected, unreachable, live }: CommandHeaderProps) {
+export function CommandHeader({
+  connected,
+  unreachable,
+  live,
+  onCreateIncident,
+}: CommandHeaderProps) {
   const identity = useAuthStore((state) => state.identity);
   const signOut = useAuthStore((state) => state.signOut);
 
@@ -75,6 +82,17 @@ export function CommandHeader({ connected, unreachable, live }: CommandHeaderPro
               {identity.username}
               <span className="text-ink-tertiary">{identity.role.toLowerCase()}</span>
             </span>
+          ) : null}
+
+          {onCreateIncident ? (
+            <button
+              type="button"
+              onClick={onCreateIncident}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-base-600 px-2.5 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:border-base-500 hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
+            >
+              <Plus size={13} aria-hidden="true" />
+              Report incident
+            </button>
           ) : null}
 
           <button

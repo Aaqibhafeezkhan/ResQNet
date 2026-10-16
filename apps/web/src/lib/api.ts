@@ -144,6 +144,17 @@ export interface LoginResponse {
   role: 'OBSERVER' | 'RESPONDER' | 'ADMIN';
 }
 
+/**
+ * A responder account that work can be assigned to.
+ *
+ * <p>Kept separate from {@link Identity}, which describes who is signed in.
+ */
+export interface ResponderAccount {
+  id: number;
+  username: string;
+  role: string;
+}
+
 export interface Identity {
   name: string;
   role: string;
@@ -290,11 +301,40 @@ export const api = {
     );
   },
 
+  /**
+   * Creates an incident by hand.
+   *
+   * <p>Distinct from a device report throughout the system: no advisory flag,
+   * no confidence, and the audit row records a person rather than a gateway.
+   */
+  createIncident(input: {
+    title: string;
+    category: Category;
+    severity?: number;
+    latitude?: number;
+    longitude?: number;
+  }): Promise<IncidentSummary> {
+    return request<IncidentSummary>('/api/v1/incidents', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  },
+
   assign(reference: string, accountId: number): Promise<IncidentSummary> {
     return request<IncidentSummary>(
       `/api/v1/incidents/${encodeURIComponent(reference)}/assign`,
       { method: 'POST', body: JSON.stringify({ accountId }) },
     );
+  },
+
+  /**
+   * Accounts available for assignment.
+   *
+   * <p>Admin only on the server, so the caller has to handle a 403 rather than
+   * assuming the list exists.
+   */
+  accounts(): Promise<ResponderAccount[]> {
+    return request<ResponderAccount[]>('/api/v1/admin/accounts');
   },
 
   simulationRuns(limit = 10): Promise<SimulationRun[]> {
