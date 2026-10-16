@@ -150,7 +150,17 @@ public class Incident {
 
     public void setStatus(IncidentStatus status) {
         this.status = Objects.requireNonNull(status, "status");
-        if (status == IncidentStatus.TRIAGED && acknowledgedAt == null) {
+        // Any live status means a responder has taken it in, so the moment of
+        // acknowledgement is recorded for all of them.
+        //
+        // Stamping only TRIAGED lost the timestamp whenever a responder skipped
+        // it and went straight to IN_PROGRESS, which is what somebody under
+        // pressure does. When is an incident first looked at is evidence after
+        // the fact, and it should not depend on the order two buttons were
+        // pressed in. The guard keeps the first such moment rather than the
+        // most recent.
+        if (acknowledgedAt == null && status != IncidentStatus.NEW
+                && !status.closed()) {
             this.acknowledgedAt = Instant.now();
         }
         if (status.closed() && resolvedAt == null) {

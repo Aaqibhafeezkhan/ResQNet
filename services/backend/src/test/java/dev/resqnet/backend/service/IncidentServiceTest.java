@@ -151,6 +151,38 @@ class IncidentServiceTest {
     }
 
     @Test
+    @DisplayName("records acknowledgement however a responder reaches a live state")
+    void acknowledgementIsNotLostBySkippingTriaged() {
+        // A responder under pressure goes straight to IN_PROGRESS and never
+        // touches TRIAGED. The timestamp of when somebody first looked at an
+        // incident is evidence after the fact, so losing it because of the
+        // order two buttons were pressed in is not acceptable.
+        Incident incident = incidents.createFromReport("Trapped", Category.TRAPPED, 0.8,
+                "rqn1_origin2", "rqn1_gateway", null, null, "req-ack", false);
+
+        incidents.updateStatus(incident.getReference(),
+                new Dtos.UpdateStatusRequest(IncidentStatus.IN_PROGRESS, "responding", null),
+                responder, "req-ack-1");
+
+        Incident working = incidentRepository.findByReference(incident.getReference())
+                .orElseThrow();
+        assertThat(working.getStatus()).isEqualTo(IncidentStatus.IN_PROGRESS);
+        assertThat(working.getAcknowledgedAt())
+                .as("IN_PROGRESS means a responder has picked this up")
+                .isNotNull();
+
+        incidents.updateStatus(incident.getReference(),
+                new Dtos.UpdateStatusRequest(IncidentStatus.RESOLVED, "done", null),
+                responder, "req-ack-2");
+        Incident resolved = incidentRepository.findByReference(incident.getReference())
+                .orElseThrow();
+        assertThat(resolved.getAcknowledgedAt())
+                .as("and the original timestamp must survive the closure")
+                .isNotNull();
+        assertThat(resolved.getResolvedAt()).isNotNull();
+    }
+
+    @Test
     @DisplayName("refuses to change an incident that is already closed")
     void refusesClosedIncident() {
         Incident incident = incidents.createFromReport("Done", Category.GENERAL, 0.2,
