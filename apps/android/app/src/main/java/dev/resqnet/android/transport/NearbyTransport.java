@@ -89,7 +89,19 @@ public final class NearbyTransport implements MeshTransport {
     /** Discovery namespace. Scoped to this project so it cannot collide. */
     private static final String SERVICE_ID = "resqnet-mesh-v1";
 
-    /** Nearby Connections caps a single payload at 16 KiB. */
+    /**
+     * Largest frame this transport will hand to Nearby.
+     *
+     * <p>This is ResQNet's own limit, not the platform's. The real ceiling is
+     * {@code Connections.MAX_BYTES_DATA_SIZE}, about 1 MiB, so the guard here is
+     * roughly sixty times more conservative than necessary.
+     *
+     * <p>That is intentional and is enforced anyway. A frame this size is
+     * already larger than an SOS needs to be, and the envelope layer caps an
+     * encoded message at 16 KiB, so anything above that is a bug rather than a
+     * large message. Checking it at the transport means a bug is caught here
+     * with a clear reason instead of surfacing as an opaque Nearby rejection.
+     */
     private static final long NEARBY_MAX_PAYLOAD_BYTES = 16 * 1024L;
 
     private static final AtomicLong TOKEN_SEQUENCE = new AtomicLong(1L);

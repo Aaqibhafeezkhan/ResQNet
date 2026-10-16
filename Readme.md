@@ -393,11 +393,18 @@ Stated plainly so it is not discovered by a reviewer.
   one that matters. Seven defects found by auditing the app would each have
   prevented the three-phone demo on their own; they are fixed, but nothing
   proves the radio path works.
-- **P2P_CLUSTER membership is not modelled.** A cluster client connects only
-  to the cluster owner and can never open a direct link to a sibling client,
-  while the router's only view of topology is `connectedPeerIds()`. Broadcast
-  SOS works because the owner relays. A directed send to a peer in the same
-  cluster is queued and re-offered rather than delivered immediately.
+- **Multi-hop cannot be observed when the phones are in range of each other.**
+  Not a defect, but it will look like one. `P2P_CLUSTER` is an M-to-N strategy:
+  every device within radio range (~100 m) connects to every other, so with
+  three phones side by side, A to C is *one* hop and no relay is involved. A
+  demonstration has to put the phones out of range of each other for the
+  relay to exist at all, which is why `DEVICE_TESTING.md` insists on a closed
+  door and on confirming C does not appear in A's peer list before sending.
+- **No P2P_CLUSTER authentication token is used.** Google's API makes it
+  optional and connection-level authentication is not required for the relay to
+  work. Trust is enforced one layer up, by envelope signature verification
+  against a key the owner confirmed in person, which is the stronger property
+  but also means an unauthenticated peer can occupy a connection slot.
 
 ---
 
