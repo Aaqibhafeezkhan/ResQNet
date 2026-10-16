@@ -12,8 +12,9 @@ android {
         // device identity needs to publish its public key, arrived in API 26.
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName '0.1.0'
+        // 2 because 0.1.0 shipped as the debug-signed internal build.
+        versionCode 2
+        versionName '0.2.0-beta.1'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
@@ -28,10 +29,45 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
                     'proguard-rules.pro'
-            // Debug signing is used so that a clean checkout can produce a
-            // release-mode build for CI verification. A real deployment supplies
-            // its own keystore through ~/.gradle/gradle.properties, which is
-            // never committed.
+            // Unset by default, so a checkout with no keystore produces an
+            // unsigned APK rather than something signed with a key that is in
+            // the repository. See the signingConfigs block below.
+        }
+    }
+
+    // ---------------------------------------------------------------- signing
+    //
+    // Signing material is never committed. The keystore path and its passwords
+    // are read from Gradle properties, which a developer keeps in
+    // ~/.gradle/gradle.properties and CI writes from repository secrets. When
+    // they are absent the release build stays unsigned and says so, rather than
+    // silently falling back to the debug key: an APK signed with the debug key
+    // looks installable and must never reach a tester by accident.
+
+    def keystoreFilePath = providers.gradleProperty('RESQNET_KEYSTORE_FILE').orNull
+    def keystorePasswordValue = providers.gradleProperty('RESQNET_KEYSTORE_PASSWORD').orNull
+    def keyAliasValue = providers.gradleProperty('RESQNET_KEY_ALIAS').orNull
+    def keyPasswordValue = providers.gradleProperty('RESQNET_KEY_PASSWORD').orNull
+    def hasReleaseSigning = keystoreFilePath && keystorePasswordValue
+            && keyAliasValue && keyPasswordValue
+            && file(keystoreFilePath).exists()
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(keystoreFilePath)
+                storePassword keystorePasswordValue
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
