@@ -44,6 +44,8 @@
     <maven.failsafe.plugin.version>3.5.2</maven.failsafe.plugin.version>
     <!-- Integration tests need a live PostgreSQL; see the failsafe config. -->
     <skipITs>true</skipITs>
+    <!-- Overridden to an empty value by the CI step that runs slow tests. -->
+    <excludedTestGroups>slow</excludedTestGroups>
     <maven.enforcer.plugin.version>3.5.0</maven.enforcer.plugin.version>
   </properties>
 
@@ -91,6 +93,20 @@
             <compilerArgs>
               <arg>-parameters</arg>
             </compilerArgs>
+            <!--
+              Full recompilation whenever the module is touched.
+
+              The default incremental mode decided "nothing to compile" after
+              source files had genuinely changed, and kept class files that
+              referenced types which no longer existed. The failure was silent:
+              the build passed and the stale class threw
+              "Unresolved compilation problem" at runtime, three separate times
+              during M10 before the cause was identified.
+
+              A compiler that occasionally skips a real change is worse than
+              one that recompiles slightly too eagerly.
+            -->
+            <useIncrementalCompilation>false</useIncrementalCompilation>
           </configuration>
         </plugin>
         <plugin>
@@ -99,6 +115,13 @@
           <version>${maven.surefire.plugin.version}</version>
           <configuration>
             <argLine>-Xmx1g -Djava.awt.headless=true</argLine>
+            <!--
+              "slow" is opt-in, not opt-out. Some tests here run whole simulated
+              meshes rather than methods; they are worth running but would triple
+              the build for every push. CI runs them in a dedicated step with
+              -DexcludedGroups=, so nothing is actually skipped there.
+            -->
+            <excludedGroups>${excludedTestGroups}</excludedGroups>
             <!--
               Use the class directory, not the packaged artifact.
 

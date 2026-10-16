@@ -21,8 +21,11 @@ import java.util.Set;
  *       duplicates are suppressed rather than amplified.</li>
  *   <li>{@link #STAR} — a single relay is the only route. Tests relay load and
  *       what happens when the hub leaves.</li>
- *   <li>{@link #MESH} — dense, many redundant paths. Tests amplification
- *       bounds under the worst realistic case.</li>
+ *   <li>{@link #MESH} — a circulant band: every node joined to its +/-1 and
+ *       +/-2 neighbours. <b>Its diameter grows linearly with node count</b>
+ *       (n/4), so it is a sparse chain-like graph, not a well-connected mesh,
+ *       and delivery falls with size for that reason alone. Tests amplification
+ *       bounds and, just as usefully, what a hop budget cannot buy.</li>
  *   <li>{@link #TWO_CLUSTER} — a partition. Tests that delivery fails cleanly
  *       rather than reporting a false success.</li>
  *   <li>{@link #RANDOM} — seeded, so an interesting shape can be captured by
@@ -157,6 +160,18 @@ public final class Topology {
                 }
             }
             case MESH -> {
+                // A circulant graph on the node index: each node is joined to
+                // the nodes one, two and optionally three positions away on
+                // either side. Redundancy is local, so the diameter is about
+                // nodeCount / 4 and grows without bound.
+                //
+                // This is NOT a well-mixed mesh despite the name, and the
+                // distinction matters: at 500 nodes its diameter is 125, so
+                // only a quarter of node pairs are within a 32-hop budget. A
+                // run that reports falling delivery at that size is reporting
+                // the graph, not the router. Use RANDOM for a small-diameter
+                // graph of the same size, or read the structural ceiling from
+                // TopologyDiagnostics before comparing delivery rates.
                 for (int i = 0; i < nodeCount; i++) {
                     connect(adjacency, i, (i + 1) % nodeCount);
                     connect(adjacency, i, (i + 2) % nodeCount);

@@ -49,6 +49,13 @@ jobs:
           python3 scripts/compare_reports.py \
             target/determinism-a.json target/determinism-b.json
 
+      # The tests tagged slow run whole simulated meshes rather than methods.
+      # They are excluded above so an ordinary build stays quick, which means
+      # they have to be asked for explicitly here or nothing would run them.
+      - name: Slow tests
+        # Excludes nothing, which opts in to every @Tag("slow") test.
+        run: mvn -B -ntp verify -DexcludedTestGroups=
+
       - name: Upload surefire reports
         if: always()
         uses: actions/upload-artifact@v4
