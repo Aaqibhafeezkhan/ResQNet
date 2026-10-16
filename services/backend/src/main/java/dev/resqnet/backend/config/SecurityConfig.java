@@ -111,6 +111,15 @@ public class SecurityConfig {
                         // permitting the path here only lets the request reach
                         // that check. Reads stay authenticated below.
                         .requestMatchers(HttpMethod.POST, "/api/v1/simulations").permitAll()
+                        // The dashboard event stream authenticates itself in a
+                        // handshake interceptor, because a browser cannot set an
+                        // Authorization header on a WebSocket. The security
+                        // filter runs before the handler mapping and would
+                        // otherwise deny the upgrade outright, so the path is
+                        // permitted here and the interceptor does the real
+                        // check. Anything reaching the handler without a valid
+                        // token is closed before it can subscribe.
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(requestIdFilter, UsernamePasswordAuthenticationFilter.class)

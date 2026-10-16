@@ -31,6 +31,19 @@ public record ResQNetPrincipal(String name, ResponderRole role, Long accountId, 
         return gateway() || role != null;
     }
 
+    /**
+     * True for any human session, whatever their role.
+     *
+     * <p>Distinct from {@link #canMutateIncidents()} and {@link #canReadAudit()}.
+     * The live event stream is not an authority question but an identity one: a
+     * responder watching the queue does not need to be able to change anything
+     * to be entitled to see that something changed, and a gateway device must
+     * never see the stream at all.
+     */
+    public boolean isResponder() {
+        return !gateway() && role != null;
+    }
+
     public boolean canMutateIncidents() {
         return !gateway() && role != null && role.canMutateIncidents();
     }

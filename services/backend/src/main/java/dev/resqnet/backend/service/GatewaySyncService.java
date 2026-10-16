@@ -29,13 +29,16 @@ public class GatewaySyncService {
     private final GatewayDeviceRepository devices;
     private final IncidentService incidentService;
     private final AuditService audit;
+    private final IncidentEventPublisher events;
 
     public GatewaySyncService(IncidentRepository incidents, GatewayDeviceRepository devices,
-                              IncidentService incidentService, AuditService audit) {
+                              IncidentService incidentService, AuditService audit,
+                              IncidentEventPublisher events) {
         this.incidents = incidents;
         this.devices = devices;
         this.incidentService = incidentService;
         this.audit = audit;
+        this.events = events;
     }
 
     /**
@@ -93,6 +96,18 @@ public class GatewaySyncService {
                 rejected++;
             }
         }
+
+        // One event for the batch rather than one per record. A handset
+        // reconnecting after a long gap can report fifty messages, and fifty
+        // identical "a device reported something" frames tell a dashboard
+        // nothing that one summary does not. The individual incident events
+        // were already staged by IncidentService.
+        events.stage(new IncidentEventPublisher.IncidentEvent(
+                IncidentEventPublisher.GATEWAY_SYNC, null, java.time.Instant.now().toString(),
+                records.size() + " record(s) from " + request.source()
+                        + ": " + created + " created, " + updated + " updated, "
+                        + rejected + " rejected",
+                null));
 
         return new Dtos.GatewaySyncResponse(UUID_NAME, records.size(), created, updated,
                 rejected, rejected == 0 ? null : rejected + " record(s) rejected");

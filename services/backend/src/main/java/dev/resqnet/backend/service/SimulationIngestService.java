@@ -36,7 +36,11 @@ public class SimulationIngestService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
 
-    public SimulationIngestService(JdbcTemplate jdbc, ObjectMapper mapper) {
+    private final IncidentEventPublisher events;
+
+    public SimulationIngestService(JdbcTemplate jdbc, ObjectMapper mapper,
+                                   IncidentEventPublisher events) {
+        this.events = events;
         this.jdbc = jdbc;
         this.mapper = mapper;
     }
@@ -103,6 +107,17 @@ public class SimulationIngestService {
             response.put("runId", runId);
             response.put("acceptedEvents", stored);
             response.put("simulated", true);
+
+            // Announced on the live stream so a dashboard that is showing the
+            // topology panel updates without waiting for its next poll. The
+            // detail is explicit that this is generated data: a run appearing
+            // in a responder console must never be mistakable for a handset
+            // reporting from a street.
+            events.stage(new IncidentEventPublisher.IncidentEvent(
+                    IncidentEventPublisher.SIMULATION_INGESTED, runId,
+                    java.time.Instant.now().toString(),
+                    "SIMULATED run ingested: " + stored + " events",
+                    null));
             return response;
         } catch (Exception e) {
             log.warn("Rejected a simulation report: {}", e.getMessage());

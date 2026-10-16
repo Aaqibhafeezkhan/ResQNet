@@ -43,12 +43,14 @@ public class IncidentService {
     private final IncidentRepository incidents;
     private final IncidentMessageRepository messages;
     private final AuditService audit;
+    private final IncidentEventPublisher events;
 
     public IncidentService(IncidentRepository incidents, IncidentMessageRepository messages,
-                           AuditService audit) {
+                           AuditService audit, IncidentEventPublisher events) {
         this.incidents = incidents;
         this.messages = messages;
         this.audit = audit;
+        this.events = events;
     }
 
     /** Creates an incident from a device report. */
@@ -70,6 +72,8 @@ public class IncidentService {
                 "incident", saved.getReference(),
                 "category=" + saved.getCategory() + " severity=" + saved.getSeverity(),
                 requestId);
+        events.stageIncidentChange(IncidentEventPublisher.INCIDENT_CREATED, toSummary(saved),
+                "reported by " + (gatewayDeviceId == null ? "this device" : gatewayDeviceId));
         return saved;
     }
 
@@ -88,6 +92,8 @@ public class IncidentService {
         Incident saved = incidents.save(incident);
         audit.record(actor.name(), actor.role(), "INCIDENT_CREATED", "incident",
                 saved.getReference(), request.title(), requestId);
+        events.stageIncidentChange(IncidentEventPublisher.INCIDENT_CREATED, toSummary(saved),
+                "created by " + actor.name() + " (not device-reported)");
         return saved;
     }
 
@@ -138,6 +144,14 @@ public class IncidentService {
                 reference, previous + " -> " + saved.getStatus()
                         + (request.note() == null ? "" : " (" + request.note() + ")"),
                 requestId);
+        // Resolution gets its own event type rather than being folded into
+        // "updated": a dashboard that wants to celebrate a closed incident
+        // should not have to compare the previous state it may never have seen.
+        events.stageIncidentChange(
+                saved.getStatus().closed() ? IncidentEventPublisher.RESOLVED
+                        : IncidentEventPublisher.INCIDENT_UPDATED,
+                toSummary(saved),
+                previous + " to " + saved.getStatus() + " by " + actor.name());
         return saved;
     }
 
@@ -152,6 +166,8 @@ public class IncidentService {
         Incident saved = incidents.save(incident);
         audit.record(actor.name(), actor.role(), "INCIDENT_ASSIGNED", "incident", reference,
                 "assigned to account " + accountId, requestId);
+        events.stageIncidentChange(IncidentEventPublisher.INCIDENT_ASSIGNED, toSummary(saved),
+                "assigned to account " + accountId + " by " + actor.name());
         return saved;
     }
 
