@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag, for example v0.2.0-beta.1'
+        description: 'Release tag, for example v0.1.0-alpha'
         required: true
         type: string
       prerelease:
@@ -64,18 +64,32 @@ jobs:
         with:
           working-directory: apps/android
 
-      - name: Check the requested tag matches the application version
+      - name: Check the requested tag matches the project version
         id: meta
         env:
           REQUESTED_TAG: ${{ inputs.tag }}
         run: |
-          # Publishing v0.3.0 with a 0.2.0 APK inside is exactly the sort of
+          # Publishing v0.3.0 with a 0.2.0 jar inside is exactly the sort of
           # mistake that is easy to make and impossible to unpick afterwards.
-          version=$(grep -oE "versionName '[^']+'" apps/android/app/build.gradle \
+          #
+          # The version is read from the root pom, which every module inherits.
+          # It used to be read from the Android build file, which made an app
+          # that ships no binary the authority for a server release.
+          version=$(sed -n 's|.*<version>\(0[^<]*\)</version>.*|\1|p' pom.xml | head -1)
+          if [ -z "$version" ]; then
+            echo "::error::could not read the project version from pom.xml"
+            exit 1
+          fi
+          # The Android app mirrors the same version and must not drift from it.
+          android=$(grep -oE "versionName '[^']+'" apps/android/app/build.gradle \
             | head -1 | sed "s/versionName '//;s/'//")
+          if [ "$android" != "$version" ]; then
+            echo "::error::Android versionName $android does not match pom.xml $version"
+            exit 1
+          fi
           expected="v$version"
           if [ "$REQUESTED_TAG" != "$expected" ]; then
-            echo "::error::tag $REQUESTED_TAG does not match the application version $expected"
+            echo "::error::tag $REQUESTED_TAG does not match the project version $expected"
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -107,13 +121,16 @@ jobs:
       - name: Java tests including the slow ones
         run: mvn -B -ntp verify -DexcludedTestGroups=
 
+      # No Android binary is published: physical-device networking has never
+      # been tested. The script is told so explicitly rather than relying on
+      # someone remembering to delete the APK directory afterwards.
       - name: Build the release artifacts
-        run: bash scripts/build_release_artifacts.sh
+        run: bash scripts/build_release_artifacts.sh --exclude-android
 
       - name: Verify the published checksums
         run: |
           cd dist
-          sha256sum --check SHA256SUMS.txt
+          sha256sum --check SHA256SUMS
 
       - name: Record what the artifacts actually are
         run: |
@@ -126,8 +143,8 @@ jobs:
             cat dist/SHA256SUMS.txt
             echo '```'
             echo
-            echo "Physical-device networking has not been tested. See"
-            echo "\`apps/android/DEVICE_TESTING.md\`."
+            echo "No Android binary is included: physical-device networking"
+            echo "has never been tested. See \`apps/android/DEVICE_TESTING.md\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifacts
@@ -164,8 +181,8 @@ jobs:
         run: |
           if [ -n "$NOTES_FILE" ] && [ -f "$NOTES_FILE" ]; then
             cp "$NOTES_FILE" /tmp/notes.md
-          elif [ -f artifacts/release-notes.md ]; then
-            cp artifacts/release-notes.md /tmp/notes.md
+          elif [ -f artifacts/RELEASE_NOTES.md ]; then
+            cp artifacts/RELEASE_NOTES.md /tmp/notes.md
           else
             printf 'Experimental beta for ResQNet.\n\nSee the repository README.\n' \
               > /tmp/notes.md
@@ -180,25 +197,26 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag }}
-          name: ResQNet ${{ inputs.tag }} (experimental)
+          name: ${{ inputs.tag }} — Experimental Developer Preview
           body: ${{ steps.body.outputs.notes }}
           prerelease: ${{ inputs.prerelease }}
           draft: false
           files: |
-            artifacts/apk/*.apk
             artifacts/jars/*.jar
-            artifacts/SHA256SUMS.txt
+            artifacts/web/*.zip
+            artifacts/SHA256SUMS
+            artifacts/RELEASE_NOTES.md
+            artifacts/INSTALLATION.md
 
       - name: Explain what was and was not verified
         run: |
           cat <<'SUMMARY' >> "$GITHUB_STEP_SUMMARY"
           ## Release created
 
-          **Experimental beta.** Before testing it, read
-          `apps/android/DEVICE_TESTING.md`: two physical Android phones have
-          never exchanged a message. Seven defects that would each have
-          prevented the three-phone relay were found by reading the code, and
-          none of them is proof that the radio path works.
+          **Experimental developer preview.** No Android binary is attached:
+          two physical Android phones have never exchanged a message. The
+          defects that would each have prevented it were found by reading the
+          code, and none of that is proof the radio path works.
 
-          Checksums are in `SHA256SUMS.txt` beside the artifacts.
+          Verify with `sha256sum -c SHA256SUMS` beside the artifacts.
           SUMMARY
