@@ -32,6 +32,17 @@
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!--
+      Reproducible archives.
+
+      Without a fixed output timestamp every build stamps the current time into
+      the jar entries, so two builds of identical source differ byte for byte
+      and a published SHA-256 means nothing. This pins the timestamp and the
+      entry order, so the checksum in the release notes is a claim somebody can
+      check rather than a number that changes every time the build runs.
+    -->
+    <project.build.outputTimestamp>2026-01-01T00:00:00Z</project.build.outputTimestamp>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <junit.version>5.11.4</junit.version>
@@ -42,6 +53,7 @@
     <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
     <maven.surefire.plugin.version>3.5.2</maven.surefire.plugin.version>
     <maven.failsafe.plugin.version>3.5.2</maven.failsafe.plugin.version>
+    <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
     <!-- Integration tests need a live PostgreSQL; see the failsafe config. -->
     <skipITs>true</skipITs>
     <!-- Overridden to an empty value by the CI step that runs slow tests. -->
