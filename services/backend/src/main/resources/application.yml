@@ -66,3 +66,19 @@ logging:
   pattern:
     # Structured, machine-parseable, and free of secrets.
     console: '{"ts":"%d{yyyy-MM-dd''T''HH:mm:ss.SSS''Z''}","level":"%p","logger":"%logger{36}","msg":"%replace(%m){''"'',''\\"''}"}%n'
+
+---
+# Documentation endpoints.
+#
+# The OpenAPI schema is the complete responder API surface: every endpoint,
+# every field, every role check. Exposing it on a deployed instance tells an
+# attacker exactly what exists without probing for it.
+#
+# springdoc's own default is to publish the schema in every profile, so it is
+# turned off here and switched on only in the profiles where someone is
+# actually reading it.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

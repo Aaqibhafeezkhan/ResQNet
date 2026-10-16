@@ -85,15 +85,26 @@ public class AuthTokenService {
                 claims.subject(), claims.role(), claims.accountId()));
     }
 
+    /**
+     * Compares two tokens without leaking their contents through timing.
+     *
+     * <p>The length is folded into the accumulator rather than checked first.
+     * Returning early on a length mismatch made the token's <em>length</em> the
+     * thing an attacker measured, which is the one property the method name
+     * promised to remove: it leaks just as reliably as the contents do, and a
+     * length oracle turns a brute-force search into a much smaller one.
+     */
     private static boolean constantTime(String a, String b) {
         byte[] left = a.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         byte[] right = b.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        if (left.length != right.length) {
-            return false;
-        }
-        int difference = 0;
-        for (int i = 0; i < left.length; i++) {
-            difference |= left[i] ^ right[i];
+        int difference = left.length ^ right.length;
+        // Bounded by the longer array and safe at every index, so an empty or
+        // short token is compared rather than short-circuited.
+        int longest = Math.max(left.length, right.length);
+        for (int i = 0; i < longest; i++) {
+            byte leftByte = i < left.length ? left[i] : (byte) 0;
+            byte rightByte = i < right.length ? right[i] : (byte) 0;
+            difference |= leftByte ^ rightByte;
         }
         return difference == 0;
     }

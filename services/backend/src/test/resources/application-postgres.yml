@@ -1,0 +1,62 @@
+# PostgreSQL integration test profile.
+#
+# This profile exists so CI can run the real Flyway migrations and the real
+# JPA mappings against a real PostgreSQL server.
+#
+# It is deliberately NOT the same as the default test profile. The default
+# profile uses H2 in PostgreSQL compatibility mode, which is a reasonable
+# trade-off for fast local runs but is not evidence that the system works on
+# the database it will actually ship against. H2's compatibility mode accepts
+# syntax PostgreSQL would reject, and its type coercion is not identical:
+#
+#   - TIMESTAMP WITH TIME ZONE is the one spelling both accept, but H2's
+#     offset handling has already diverged once during development.
+#   - Flyway runs migrations against H2 in the default profile, so a
+#     migration that only PostgreSQL would fail on has passed.
+#   - Partial indexes, JSONB, and CHECK constraint deferral are not enforced
+#     the same way.
+#
+# The consequence is that "tests pass locally" does not imply "the schema
+# applies on PostgreSQL", and only this profile can close that gap. CI runs
+# both: the H2 profile on every push for speed, this one to prove the real
+# thing.
+spring:
+  datasource:
+    url: ${TEST_PG_URL:jdbc:postgresql://localhost:5432/resqnet_test}
+    driver-class-name: org.postgresql.Driver
+    username: ${TEST_PG_USER:resqnet}
+    password: ${TEST_PG_PASSWORD:resqnet}
+    hikari:
+      # Small pool: CI runs these tests in one JVM against one container, and a
+      # larger pool just adds connection churn against the service container.
+      maximum-pool-size: 5
+  jpa:
+    hibernate:
+      # The schema under test must be the one that ships. Flyway creates it,
+      # Hibernate only checks that the mappings agree with it.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # Start from nothing every run so a migration that is not idempotent or
+    # not correctly ordered fails here rather than in a deployment.
+    clean-disabled: false
+
+resqnet:
+  security:
+    jwt-secret: "postgres-profile-secret-long-enough-to-pass-32"
+    token-ttl-minutes: 30
+    gateway-token: "test-gateway-token"
+  gateway:
+    max-batch-size: 200
+
+logging:
+  level:
+    root: WARN
+    dev.resqnet.backend: INFO
+    org.flywaydb: INFO

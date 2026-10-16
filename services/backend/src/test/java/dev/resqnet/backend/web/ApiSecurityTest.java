@@ -1,5 +1,6 @@
 package dev.resqnet.backend.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import dev.resqnet.backend.domain.ResponderAccount;
 import dev.resqnet.backend.domain.ResponderRole;
+import dev.resqnet.backend.repository.AuditEventRepository;
+import dev.resqnet.backend.security.RequestIdFilter;
 import dev.resqnet.backend.repository.ResponderAccountRepository;
 import dev.resqnet.backend.security.JwtService;
 
@@ -48,6 +51,9 @@ class ApiSecurityTest {
     @Autowired
     private ResponderAccountRepository accounts;
 
+    @Autowired
+    private AuditEventRepository auditRepository;
+
     private String tokenFor(ResponderRole role, String username) {
         ResponderAccount account = accounts.save(new ResponderAccount(
                 username + "-" + System.nanoTime(), username, encoder.encode("pw"), role));
@@ -59,6 +65,48 @@ class ApiSecurityTest {
     void rejectsUnauthenticatedRead() throws Exception {
         mvc.perform(get("/api/v1/incidents"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("a wrong Content-Type is a client error, not a 500")
+    void wrongContentTypeIsNotAnInternalError() throws Exception {
+        // A device posting form-encoded data is a bug in the device. Answering
+        // 500 would tell its logs the gateway is broken.
+        mvc.perform(post("/api/v1/simulations")
+                        .header("Authorization", "Bearer test-gateway-token")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .content("runId=x"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+    }
+
+    @Test
+    @DisplayName("gateway sync rows carry the request id, not a constant")
+    void gatewaySyncUsesTheRequestId() throws Exception {
+        mvc.perform(post("/api/v1/gateway/sync")
+                        .header("Authorization", "Bearer test-gateway-token")
+                        .header(RequestIdFilter.HEADER, "test-correlation-id")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(gatewayBody("rqn1_corr", "m-corr")))
+                .andExpect(status().isOk());
+
+        // The audit trail is the record an investigator reads. A constant
+        // request id would make every sync indistinguishable from every other.
+        assertThat(auditRepository.findAll())
+                .as("the correlation id must reach the audit row")
+                .isNotEmpty()
+                .allSatisfy(row -> assertThat(row.getRequestId())
+                        .isEqualTo("test-correlation-id"));
+    }
+
+    private static String gatewayBody(String deviceId, String messageId) {
+        return """
+                {"source":"android","deviceId":"%s","records":[{"messageId":"%s",
+                "state":"ACKNOWLEDGED","priority":"SOS","type":"EMERGENCY_REPORT",
+                "category":"medical","advisoryConfidence":0.8,"origin":"rqn1_o",
+                "destination":"command","createdAt":1760000000000,
+                "expiresAt":1760000900000,"attempts":1,"detail":"corr test"}]}
+                """.formatted(deviceId, messageId);
     }
 
     @Test

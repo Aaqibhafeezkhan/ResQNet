@@ -12,6 +12,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -75,6 +76,24 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = base("VALIDATION_FAILED", "The request was not valid");
         body.put("fields", fields);
         return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * A wrong Content-Type is a client error, not a server fault.
+     *
+     * <p>Spring raises this before the controller runs, and the catch-all
+     * handler was turning it into a 500. A device posting
+     * {@code application/x-www-form-urlencoded} to a JSON endpoint is a bug in
+     * the device, and answering 500 tells its logs that the gateway is broken
+     * when it is not. It also logged a full stack trace for what is ordinary
+     * client misbehaviour.
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> unsupportedMediaType(
+            HttpMediaTypeNotSupportedException e) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(base("UNSUPPORTED_MEDIA_TYPE",
+                        "This endpoint accepts application/json"));
     }
 
     @ExceptionHandler(Exception.class)

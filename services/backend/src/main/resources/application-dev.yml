@@ -1,0 +1,7 @@
+
+# API documentation is a development aid. Re-enabled here only.
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
