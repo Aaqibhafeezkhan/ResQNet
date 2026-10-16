@@ -203,11 +203,16 @@ session would imply an accountability model that does not exist.
 | Suite | Count | Command |
 |---|---:|---|
 | mesh-core | 141 | `mvn -pl packages/mesh-core test` |
-| simulator | 41 | `mvn -pl packages/mesh-simulator -am test` |
-| backend (H2) | 50 | `mvn -pl services/backend test` |
+| simulator | 45 | `mvn -pl packages/mesh-simulator -am test` |
+| backend (H2) | 58 | `mvn -pl services/backend test` |
 | backend (PostgreSQL) | 7 | see below, runs in CI against `postgres:16-alpine` |
-| Android | 38 | `cd apps/android && ./gradlew testDebugUnitTest` |
-| Web | 39 | `cd apps/web && npm run test` |
+| Android | 43 | `cd apps/android && ./gradlew testDebugUnitTest` |
+| Web | 46 | `cd apps/web && npm run test` |
+
+Seven of these are tagged `slow` because they run whole simulated meshes
+rather than methods. They are excluded from an ordinary build so a push stays
+quick, and CI asks for them explicitly with `-DexcludedTestGroups=`, so
+nothing is silently skipped.
 
 The PostgreSQL integration tests run against a real server and are **not** run
 by default, because they need one:
@@ -230,6 +235,19 @@ migrations produced, a millisecond timestamp surviving a `timestamptz` round
 trip, the message-id uniqueness constraint and the severity CHECK constraint
 being enforced by the database rather than only by application code, the
 incident lifecycle, and device actions being audited as `DEVICE`.
+
+### The demonstration
+
+```bash
+CP=packages/mesh-simulator/target/classes:packages/mesh-core/target/classes
+java -cp $CP dev.resqnet.mesh.simulator.demo.DemoScenario
+```
+
+Seven stages over the real `MeshRouter` with a modelled radio: composition
+with no network, two-hop delivery, a relay vanishing mid-flight, recovery,
+gateway sync without content, end-to-end confirmation, and the responder
+view. It exits non-zero if any stage misbehaves, and three tests assert on
+that result.
 
 ### What the tests do not cover
 
@@ -276,6 +294,23 @@ python3 scripts/compare_reports.py /tmp/a.json /tmp/b.json
 ---
 
 ## Benchmarks
+
+**Delivery figures are computed over directed messages only.** A broadcast has
+no destination, so nothing can acknowledge it, and counting broadcasts in the
+denominator capped the reported rate below 100% however well the mesh
+performed. Both counts are reported separately.
+
+**What limits delivery is the graph, not the router.** `TopologyDiagnostics`
+measures the shapes the simulator builds. `MESH` is a circulant band of
+diameter n/4, so at 500 nodes only a quarter of node pairs are inside a
+32-hop budget; `RANDOM` at the same size has diameter 6. Across hop budgets
+at 100 nodes the router reaches 98–100% of what the graph permits, and at
+500 nodes the measured 21.6% sits directly under the 25.7% structural
+ceiling. The full argument, including seven causes that were tested and
+ruled out, is in
+[docs/routing-analysis.md](docs/routing-analysis.md), and
+`RoutingEfficiencyTest` asserts it so a future regression fails the build
+rather than quietly reappearing as a benchmark number.
 
 Full numbers, with the host they were measured on, are in
 [docs/benchmarks/results.md](docs/benchmarks/results.md), regenerable with:
@@ -355,7 +390,14 @@ Stated plainly so it is not discovered by a reviewer.
 - **Manual incident creation has no UI.** The endpoint works.
 - **The physical-device test has not been run.** This is the largest gap in
   the project and it is listed first in the test section above because it is the
-  one that matters.
+  one that matters. Seven defects found by auditing the app would each have
+  prevented the three-phone demo on their own; they are fixed, but nothing
+  proves the radio path works.
+- **P2P_CLUSTER membership is not modelled.** A cluster client connects only
+  to the cluster owner and can never open a direct link to a sibling client,
+  while the router's only view of topology is `connectedPeerIds()`. Broadcast
+  SOS works because the owner relays. A directed send to a peer in the same
+  cluster is queued and re-offered rather than delivered immediately.
 
 ---
 
