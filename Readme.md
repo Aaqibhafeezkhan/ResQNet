@@ -1,0 +1,347 @@
+# ResQNet
+
+Peer-to-peer emergency messaging that keeps working when the network does not.
+
+When cell towers lose power, so does the internet. Bluetooth and Wi-Fi Direct do
+not: the radios are in the phones, the batteries are in the phones, and the
+people who need to talk are holding the phones. ResQNet is the layer that makes
+those radios useful to each other.
+
+A handset sends an SOS. It is handed to whichever nearby devices are connected.
+They hand it on. The message keeps moving until it reaches the device that owns
+the responder, or until its lifetime runs out. No server is involved at any
+point. The coordination gateway is strictly optional and is never on the
+emergency path.
+
+---
+
+## What is actually implemented
+
+This is a description of the code in this repository, not a roadmap. Anything
+not listed here does not exist.
+
+### Mesh core (`packages/mesh-core`, pure Java 21, zero dependencies)
+
+The engine that runs on the handset. It has no third-party runtime
+dependencies and compiles against nothing newer than the Android API 26
+surface, because the Android app compiles it *from source* rather than
+consuming a jar.
+
+- Controlled flooding with split horizon, bounded fan-out and hop limits.
+- Duplicate suppression keyed on message id, bounded on three axes
+  (entries, bytes, age) so a long-running handset cannot grow without limit.
+- Durable store-and-forward. A message queued on a relay is persisted before
+  the relay acknowledges it, and survives the process dying.
+- Signed envelopes. Every hop carries a signature; the identity is derived from
+  the device's X.509 EC public key, so there is no trust-on-first-use and no
+  account to lose.
+- Offline triage. A keyword classifier runs on the handset with no network, so
+  a category and a severity exist before anything is transmitted.
+- Application-level acknowledgements, which are the only thing that counts as
+  proof of delivery.
+
+### Simulator (`packages/mesh-simulator`)
+
+A discrete-event model of the same routing code. Not a mock: it runs the real
+`MeshRouter` with a modelled radio.
+
+- Line, ring, star, mesh, two-cluster and random topologies.
+- Link loss, churn and partition modelling.
+- Reproducible from a seed. See [Reproducibility](#reproducibility) for exactly
+  what is and is not byte-stable.
+- Publishes reports straight to a running gateway.
+
+### Coordination gateway (`services/backend`, Spring Boot 3)
+
+Optional. A handset may synchronise with it when it has connectivity, and a
+responder console reads from it. **Nothing on the emergency path depends on it
+existing.** Message bodies are never sent to it, only delivery metadata.
+
+- Flyway migrations, JPA entities, HMAC-signed JWTs.
+- Separate credentials for people and for devices. A device may report; only a
+  person may act. The two are not interchangeable.
+- Incident lifecycle with an audit trail. Device actions are recorded as
+  `DEVICE`, never as a responder role, because the audit trail is the record an
+  investigator is guaranteed to read.
+- Redis-less, single-node by design. No queue, no broker, no cluster.
+
+### Android app (`apps/android`)
+
+- Nearby Connections via the current `ConnectionsClient` API, `P2P_CLUSTER`.
+- Foreground service so the mesh survives the screen turning off.
+- SQLite-backed durable queue.
+- Compiles mesh-core from source, so a mesh-core change that breaks Android is
+  caught by `apps/android/app/build.gradle` rather than at release time.
+
+### Web (`apps/web`, React 18 + Vite)
+
+- A landing page that makes one claim and supports it.
+- A responder command centre: queue, detail, live counters, topology.
+- The client distinguishes *the gateway is unreachable* from *there are no
+  incidents*. Conflating them would let a responder act on a dashboard that is
+  quietly reporting an empty queue because it could not reach the server.
+
+---
+
+## Architecture
+
+```
+   Android handset A                Android handset C
+  ┌───────────────────┐           ┌───────────────────┐
+  │ UI / MeshService  │           │ UI / MeshService  │
+  │        ↓          │           │        ↑          │
+  │  MeshRouter       │  Bluetooth │  MeshRouter      │
+  │  (mesh-core)      │ ─────────► │  (mesh-core)     │
+  │        ↓          │  / Wi-Fi   │        ↑          │
+  │ SQLite queue      │   Direct   │ SQLite queue      │
+  └───────────────────┘           └───────────────────┘
+            │  (only when a connection happens to exist)
+            ▼
+   ┌────────────────────────────┐
+   │  Coordination gateway      │   Spring Boot
+   │  incidents · audit · sync  │   optional, never required
+   └────────────────────────────┘
+            │
+            ▼
+   ┌────────────────────────────┐
+   │  Responder command centre  │   React
+   └────────────────────────────┘
+```
+
+The full design, including the reasoning behind each trade-off, is in
+[docs/architecture/README.md](docs/architecture/README.md).
+
+### The distinction the whole system rests on
+
+`SENT_TO_PEER` and `ACKNOWLEDGED` are different states and are never collapsed.
+
+A successful Nearby Connections payload transfer proves that one radio hop
+succeeded. It does not prove that a person received anything. The UI renders
+`SENT_TO_PEER` as "Handed to a nearby device", never as delivered, because a
+responder deciding whether to hold a position needs to know the difference.
+
+---
+
+## Running it locally
+
+Requires JDK 21, Maven 3.9+, Node 21+.
+
+```bash
+git clone https://github.com/Gautam-aman/ResQNet.git
+cd ResQNet
+
+# Java modules: mesh core, simulator, gateway
+mvn -q package
+
+# Web
+cd apps/web && npm ci && npm run build
+```
+
+### Run a simulation
+
+```bash
+CP=packages/mesh-simulator/target/classes:packages/mesh-core/target/classes
+
+java -cp $CP dev.resqnet.mesh.simulator.SimulatorCli \
+  --topology mesh --nodes 12 --messages 40 --seed 7 --rounds 60 \
+  --out /tmp/report.json
+```
+
+Useful flags: `--drop 0.2` to lose 20% of frames, `--churn 6` to cut and
+restore a link every six rounds, `--partitioned` to start with the busiest
+relay offline.
+
+### Run the gateway
+
+```bash
+java -jar services/backend/target/backend-0.1.0-SNAPSHOT.jar \
+  --spring.profiles.active=dev
+```
+
+Requires `RESQNET_JWT_SECRET` (32+ characters) and, to let any device
+synchronise, `RESQNET_GATEWAY_TOKEN`. Without them the application refuses to
+start, which is deliberate.
+
+Dev seeds two accounts with the password `resqnet-dev`: `responder` and
+`admin`. They exist only under the `dev` profile.
+
+To use PostgreSQL rather than H2:
+
+```bash
+RESQNET_DB_URL=jdbc:postgresql://localhost:5432/resqnet \
+RESQNET_DB_USER=resqnet RESQNET_DB_PASSWORD=resqnet \
+java -jar services/backend/target/backend-0.1.0-SNAPSHOT.jar \
+  --spring.profiles.active=dev
+```
+
+### Run the web app
+
+```bash
+cd apps/web && npm run dev      # http://localhost:5173
+```
+
+The command centre is at `/command`. The dev server proxies `/api` and `/ws`
+to `localhost:8080`.
+
+### Publish simulator data into a running gateway
+
+```bash
+RESQNET_GATEWAY_TOKEN=dev-device-token \
+java -cp $CP dev.resqnet.mesh.simulator.SimulatorCli \
+  --topology mesh --nodes 14 --messages 50 --seed 11 --quiet \
+  --gateway http://localhost:8080/api/v1/simulations
+```
+
+Ingestion authenticates as a *device*, using the shared token. This is
+deliberate: a simulator is a generator, not a handset, and giving it a human
+session would imply an accountability model that does not exist.
+
+---
+
+## Tests
+
+| Suite | Count | Command |
+|---|---:|---|
+| mesh-core | 141 | `mvn -pl packages/mesh-core test` |
+| simulator | 41 | `mvn -pl packages/mesh-simulator -am test` |
+| backend (H2) | 50 | `mvn -pl services/backend test` |
+| backend (PostgreSQL) | 7 | see below |
+| Android | 38 | `cd apps/android && ./gradlew testDebugUnitTest` |
+| Web | 39 | `cd apps/web && npm run test` |
+
+The PostgreSQL integration tests run against a real server and are **not** run
+by default, because they need one:
+
+```bash
+mvn -pl services/backend -am test \
+  -Dspring.profiles.active=postgres \
+  -Dtest=PostgresMigrationIT \
+  -Dsurefire.failIfNoSpecifiedTests=false
+```
+
+with `TEST_PG_URL`, `TEST_PG_USER` and `TEST_PG_PASSWORD` pointing at a live
+instance. CI does this against a `postgres:16-alpine` service container.
+
+### What the tests do not cover
+
+Being explicit about this is more useful than a coverage number.
+
+- **Physical-device radio behaviour is unverified.** Nearby Connections has not
+  been run between real handsets in CI or on a desk, because CI has no radios
+  and this has not been run on hardware. The procedure for doing so is in
+  [apps/android/DEVICE_TESTING.md](apps/android/DEVICE_TESTING.md), and it is
+  written as a procedure rather than a result because the result does not exist
+  yet.
+- **Real-world range and battery life are unknown.** The benchmarks measure the
+  routing engine against a modelled radio. Nothing here is a claim about how
+  far a message travels through a collapsed building.
+- **PostgreSQL under concurrency is untested.** Migrations and lifecycle are
+  verified; write contention and replication are not.
+- **The WebSocket event stream is not wired to any producer.** See
+  [Unfinished work](#unfinished-work).
+
+---
+
+## Reproducibility
+
+`SimulationReport.volatileJsonFields()` names exactly three things that cannot
+be byte-stable across runs of the same seed, and everything else is
+reproducible:
+
+- `timing.wallClockMillis` and `timing.throughputPerSecond` are measurements.
+- `nodes[].deviceId` and `nodes[].keyFingerprint` come from freshly generated
+  keys.
+
+Every routing decision, counter, latency and hop distribution is a function of
+the seed. This is enforced by a test that forks the CLI in a separate JVM,
+because the failure mode it guards against is invisible in-process: the JDK
+randomises its immutable collection iteration order once per JVM, so two runs
+in one process agree with each other and disagree with every other process.
+
+Verify it yourself:
+
+```bash
+python3 scripts/compare_reports.py /tmp/a.json /tmp/b.json
+```
+
+---
+
+## Benchmarks
+
+Full numbers, with the host they were measured on, are in
+[docs/benchmarks/results.md](docs/benchmarks/results.md), regenerable with:
+
+```bash
+java -cp $CP dev.resqnet.mesh.simulator.benchmark.BenchmarkSuite --seed 42 \
+  --markdown docs/benchmarks/results.md --json docs/benchmarks/results.json
+```
+
+These are simulation results, not field measurements.
+
+The headline finding is that **hop budget, not mesh size, decides whether a
+message crosses**. A flood travels one hop per relay, so a mesh wider than the
+hop budget cannot be crossed no matter how long the sender waits. On a
+100-node mesh with the same seed and the same messages:
+
+| Hop budget | Delivery |
+|---:|---:|
+| 8 | 24.0% |
+| 16 | 52.0% |
+| 32 | 84.0% |
+
+---
+
+## Security posture
+
+Threat model in [docs/security/threat-model.md](docs/security/threat-model.md).
+The parts that are easy to get wrong:
+
+- **No trust on first use.** Identity is a key. A device you have never met is
+  `UNVERIFIED`, not trusted.
+- **Devices cannot act.** The gateway token authorises reporting only. It can
+  never open, assign or close an incident.
+- **People and devices use different credentials.** A device cannot obtain a
+  responder session, and a responder token cannot push device data.
+- **Message bodies never leave the mesh.** Synchronisation sends delivery
+  metadata: ids, states, timestamps, attempt counts.
+- **The audit trail does not overstate authority.** A gateway-synchronised
+  incident is recorded as `DEVICE`, because no human triaged it.
+
+Known limitations are listed in the threat model rather than left implicit. The
+most important one: the shared gateway token is a bearer secret, so it is
+revocable by rotation but not attributable, and every device holding it shares
+one identity.
+
+---
+
+## Unfinished work
+
+Stated plainly so it is not discovered by a reviewer.
+
+- **The WebSocket event stream has no producer.** The handler, the security
+  configuration and the endpoint all exist; nothing calls `broadcast()`, and
+  the frontend polls instead. Wiring it is a feature, not a fix, so it is not
+  included here.
+- **Assignment has no UI.** `POST /incidents/{reference}/assign` exists, is
+  audited and is tested, but the command centre has no control for it.
+- **Manual incident creation has no UI.** The endpoint works.
+- **The physical-device test has not been run.** This is the largest gap in
+  the project and it is listed first in the test section above because it is the
+  one that matters.
+
+---
+
+## Demo
+
+A step-by-step demonstration script, including the exact commands and the
+failure injection, is in [docs/demo.md](docs/demo.md).
+
+The short version: cut phone C's connection to the rest of the mesh, send an SOS
+from phone A, and watch the command centre keep reporting what it actually
+knows rather than what would be convenient.
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE).

@@ -1,0 +1,93 @@
+name: Java
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch cancels the run in flight. Emergency tooling
+# gets quick iterations, not a queue of stale builds.
+concurrency:
+  group: java-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  mesh:
+    name: mesh core + simulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build and test
+        # `verify` rather than `test`: it runs the full lifecycle including the
+        # packaging checks, so a failure anywhere in the reactor fails here.
+        run: mvn -B -ntp verify
+
+      - name: Determinism is a contract, so it is checked in CI
+        # The cross-JVM reproducibility test needs the packaged classes on the
+        # classpath, because it forks the CLI itself.
+        run: |
+          java -cp packages/mesh-simulator/target/classes:packages/mesh-core/target/classes \
+            dev.resqnet.mesh.simulator.SimulatorCli \
+            --topology mesh --nodes 12 --messages 30 --seed 42 --rounds 40 --quiet \
+            --out target/determinism-a.json
+          java -cp packages/mesh-simulator/target/classes:packages/mesh-core/target/classes \
+            dev.resqnet.mesh.simulator.SimulatorCli \
+            --topology mesh --nodes 12 --messages 30 --seed 42 --rounds 40 --quiet \
+            --out target/determinism-b.json
+          python3 scripts/compare_reports.py \
+            target/determinism-a.json target/determinism-b.json
+
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-surefire
+          path: '**/target/surefire-reports'
+          retention-days: 14
+
+  benchmark:
+    name: benchmark smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: mesh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Compile
+        run: mvn -B -ntp -q -pl packages/mesh-simulator -am package -DskipTests
+
+      # A reduced sweep. The full 500-node run takes minutes on a laptop, and
+      # this job exists to catch a benchmark harness that stops working, not to
+      # publish numbers. The published numbers come from a full local run.
+      - name: Benchmark smoke run
+        run: |
+          java -Xmx2g -cp packages/mesh-simulator/target/classes:packages/mesh-core/target/classes \
+            dev.resqnet.mesh.simulator.benchmark.BenchmarkSuite \
+            --seed 42 --quick --json target/benchmark.json \
+            > /dev/null
+
+      - name: Upload benchmark output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-json
+          path: target/benchmark.json
+          retention-days: 14

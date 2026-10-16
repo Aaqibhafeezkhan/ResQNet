@@ -1,0 +1,201 @@
+name: Backend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: unit + H2 integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Runs the default profile: H2 in PostgreSQL compatibility mode, real
+      # Flyway migrations, real JPA mappings. Fast, and good enough for most
+      # assertions. It is explicitly NOT evidence the system works on
+      # PostgreSQL, which is what the postgres job below is for.
+      - name: Test on the default profile
+        run: mvn -B -ntp verify -pl services/backend -am
+
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-h2
+          path: services/backend/target/surefire-reports
+          retention-days: 14
+
+  postgres:
+    name: PostgreSQL migrations and integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # A real PostgreSQL service container, because the schema is part of the
+    # deliverable and H2 in compatibility mode cannot validate it.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: resqnet_test
+          POSTGRES_USER: resqnet
+          POSTGRES_PASSWORD: resqnet
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U resqnet -d resqnet_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_PG_URL: jdbc:postgresql://localhost:5432/resqnet_test
+      TEST_PG_USER: resqnet
+      TEST_PG_PASSWORD: resqnet
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Confirm the database is reachable
+        # A failed connection would otherwise surface as a confusing test
+        # error rather than as an infrastructure problem.
+        run: |
+          for attempt in $(seq 1 30); do
+            if pg_isready -h localhost -U resqnet -d resqnet_test; then
+              echo "postgres is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "postgres never became ready" >&2
+          exit 1
+
+      - name: Run the PostgreSQL integration tests
+        # `postgres` profile, so the datasource points at the service container
+        # and the postgres-profile test class runs.
+        run: |
+          mvn -B -ntp verify -pl services/backend -am \
+            -Dspring.profiles.active=postgres \
+            -Dtest='PostgresMigrationIT' \
+            -Dsurefire.failIfNoSpecifiedTests=false
+
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-postgres
+          path: services/backend/target/surefire-reports
+          retention-days: 14
+
+  boot:
+    name: boots against PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: postgres
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: resqnet
+          POSTGRES_USER: resqnet
+          POSTGRES_PASSWORD: resqnet
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U resqnet -d resqnet"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build
+        run: mvn -B -ntp -q package -DskipTests
+
+      # A passing test suite does not prove the application starts against a
+      # real database with a real schema. Flyway applying, Hibernate validating
+      # the mappings against it, and the context coming up is a separate claim,
+      # and a separate thing to break.
+      - name: Start the gateway on PostgreSQL and check it is healthy
+        env:
+          RESQNET_DB_URL: jdbc:postgresql://localhost:5432/resqnet
+          RESQNET_DB_USER: resqnet
+          RESQNET_DB_PASSWORD: resqnet
+          RESQNET_JWT_SECRET: ci-secret-that-is-long-enough-to-pass-the-check
+          RESQNET_GATEWAY_TOKEN: ci-gateway-token
+          SERVER_PORT: '8080'
+          # The seeded admin/responder accounts only exist under the dev
+          # profile. That is deliberate: they carry a well-known password and
+          # must never exist in a deployed system, so CI opts in explicitly
+          # rather than the default profile growing them.
+          SPRING_PROFILES_ACTIVE: dev
+        run: |
+          nohup java -jar services/backend/target/backend-0.1.0-SNAPSHOT.jar \
+            > target/backend.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/actuator/health | grep -q '"UP"'; then
+              echo "backend is up against PostgreSQL"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "backend never became healthy; last 60 lines:" >&2
+          tail -60 target/backend.log >&2
+          exit 1
+
+      - name: Exercise a full incident through the running service
+        env:
+          RESQNET_DB_URL: jdbc:postgresql://localhost:5432/resqnet
+          RESQNET_DB_USER: resqnet
+          RESQNET_DB_PASSWORD: resqnet
+          RESQNET_JWT_SECRET: ci-secret-that-is-long-enough-to-pass-the-check
+          RESQNET_GATEWAY_TOKEN: ci-gateway-token
+        run: |
+          set -euo pipefail
+          token=$(curl -fsS -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"admin","password":"resqnet-dev"}' \
+            | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+
+          curl -fsS -X POST http://localhost:8080/api/v1/gateway/sync \
+            -H 'Content-Type: application/json' \
+            -H 'Authorization: Bearer ci-gateway-token' \
+            -d '{"source":"ci","deviceId":"rqn1_ci_1","records":[{"messageId":"ci-m1","state":"ACKNOWLEDGED","priority":"SOS","type":"EMERGENCY_REPORT","category":"medical","advisoryConfidence":0.9,"origin":"rqn1_ci_origin","destination":"command","createdAt":1760000000000,"expiresAt":1760000900000,"attempts":1,"detail":"ci smoke"}]}' \
+            | python3 -c 'import sys,json;d=json.load(sys.stdin);assert d["createdIncidents"]==1, d;print("gateway sync created one incident")'
+
+          curl -fsS -H "Authorization: Bearer $token" \
+            http://localhost:8080/api/v1/incidents/overview \
+            | python3 -c 'import sys,json;d=json.load(sys.stdin);assert d["open"]==1, d;print("overview reports one open incident")'
+
+      - name: Upload application log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-postgres-boot-log
+          path: target/backend.log
+          retention-days: 7

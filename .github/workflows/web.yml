@@ -1,0 +1,95 @@
+name: Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/web.yml'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/web.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: typecheck + test + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '21'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      # `npm ci`, not `npm install`: it installs exactly the lockfile, so a
+      # green build here means the same tree a deploy would get. `npm install`
+      # can silently update the lockfile and test something nobody committed.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        # Separate from the build so a type error is reported as a type error.
+        # Vite strips types without checking them, which means `vite build`
+        # alone would pass on code that does not compile.
+        run: npx tsc -b --force
+
+      - name: Lint
+        # --max-warnings=0 is in the npm script. A warning here is not a note
+        # about style; in this project it has been a real hook dependency bug.
+        run: npm run lint
+
+      - name: Test
+        run: npm run test -- --run
+
+      - name: Build
+        run: npm run build
+
+      - name: Check nothing generated was committed
+        # A stale dist or a committed lockfile drift is the kind of thing that
+        # is invisible locally and confusing in review.
+        run: |
+          if [ -n "$(git status --porcelain --ignored=no apps/web 2>/dev/null | grep -E 'dist/|tsbuildinfo')" ]; then
+            echo "generated files would be committed:" >&2
+            git status --porcelain apps/web >&2
+            exit 1
+          fi
+          echo "no generated files staged"
+
+      - name: Report the bundle size
+        # Not a hard gate. The numbers are here so a regression is visible in
+        # the diff of a pull request rather than discovered by a user on a
+        # three-year-old handset in a place with no signal.
+        run: |
+          echo "### Web bundle" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '| Asset | Raw | Gzip |' >> "$GITHUB_STEP_SUMMARY"
+          echo '|---|---:|---:|' >> "$GITHUB_STEP_SUMMARY"
+          for f in dist/assets/*.js dist/assets/*.css; do
+            [ -e "$f" ] || continue
+            raw=$(wc -c < "$f" | tr -d ' ')
+            gz=$(gzip -c "$f" | wc -c | tr -d ' ')
+            printf '| %s | %s | %s |\n' "$(basename "$f")" "$raw" "$gz" \
+              >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Upload the built site
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+          retention-days: 14
