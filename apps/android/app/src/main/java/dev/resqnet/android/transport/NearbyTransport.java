@@ -18,6 +18,7 @@ import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo;
 import com.google.android.gms.nearby.connection.DiscoveryOptions;
 import com.google.android.gms.nearby.connection.EndpointDiscoveryCallback;
 import com.google.android.gms.nearby.connection.Payload;
+import com.google.android.gms.tasks.Task;
 import com.google.android.gms.nearby.connection.PayloadCallback;
 import com.google.android.gms.nearby.connection.Strategy;
 
@@ -156,8 +157,23 @@ public final class NearbyTransport implements MeshTransport {
             return Optional.empty();
         }
         try {
-            client.sendPayload(endpointId, Payload.fromBytes(encodedPayload));
-            return Optional.of(TOKEN_SEQUENCE.getAndIncrement());
+            long token = TOKEN_SEQUENCE.getAndIncrement();
+            Task<Void> task = client.sendPayload(endpointId,
+                    Payload.fromBytes(encodedPayload));
+            // The transfer outcome is observed rather than discarded.
+            //
+            // send() returned a token the moment the payload was handed over,
+            // and nothing ever looked at whether the radio delivered it. The
+            // router records SENT_TO_PEER, increments its metrics and schedules
+            // the next attempt on the strength of that. On a phone link that
+            // was dropping frames the UI would show "sent" indefinitely with no
+            // error anywhere, which is the worst possible failure for a system
+            // whose only product is an honest answer about delivery.
+            task.addOnFailureListener(error ->
+                    reportFailure("payload", "transfer to " + endpointId
+                            + " failed: " + error.getMessage()));
+            task.addOnSuccessListener(ignored -> { });
+            return Optional.of(token);
         } catch (SecurityException e) {
             reportError("send", e);
             return Optional.empty();
@@ -377,8 +393,14 @@ public final class NearbyTransport implements MeshTransport {
         public void onPayloadTransferUpdate(String endpointId,
                                             com.google.android.gms.nearby.connection
                                                     .PayloadTransferUpdate update) {
-            // Transfer progress is reported by the engine through delivery state
-            // transitions; logging every chunk would be noise.
+            // Per-chunk progress stays unlogged: a frame is 16 KB and arrives
+            // in several chunks, so logging would bury the errors. The
+            // pass/fail outcome is handled where it matters, on the Task from
+            // sendPayload above.
+            if (update.getStatus() == com.google.android.gms.nearby.connection
+                    .PayloadTransferUpdate.Status.FAILURE) {
+                reportFailure("payload", "transfer to " + endpointId + " failed");
+            }
         }
     };
 
@@ -442,9 +464,22 @@ public final class NearbyTransport implements MeshTransport {
         }
     }
 
+    /** A runtime permission was refused. */
     private void reportError(String operation, SecurityException failure) {
         Log.w(TAG, operation + " failed: missing runtime permission", failure);
         listener.onTransportError(operation, "Missing permission: " + failure.getMessage());
+    }
+
+    /**
+     * The radio refused the operation for a reason that is not a permission.
+     *
+     * <p>Separated from the overload above because "missing permission" is a
+     * fixable configuration problem and "transfer failed" is a field problem,
+     * and a responder staring at a phone needs to be able to tell them apart.
+     */
+    private void reportFailure(String operation, String message) {
+        Log.w(TAG, operation + " failed: " + message);
+        listener.onTransportError(operation, message);
     }
 
     /** Current endpoint to device bindings, for the nearby devices screen. */

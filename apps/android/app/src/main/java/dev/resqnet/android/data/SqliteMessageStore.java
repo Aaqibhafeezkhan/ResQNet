@@ -3,6 +3,7 @@ package dev.resqnet.android.data;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 
 import androidx.annotation.NonNull;
@@ -90,16 +91,40 @@ public final class SqliteMessageStore implements MessageStore {
         return message.withIdentity(message.state(), message.lastDetail(), rowId);
     }
 
+    /**
+     * Inserts the message, or updates the existing row in place.
+     *
+     * <p>Uses an UPDATE followed by a conditional INSERT rather than
+     * {@code CONFLICT_REPLACE}.
+     *
+     * <p>CONFLICT_REPLACE deletes the conflicting row and inserts a new one.
+     * The values written by {@link #upsert} do not include {@code read},
+     * {@code triage_category} or {@code triage_confidence}, so every replace
+     * reset those to their column defaults. The router calls upsert on every
+     * retry sweep, five seconds apart, so a message the user had already read
+     * reappeared as unread forever, its triage was wiped, and it was given a
+     * new {@code local_id}.
+     *
+     * <p>Updating in place keeps the row identity stable and leaves columns
+     * this method does not know about exactly as they were.
+     */
     private long upsertReturningRowId(SQLiteDatabase db, ContentValues values, String messageId) {
-        long rowId = db.insertWithOnConflict(ResQNetDatabase.TABLE_MESSAGES, null, values,
-                SQLiteDatabase.CONFLICT_REPLACE);
-        if (rowId != -1) {
+        long rowId = db.update(ResQNetDatabase.TABLE_MESSAGES, values,
+                "message_id = ?", new String[] { messageId });
+        if (rowId > 0) {
             return rowId;
         }
-        try (Cursor cursor = db.query(ResQNetDatabase.TABLE_MESSAGES,
-                new String[] { "rowid" }, "message_id = ?", new String[] { messageId },
-                null, null, null)) {
-            return cursor.moveToFirst() ? cursor.getLong(0) : -1L;
+        // update() returns 0 both for "no such row" and for "row unchanged",
+        // so an INSERT is attempted and its conflict handled explicitly.
+        try {
+            return db.insertOrThrow(ResQNetDatabase.TABLE_MESSAGES, null, values);
+        } catch (SQLException raced) {
+            // Another writer inserted between the update and the insert.
+            try (Cursor cursor = db.query(ResQNetDatabase.TABLE_MESSAGES,
+                    new String[] { "rowid" }, "message_id = ?", new String[] { messageId },
+                    null, null, null)) {
+                return cursor.moveToFirst() ? cursor.getLong(0) : -1L;
+            }
         }
     }
 

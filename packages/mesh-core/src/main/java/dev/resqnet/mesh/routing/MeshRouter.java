@@ -792,8 +792,20 @@ public final class MeshRouter implements AutoCloseable {
             }
 
             if (retryPolicy.exhausted(message.attemptCount())) {
-                store.updateState(message.messageId(), DeliveryState.FAILED,
-                        "gave up after " + message.attemptCount() + " attempts");
+                // Only the originating device may conclude that a message has
+                // failed. This node is more likely than not holding someone
+                // else's message, and concluding "failed" on their behalf
+                // turns a momentary loss of contact into a permanent, recorded
+                // loss of an emergency message. handleAcknowledgement already
+                // draws exactly this line; this is the other half of it.
+                //
+                // A relay that has run out of attempts keeps the record until
+                // its lifetime expires, which is the honest outcome: expired
+                // rather than delivered, and not quietly discarded.
+                if (envelope.originDeviceId().equals(self.deviceId())) {
+                    store.updateState(message.messageId(), DeliveryState.FAILED,
+                            "gave up after " + message.attemptCount() + " attempts");
+                }
                 continue;
             }
 
