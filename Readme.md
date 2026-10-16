@@ -174,6 +174,41 @@ java -jar services/backend/target/backend-0.1.0-SNAPSHOT.jar \
   --spring.profiles.active=dev
 ```
 
+### Build the Android app
+
+```bash
+cd apps/android
+./gradlew assembleDebug          # installable, debug-signed, internal testing only
+./gradlew assembleRelease        # unsigned unless a keystore is configured
+```
+
+**Install on a phone:**
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Debug builds carry the `.debug` application-id suffix, so a debug and a
+release build install side by side without replacing each other.
+
+**Release signing.** No keystore is in this repository and none is committed.
+Supply one through your own Gradle home:
+
+```properties
+# ~/.gradle/gradle.properties — never the project file, never committed
+RESQNET_KEYSTORE_FILE=/absolute/path/to/resqnet-release.jks
+RESQNET_KEYSTORE_PASSWORD=...
+RESQNET_KEY_ALIAS=resqnet
+RESQNET_KEY_PASSWORD=...
+```
+
+With any of the four missing, `./gradlew assembleRelease` produces an
+**unsigned** APK. It does not fall back to the debug key, because a
+debug-signed APK is installable and looks exactly like a release until
+somebody tries to ship it.
+
+CI takes the same four values from repository secrets.
+
 ### Run the web app
 
 ```bash
@@ -198,15 +233,57 @@ session would imply an accountability model that does not exist.
 
 ---
 
+## Release artifacts
+
+```bash
+scripts/build_release_artifacts.sh
+```
+
+Builds everything into `dist/`, writes `SHA256SUMS.txt`, and generates
+`dist/release-notes.md` describing each artifact: what it is, how to run
+it, what was verified, what was only simulated, and what has never been
+tested at all.
+
+```
+dist/
+  jars/mesh-simulator-*-runnable.jar   self-contained simulator + demonstration
+  jars/backend-*.jar                   Spring Boot gateway, needs PostgreSQL
+  apk/resqnet-<version>-release.apk    unsigned unless a keystore was supplied
+  apk/resqnet-<version>-debug.apk      debug-signed, internal testing only
+  SHA256SUMS.txt
+  release-notes.md
+```
+
+```bash
+cd dist && shasum -a 256 -c SHA256SUMS.txt   # macOS
+sha256sum -c SHA256SUMS.txt                 # Linux
+```
+
+The jars are byte-reproducible: two builds of the same commit produce
+the same digest. APK digests are not, because the Android toolchain
+embeds build timestamps in the zip.
+
+Run the demonstration without any infrastructure:
+
+```bash
+java -cp dist/jars/mesh-simulator-*-runnable.jar \
+  dev.resqnet.mesh.simulator.demo.DemoScenario
+```
+
+The backend jar has no bundled H2 driver, because H2 is test scope.
+Pointing it at H2 fails at startup by design; it targets PostgreSQL.
+
+---
+
 ## Tests
 
 | Suite | Count | Command |
 |---|---:|---|
-| mesh-core | 141 | `mvn -pl packages/mesh-core test` |
+| mesh-core | 145 | `mvn -pl packages/mesh-core test` |
 | simulator | 45 | `mvn -pl packages/mesh-simulator -am test` |
 | backend (H2) | 58 | `mvn -pl services/backend test` |
 | backend (PostgreSQL) | 7 | see below, runs in CI against `postgres:16-alpine` |
-| Android | 43 | `cd apps/android && ./gradlew testDebugUnitTest` |
+| Android | 55 | `cd apps/android && ./gradlew testDebugUnitTest` |
 | Web | 46 | `cd apps/web && npm run test` |
 
 Seven of these are tagged `slow` because they run whole simulated meshes
