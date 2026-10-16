@@ -8,6 +8,16 @@ interface CommandHeaderProps {
   connected: boolean;
   /** Set when the gateway could not be reached at all. */
   unreachable: boolean;
+  /**
+   * True when the live stream is open.
+   *
+   * <p>Shown separately from `connected` because the two mean different things
+   * and conflating them is misleading. The dashboard keeps working without the
+   * socket; it just refreshes on a timer instead of the instant something
+   * happens. Saying "Live" while polling quietly would teach an operator that
+   * the indicator is decorative.
+   */
+  live?: boolean;
 }
 
 /**
@@ -17,7 +27,7 @@ interface CommandHeaderProps {
  * red is not a sufficient signal that the whole data source is unavailable,
  * which is the one thing an operator most needs to notice immediately.
  */
-export function CommandHeader({ connected, unreachable }: CommandHeaderProps) {
+export function CommandHeader({ connected, unreachable, live }: CommandHeaderProps) {
   const identity = useAuthStore((state) => state.identity);
   const signOut = useAuthStore((state) => state.signOut);
 
@@ -40,7 +50,7 @@ export function CommandHeader({ connected, unreachable }: CommandHeaderProps) {
           ) : connected ? (
             <StatusChip tone="delivered" pulse>
               <Wifi size={12} aria-hidden="true" />
-              Live
+              {live ? 'Live' : 'Polling'}
             </StatusChip>
           ) : (
             <StatusChip tone="pending">
@@ -48,6 +58,17 @@ export function CommandHeader({ connected, unreachable }: CommandHeaderProps) {
               Connecting
             </StatusChip>
           )}
+
+          {/*
+            Reachable but not live is its own state. Silently dropping to a
+            slower refresh is the kind of thing nobody notices until the moment
+            it matters, so it is stated rather than hidden.
+          */}
+          {connected && !live && !unreachable ? (
+            <span className="text-[11px] text-ink-tertiary">
+              live stream unavailable; refreshing every 15s
+            </span>
+          ) : null}
 
           {identity ? (
             <span className="inline-flex items-center gap-2 rounded-full border border-base-600 px-2.5 py-1 text-[11px] font-medium text-ink-secondary">

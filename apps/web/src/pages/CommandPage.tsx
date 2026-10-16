@@ -6,7 +6,8 @@ import { IncidentQueue } from '@/components/command/IncidentQueue';
 import { MapPanel } from '@/components/command/MapPanel';
 import { OverviewTiles } from '@/components/command/OverviewTiles';
 import { TopologyPanel } from '@/components/command/TopologyPanel';
-import { api, type IncidentDetail, type IncidentStatus } from '@/lib/api';
+import { api, authStorage, type IncidentDetail, type IncidentStatus } from '@/lib/api';
+import { EventStream, shouldRefreshList } from '@/lib/events';
 import { useAuthStore } from '@/state/auth';
 import { useIncidentStore } from '@/state/incidents';
 import { useSimulationStore } from '@/state/simulation';
@@ -38,6 +39,8 @@ export function CommandPage() {
 
   const { runs, activeRun, events, loadRuns, selectRun } = useSimulationStore();
 
+  const [live, setLive] = useState(false);
+
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<IncidentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -46,6 +49,46 @@ export function CommandPage() {
     if (!identity) return;
     void refresh();
     void loadRuns();
+  }, [identity, refresh, loadRuns]);
+
+  /**
+   * Live updates, with polling kept underneath.
+   *
+   * <p>Three things matter here and each is deliberate:
+   *
+   * <ul>
+   *   <li>The stream is an accelerator, not a dependency. Polling stays at its
+   *       existing interval and continues whether the socket is open, retrying
+   *       or permanently dead, so a responder is never looking at a screen that
+   *       stopped updating because a WebSocket closed.</li>
+   *   <li>Every connection <em>transition</em> triggers a refresh, including
+   *       reconnects. The stream carries no replay, so anything that happened
+   *       while it was down is only recoverable by asking again.</li>
+   *   <li>The token is read through a ref-like getter rather than captured, so
+   *       signing out closes the socket instead of leaving it authenticated.</li>
+   * </ul>
+   */
+  useEffect(() => {
+    if (!identity) return undefined;
+    const stream = new EventStream({
+      token: () => authStorage.token(),
+      onEvent: (event) => {
+        if (shouldRefreshList(event)) {
+          void refresh();
+        } else if (event.type === 'simulation.ingested') {
+          void loadRuns();
+        }
+      },
+      onConnectionChange: () => {
+        setLive(true);
+        // Deliberately unconditional. This fires on close as well as open, so
+        // a dropped socket reconciles the view rather than leaving whatever it
+        // missed on screen until the next poll.
+        void refresh();
+      },
+    });
+    stream.start();
+    return () => stream.stop();
   }, [identity, refresh, loadRuns]);
 
   useEffect(() => {
@@ -97,7 +140,11 @@ export function CommandPage() {
       {/* Reachability, not idleness. Tying this to `loading` made the
           indicator alternate on every 15-second poll, which trains an operator
           to ignore it. */}
-      <CommandHeader connected={!unreachable} unreachable={unreachable} />
+      <CommandHeader
+        connected={!unreachable}
+        unreachable={unreachable}
+        live={live && !unreachable}
+      />
 
       {/*
         One live region for everything that changes without a page load.
