@@ -182,10 +182,30 @@ jobs:
           RESQNET_GATEWAY_TOKEN: ci-gateway-token
         run: |
           set -euo pipefail
-          token=$(curl -fsS -X POST http://localhost:8080/api/v1/auth/login \
-            -H 'Content-Type: application/json' \
-            -d '{"username":"admin","password":"resqnet-dev"}' \
-            | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+
+          # Retried, not issued once. /actuator/health reports UP as soon as the
+          # web layer is serving, which happens before the ApplicationRunner
+          # finishes. The dev accounts are seeded by that runner, so a single
+          # login immediately after the health check races it and gets a 401
+          # that says nothing about the application being broken.
+          token=""
+          for attempt in $(seq 1 30); do
+            token=$(curl -fsS -X POST http://localhost:8080/api/v1/auth/login \
+              -H 'Content-Type: application/json' \
+              -d '{"username":"admin","password":"resqnet-dev"}' \
+              | python3 -c 'import sys,json;print(json.load(sys.stdin).get("token",""))' \
+              2>/dev/null || true)
+            if [ -n "$token" ]; then
+              echo "signed in after ${attempt} attempt(s)"
+              break
+            fi
+            sleep 2
+          done
+          if [ -z "$token" ]; then
+            echo "could not sign in; last 40 lines:" >&2
+            tail -40 target/backend.log >&2
+            exit 1
+          fi
 
           curl -fsS -X POST http://localhost:8080/api/v1/gateway/sync \
             -H 'Content-Type: application/json' \
