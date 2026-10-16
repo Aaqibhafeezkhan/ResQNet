@@ -52,9 +52,22 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
   setQuery: (query) => set({ filters: { ...get().filters, query } }),
   setSeverityFilter: (severity) => set({ filters: { ...get().filters, severity } }),
 
+  /**
+   * True only while the first load is outstanding.
+   *
+   * <p>Not set for background refreshes. The command centre polls every 15
+   * seconds, and marking every poll as loading made the header alternate
+   * Live, Connecting, Live, Connecting. An operator learns to ignore the one
+   * indicator that tells them whether the dashboard is telling the truth, and
+   * then misses a real outage. Refreshing data is not the same as losing the
+   * connection; only a failed request is.
+   */
   async refresh() {
     const { filters } = get();
-    set({ loading: true, error: null });
+    if (get().items.length === 0) {
+      set({ loading: true });
+    }
+    set({ error: null });
     try {
       const page = filters.query
         ? await api.search(filters.query)

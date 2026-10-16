@@ -33,6 +33,7 @@ export function CommandPage() {
   const refresh = useIncidentStore((state) => state.refresh);
   const updateStatus = useIncidentStore((state) => state.updateStatus);
   const setStatusFilter = useIncidentStore((state) => state.setStatusFilter);
+  const statusFilter = useIncidentStore((state) => state.filters.status);
   const setQuery = useIncidentStore((state) => state.setQuery);
 
   const { runs, activeRun, events, loadRuns, selectRun } = useSimulationStore();
@@ -93,7 +94,31 @@ export function CommandPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-base-900">
-      <CommandHeader connected={!unreachable && !loading} unreachable={unreachable} />
+      {/* Reachability, not idleness. Tying this to `loading` made the
+          indicator alternate on every 15-second poll, which trains an operator
+          to ignore it. */}
+      <CommandHeader connected={!unreachable} unreachable={unreachable} />
+
+      {/*
+        One live region for everything that changes without a page load.
+
+        Previously the command centre announced nothing at all: incidents
+        arriving on the 15-second poll, the gateway becoming unreachable, and a
+        status change succeeding were all silent. A screen-reader user watching
+        this console would have no idea the data underneath them had changed.
+
+        `aria-live="polite"` rather than "assertive" because a new incident is
+        not an emergency *to the user*; it is information they will read when
+        they look. Assertive would interrupt them mid-sentence on every poll.
+      */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {unreachable
+          ? 'The coordination gateway is unreachable. The incident list below may be out of date.'
+          : incidents.length === 1
+            ? '1 incident in the queue.'
+            : `${incidents.length} incidents in the queue.`}
+        {overview ? ` ${overview.open} open, ${overview.critical} critical.` : ''}
+      </div>
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-5 py-6 sm:px-8">
         <OverviewTiles
@@ -109,6 +134,7 @@ export function CommandPage() {
               selected={selected}
               loading={loading}
               unreachable={unreachable}
+              activeStatus={statusFilter}
               onSelect={setSelected}
               onFilterChange={(patch) => {
                 if (patch.status !== undefined) setStatusFilter(patch.status);

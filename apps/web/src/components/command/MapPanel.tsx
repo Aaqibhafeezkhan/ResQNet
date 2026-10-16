@@ -8,6 +8,12 @@ interface MapPanelProps {
   incidents: IncidentSummary[];
   selected: string | null;
   onSelect: (reference: string) => void;
+  /**
+   * Optional. Supplied so keyboard navigation on the canvas can move the
+   * selection highlight as the user arrows through pins, rather than leaving
+   * them pressing Enter blind.
+   */
+  onFocusChange?: (reference: string) => void;
 }
 
 /**
@@ -23,8 +29,10 @@ interface MapPanelProps {
  * known point, because a plausible-looking wrong coordinate is far worse than an
  * honest gap.
  */
-export function MapPanel({ incidents, selected, onSelect }: MapPanelProps) {
+export function MapPanel({ incidents, selected, onSelect, onFocusChange }: MapPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  /** Keyboard cursor over the pins. Separate from the committed selection. */
+  const cursorRef = useRef(0);
   const [showGrid, setShowGrid] = useState(true);
 
   const located = incidents.filter(
@@ -132,6 +140,32 @@ export function MapPanel({ incidents, selected, onSelect }: MapPanelProps) {
     return () => observer.disconnect();
   }, [located, selected, showGrid]);
 
+  /**
+   * Selects a pin from the keyboard.
+   *
+   * <p>Arrow keys move between pins in the same order the queue lists them, and
+   * Enter or Space selects the one under the cursor. Without this the map was a
+   * pointer-only control wearing an `img` role.
+   */
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLCanvasElement>) => {
+    if (located.length === 0) return;
+    const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown';
+    const backward = event.key === 'ArrowLeft' || event.key === 'ArrowUp';
+    if (!forward && !backward && event.key !== 'Enter' && event.key !== ' ') return;
+
+    event.preventDefault();
+    if (forward || backward) {
+      const step = forward ? 1 : -1;
+      const next = (cursorRef.current + step + located.length) % located.length;
+      cursorRef.current = next;
+      const incident = located[next];
+      if (incident) onFocusChange?.(incident.reference);
+      return;
+    }
+    const incident = located[cursorRef.current];
+    if (incident) onSelect(incident.reference);
+  };
+
   const handleClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -179,10 +213,36 @@ export function MapPanel({ incidents, selected, onSelect }: MapPanelProps) {
         <canvas
           ref={canvasRef}
           onClick={handleClick}
-          className="h-full w-full cursor-crosshair"
-          role="img"
+          onKeyDown={handleKeyDown}
+          // role="img" is a non-interactive role, so attaching a click handler
+          // to it left the pins unreachable by keyboard and invisible to
+          // assistive technology. listbox makes the pins enumerable and gives
+          // arrow-key navigation a meaning.
+          role="listbox"
+          tabIndex={0}
           aria-label={`Map of ${located.length} incident locations shared by senders`}
+          className="h-full w-full cursor-crosshair focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
         />
+        {/*
+          The canvas cannot expose its own pins. This is the accessible
+          equivalent: the same incidents, reachable by keyboard and announced
+          by a screen reader. The queue list already provides this route, so
+          this is redundancy rather than the only way in.
+        */}
+        <ul className="sr-only" aria-label="Incidents plotted on the map">
+          {located.map((incident) => (
+            <li key={incident.reference}>
+              <button
+                type="button"
+                onClick={() => onSelect(incident.reference)}
+                className="focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:rounded-lg focus:bg-base-800 focus:px-3 focus:py-2 focus:text-sm focus:text-ink-primary"
+              >
+                {incident.reference}, {incident.categoryLabel}, severity{' '}
+                {incident.severity}
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {unlocated.length > 0 ? (

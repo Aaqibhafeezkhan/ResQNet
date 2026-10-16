@@ -59,14 +59,6 @@ export function MeshField({
   const nodes = useMemo<MeshNode[]>(() => buildNodes(count), [count]);
   const links = useMemo<MeshLink[]>(() => buildLinks(nodes), [nodes]);
 
-  /** Starts the loop if it is not already running. */
-  const startLoop = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || frameRef.current !== null || !visibleRef.current) return;
-    lastTimeRef.current = 0;
-    frameRef.current = requestAnimationFrame(step);
-  }, []);
-
   /**
    * One animation frame.
    *
@@ -184,6 +176,21 @@ export function MeshField({
     },
     [intensity, links, nodes, reduced],
   );
+
+  /**
+   * Starts the loop, unless it is already running or the tab is hidden.
+   *
+   * <p>Declared after `step` so the dependency is explicit rather than relying
+   * on `step` being initialised by the time this ever runs. The loop needs to be
+   * stoppable and restartable from the visibility effect, which means both have
+   * to be stable identities.
+   */
+  const startLoop = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || frameRef.current !== null || !visibleRef.current) return;
+    lastTimeRef.current = 0;
+    frameRef.current = requestAnimationFrame(step);
+  }, [step]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

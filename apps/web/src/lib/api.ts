@@ -20,6 +20,20 @@ export type Category =
   | 'GENERAL'
   | 'UNKNOWN';
 
+/**
+ * Nullable fields are absent, not null.
+ *
+ * <p>Spring is configured with `default-property-inclusion: non_null`, so a
+ * null field is omitted from the JSON entirely and arrives here as
+ * `undefined`. Declaring these `| null` and guarding with `!== null` compiles
+ * cleanly and is wrong at runtime, because `undefined !== null` is true. That
+ * is how the dashboard came to render "NaN% confidence": the handset never
+ * sends `advisoryConfidence`, so every device-created incident hit the guard
+ * and then multiplied `undefined`.
+ *
+ * <p>Declared `?:` with a union so both readings are caught, and so the type
+ * cannot drift away from what the server actually sends.
+ */
 export interface IncidentSummary {
   id: number;
   reference: string;
@@ -31,31 +45,31 @@ export interface IncidentSummary {
   statusLabel: string;
   /** True when the category came from the on-device classifier. */
   advisory: boolean;
-  advisoryConfidence: number | null;
+  advisoryConfidence?: number | null;
   /** Distinguishes "no location was sent" from "a location was sent". */
   locationShared: boolean;
-  latitude: number | null;
-  longitude: number | null;
-  sourceDeviceId: string | null;
-  gatewayDeviceId: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  sourceDeviceId?: string | null;
+  gatewayDeviceId?: string | null;
   createdAt: string;
   updatedAt: string;
-  acknowledgedAt: string | null;
-  resolvedAt: string | null;
-  assignedTo: number | null;
+  acknowledgedAt?: string | null;
+  resolvedAt?: string | null;
+  assignedTo?: number | null;
   messageCount: number;
 }
 
 export interface MessageDelivery {
   messageId: string;
   originDeviceId: string;
-  destinationDeviceId: string | null;
+  destinationDeviceId?: string | null;
   state: string;
   priority: string;
   createdAt: number;
   expiresAt: number;
   attempts: number;
-  detail: string | null;
+  detail?: string | null;
   simulated: boolean;
 }
 
@@ -64,9 +78,9 @@ export interface AuditRow {
   actor: string;
   actorRole: string;
   action: string;
-  targetType: string | null;
-  targetId: string | null;
-  detail: string | null;
+  targetType?: string | null;
+  targetId?: string | null;
+  detail?: string | null;
 }
 
 export interface IncidentDetail {
@@ -92,10 +106,16 @@ export interface SimulationRun {
   originated: number;
   acknowledged: number;
   deliveryRate: number;
-  medianLatencyMillis: number | null;
-  p95LatencyMillis: number | null;
-  amplification: number | null;
+  medianLatencyMillis?: number | null;
+  p95LatencyMillis?: number | null;
+  amplification?: number | null;
   partitions: number;
+  /**
+   * Always true. Sent explicitly rather than implied by the endpoint so that a
+   * dashboard merging generated runs with field incidents cannot lose the
+   * distinction further downstream.
+   */
+  simulated: true;
 }
 
 export interface SimulationEvent {
@@ -103,9 +123,9 @@ export interface SimulationEvent {
   round: number;
   node: string;
   kind: string;
-  messageId: string | null;
+  messageId?: string | null;
   hopCount: number;
-  reason: string | null;
+  reason?: string | null;
   detail: string;
   simulated: true;
 }
@@ -198,7 +218,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, { ...init, headers });
-  } catch (cause) {
+  } catch {
     // A gateway that cannot be reached is not an empty queue. Saying so
     // matters more than the retry, because an operator acting on an empty
     // incident list during an outage is the dangerous outcome.

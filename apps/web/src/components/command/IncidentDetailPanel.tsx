@@ -10,7 +10,7 @@ import { useState } from 'react';
 
 import { StatusChip } from '@/components/primitives/StatusChip';
 import { deliveryStateLabel, relativeTime, severityLabel } from '@/lib/format';
-import type { IncidentDetail, IncidentStatus } from '@/lib/api';
+import { ApiError, type IncidentDetail, type IncidentStatus } from '@/lib/api';
 import { canMutate } from '@/state/auth';
 
 interface IncidentDetailPanelProps {
@@ -40,6 +40,7 @@ export function IncidentDetailPanel({
   onStatusChange,
 }: IncidentDetailPanelProps) {
   const [pending, setPending] = useState<IncidentStatus | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
   const [note, setNote] = useState('');
 
   if (loading && !detail) {
@@ -67,9 +68,21 @@ export function IncidentDetailPanel({
 
   const change = async (status: IncidentStatus) => {
     setPending(status);
+    setFailure(null);
     try {
       await onStatusChange(incident.reference, status, note.trim() || undefined);
       setNote('');
+    } catch (cause) {
+      // Previously the promise was voided with no catch, so a rejected status
+      // change became an unhandled rejection: the button returned to idle and
+      // the responder was told nothing. The most likely failure is another
+      // responder having closed the incident first, which is exactly the case
+      // where the operator most needs to be told their action did not land.
+      setFailure(
+        cause instanceof ApiError
+          ? cause.message
+          : 'The status change could not be saved.',
+      );
     } finally {
       setPending(null);
     }
@@ -102,8 +115,10 @@ export function IncidentDetailPanel({
           <Fact
             label="Location"
             value={
-              incident.locationShared && incident.latitude !== null
-                ? `${incident.latitude.toFixed(4)}, ${incident.longitude?.toFixed(4)}`
+              incident.locationShared &&
+              incident.latitude != null &&
+              incident.longitude != null
+                ? `${incident.latitude.toFixed(4)}, ${incident.longitude.toFixed(4)}`
                 : 'Not shared'
             }
             icon={
@@ -112,7 +127,7 @@ export function IncidentDetailPanel({
           />
         </dl>
 
-        {incident.advisory && incident.advisoryConfidence !== null ? (
+        {incident.advisory && incident.advisoryConfidence != null ? (
           <p className="mt-4 flex items-start gap-2 rounded-lg bg-pending-soft px-3 py-2.5 text-[12px] leading-relaxed text-ink-secondary">
             <ShieldAlert size={13} className="mt-0.5 shrink-0 text-pending" aria-hidden="true" />
             <span>
@@ -216,6 +231,19 @@ export function IncidentDetailPanel({
               placeholder="Optional note for the audit trail"
               className="w-full rounded-lg border border-base-600 bg-base-850 px-3 py-2 text-[13px] text-ink-primary placeholder:text-ink-tertiary focus-visible:border-network focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-network"
             />
+            {/*
+              The error is rendered here rather than only logged, because a
+              silently failed status change is worse than no control at all: the
+              responder believes the incident was triaged when it was not.
+            */}
+            {failure ? (
+              <p
+                role="alert"
+                className="mb-2 rounded-lg bg-emergency-soft px-3 py-2 text-[12px] leading-relaxed text-emergency"
+              >
+                {failure}
+              </p>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               {NEXT_STATUSES.map((action) => (
                 <button

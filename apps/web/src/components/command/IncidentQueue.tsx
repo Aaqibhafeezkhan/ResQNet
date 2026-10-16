@@ -16,6 +16,8 @@ interface IncidentQueueProps {
   selected: string | null;
   loading: boolean;
   unreachable: boolean;
+  /** The status filter currently applied, so the chip can show itself selected. */
+  activeStatus: IncidentStatus | null;
   onSelect: (reference: string) => void;
   onFilterChange: (patch: { status?: IncidentStatus | null; query?: string }) => void;
 }
@@ -26,6 +28,10 @@ const STATUS_FILTERS: { label: string; value: IncidentStatus | null }[] = [
   { label: 'Triaged', value: 'TRIAGED' },
   { label: 'In progress', value: 'IN_PROGRESS' },
   { label: 'Resolved', value: 'RESOLVED' },
+  // Dismissed is reachable from the detail panel, so filtering to it has to be
+  // reachable here too. Leaving it out meant a dismissed incident could only be
+  // found under "All", which is where nobody looks for something already closed.
+  { label: 'Dismissed', value: 'DISMISSED' },
 ];
 
 /**
@@ -40,6 +46,7 @@ export function IncidentQueue({
   selected,
   loading,
   unreachable,
+  activeStatus,
   onSelect,
   onFilterChange,
 }: IncidentQueueProps) {
@@ -81,22 +88,33 @@ export function IncidentQueue({
 
         <div className="flex items-center gap-1 overflow-x-auto" role="group" aria-label="Status filter">
           <SlidersHorizontal size={13} className="mr-1 shrink-0 text-ink-tertiary" aria-hidden="true" />
-          {STATUS_FILTERS.map((filter) => (
-            <button
-              key={filter.label}
-              type="button"
-              onClick={() => onFilterChange({ status: filter.value })}
-              aria-pressed={selected === null ? filter.value === null : undefined}
-              className={
-                'shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network ' +
-                (filter.value === null
-                  ? 'border border-transparent text-ink-tertiary hover:text-ink-primary'
-                  : 'border border-transparent text-ink-tertiary hover:text-ink-primary')
-              }
-            >
-              <FilterChip label={filter.label} />
-            </button>
-          ))}
+          {STATUS_FILTERS.map((filter) => {
+            const active = filter.value === activeStatus;
+            return (
+              <button
+                key={filter.label}
+                type="button"
+                onClick={() => onFilterChange({ status: filter.value })}
+                // The active filter, not the selected incident. These were the
+                // same expression before, which meant selecting an incident
+                // cleared every chip's pressed state and the applied filter was
+                // never exposed to assistive technology at all.
+                aria-pressed={active}
+                className={
+                  'shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ' +
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network ' +
+                  // Previously both branches of this conditional produced the
+                  // same class, so clicking a filter gave no visual confirmation
+                  // that anything had happened.
+                  (active
+                    ? 'bg-network-soft text-network border border-network/40'
+                    : 'border border-transparent text-ink-tertiary hover:text-ink-primary')
+                }
+              >
+                <FilterChip label={filter.label} />
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -185,7 +203,11 @@ function IncidentRow({
               <span
                 className="rounded bg-base-700 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-ink-tertiary"
                 title={
-                  incident.advisoryConfidence !== null
+                  // The handset does not send a confidence, and the backend
+                  // omits the field entirely rather than sending null, so this
+                  // is usually absent rather than zero. Saying "classified
+                  // on-device" is honest; interpolating undefined is not.
+                  incident.advisoryConfidence != null
                     ? `Classified on-device at ${Math.round(incident.advisoryConfidence * 100)}% confidence`
                     : 'Classified on-device'
                 }
