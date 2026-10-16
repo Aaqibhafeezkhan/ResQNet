@@ -65,8 +65,12 @@ public final class SimulationReport {
         this.partitions = partitions;
         this.simulatedDurationMillis = simulatedDurationMillis;
         this.wallClockMillis = wallClockMillis;
-        this.hopDistribution = Map.copyOf(hopDistribution);
-        this.hopLatencySum = Map.copyOf(hopLatencySum);
+        // Ordered, not Map.copyOf. The JDK randomises ImmutableCollections
+        // iteration order per JVM run, which would make two runs with the same
+        // seed emit the same numbers under different key orders and defeat any
+        // attempt to diff the output.
+        this.hopDistribution = sortedLongs(hopDistribution);
+        this.hopLatencySum = sortedLongs(hopLatencySum);
 
         this.originatedCount = aggregate.originatedCount();
         this.acknowledgedCount = aggregate.acknowledgementReceivedCount();
@@ -361,7 +365,7 @@ public final class SimulationReport {
                     metrics.untrustedDropCount(), metrics.rateLimitDropCount(),
                     metrics.hopLimitDropCount(), node.store().pendingCount(),
                     metrics.medianDeliveryLatencyMillis(), metrics.p95DeliveryLatencyMillis(),
-                    degreeAtEnd, Map.copyOf(stateCounts));
+                    degreeAtEnd, sortedCounts(stateCounts));
         }
 
         long countByState(dev.resqnet.mesh.protocol.DeliveryState state) {
@@ -393,4 +397,42 @@ public final class SimulationReport {
         }
     }
 
+
+    /**
+     * The JSON paths that cannot be byte-stable across runs of the same seed.
+     *
+     * <p>Documented rather than silently tolerated. Everything outside this set
+     * is a routing decision and is reproducible, which is the property that
+     * makes a report usable as a regression artefact.
+     */
+    public static java.util.List<String> volatileJsonFields() {
+        return java.util.List.of(
+                "timing.wallClockMillis",
+                "timing.throughputPerSecond",
+                "nodes[].deviceId",
+                "nodes[].keyFingerprint");
+    }
+
+    /**
+     * Freezes a map in a stable iteration order.
+     *
+     * <p>{@code Map.copyOf} discards insertion order and the JDK then iterates
+     * its immutable maps in a per-JVM randomised order. Two runs with the same
+     * seed produced identical numbers but different key ordering in the JSON,
+     * so the output could not be diffed despite the CLI promising a byte for
+     * byte reproducible report. Sorting by key makes the order a function of
+     * the data instead of of the JVM.
+     */
+    private static Map<Integer, Long> sortedLongs(Map<Integer, Long> source) {
+        Map<Integer, Long> out = new java.util.TreeMap<>();
+        out.putAll(source);
+        return java.util.Collections.unmodifiableMap(out);
+    }
+
+    private static <K extends Comparable<? super K>> Map<K, Integer> sortedCounts(
+            Map<K, Integer> source) {
+        Map<K, Integer> out = new java.util.TreeMap<>();
+        out.putAll(source);
+        return java.util.Collections.unmodifiableMap(out);
+    }
 }

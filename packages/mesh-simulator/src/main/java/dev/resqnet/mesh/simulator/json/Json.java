@@ -13,9 +13,16 @@ import java.util.Map;
  * results and to talk to the gateway live here. It is a few hundred lines rather
  * than a dependency, and its behaviour is completely inspectable.
  *
- * <p>Output is deterministic: object member order follows insertion order, so
- * two runs with the same seed produce byte-identical files. That property is
- * what makes a regression in routing visible in a diff.
+ * <p>Object member order follows insertion order, and writers here sort
+ * map-valued members rather than inheriting the JDK's per-JVM iteration order.
+ * That is what makes a regression in routing visible in a diff.
+ *
+ * <p>A report from two runs with the same seed is byte-identical apart from
+ * three things that cannot be deterministic and are not routing decisions: the
+ * wall-clock duration, the throughput derived from it, and each node's device
+ * id and key fingerprint, which come from freshly generated keys.
+ * {@code SimulationReport#volatileJsonFields()} names them so a test can
+ * subtract exactly those and assert the rest is stable.
  */
 public final class Json {
 

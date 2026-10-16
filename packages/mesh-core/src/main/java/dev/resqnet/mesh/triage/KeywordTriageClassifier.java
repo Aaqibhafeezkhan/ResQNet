@@ -246,7 +246,7 @@ public final class KeywordTriageClassifier implements TriageClassifier {
                 "insulin", 2.2, "baby formula", 2.0, "no food", 1.8, "out of water", 1.8,
                 "need supplies", 1.6, "running out", 1.4, "dias", 2.0));
 
-        return Map.copyOf(map);
+        return ordered(map);
     }
 
     private static Map<String, Double> terms(Object... pairs) {
@@ -254,7 +254,23 @@ public final class KeywordTriageClassifier implements TriageClassifier {
         for (int i = 0; i < pairs.length; i += 2) {
             map.put((String) pairs[i], (Double) pairs[i + 1]);
         }
-        return Map.copyOf(map);
+        return ordered(map);
+    }
+
+    /**
+     * Freezes a map while preserving insertion order.
+     *
+     * <p>{@code Map.copyOf} would throw that order away and iterate in a
+     * per-JVM randomised order. That matters here for three reasons, all of
+     * them about the result being reproducible rather than merely correct:
+     * the {@code signals} list is the classifier's explanation and should read
+     * the same way twice; {@code score +=} is a floating-point sum whose order
+     * changes the last bits of the result; and {@code ranked.sort} is stable,
+     * so a tie would be broken differently and could select a different
+     * category on an identical input.
+     */
+    private static <K, V> Map<K, V> ordered(Map<K, V> source) {
+        return java.util.Collections.unmodifiableMap(new LinkedHashMap<>(source));
     }
 
     /** Exposes the weight table for documentation and tests. */

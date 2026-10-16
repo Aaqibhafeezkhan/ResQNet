@@ -24,8 +24,11 @@ import java.util.Locale;
  * </pre>
  *
  * <p>Every run is fully described by its arguments plus its seed. Re-running with
- * the same arguments reproduces the same event stream byte for byte, which is
- * what makes a report usable as a regression artefact rather than a story.
+ * the same arguments reproduces the same event stream, byte for byte, except
+ * for the wall-clock timing and the freshly generated node keys listed in
+ * {@code SimulationReport#volatileJsonFields()}. Every routing decision is
+ * reproducible, which is what makes a report usable as a regression artefact
+ * rather than a story.
  */
 public final class SimulatorCli {
 

@@ -2,6 +2,8 @@ package dev.resqnet.mesh.simulator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -102,6 +104,127 @@ class MeshSimulationTest {
 
         assertThat(stripVolatile(first)).isEqualTo(stripVolatile(second));
     }
+
+    /**
+     * Map-valued JSON members must be emitted in sorted key order.
+     *
+     * <p>This is asserted structurally rather than by running the simulation
+     * twice and diffing, because {@code Map.copyOf} randomises its iteration
+     * order once per JVM rather than once per map: two runs inside the same
+     * test JVM agree with each other and disagree with every other process.
+     * A reproducibility test written that way passes with the bug still
+     * present, which is exactly what the first version of this test did.
+     *
+     * <p>Asserting the order directly holds in any JVM and fails the moment
+     * the sorting is removed.
+     */
+    @Test
+    @DisplayName("emits map-valued members in sorted key order")
+    void mapValuedMembersAreSorted() throws Exception {
+        SimulationReport report = tryRun(config(Topology.Shape.MESH, 10, 4242L));
+        String json = report.toJson().toString();
+
+        assertAscending(json, "hopDistribution");
+        assertAscending(json, "stateCounts");
+    }
+
+    /** Asserts the integer keys of a JSON object appear in ascending order. */
+    private static void assertAscending(String json, String member) {
+        int open = json.indexOf("\"" + member + "\":{");
+        assertThat(open).as("member %s missing from the report", member).isNotNegative();
+        String body = json.substring(json.indexOf('{', open) + 1, json.indexOf('}', open));
+        int previous = -1;
+        for (String part : body.split(",")) {
+            int colon = part.indexOf(':');
+            if (colon < 0) {
+                continue;
+            }
+            String rawKey = part.substring(0, colon).trim().replace("\"", "");
+            int key;
+            try {
+                key = Integer.parseInt(rawKey);
+            } catch (NumberFormatException notNumeric) {
+                continue; // a quoted member such as "CREATED"
+            }
+            assertThat(key)
+                    .as("%s keys must be ascending so two runs diff cleanly", member)
+                    .isGreaterThan(previous);
+            previous = key;
+        }
+    }
+
+    /**
+     * The cross-process half of the reproducibility claim.
+     *
+     * <p>Runs the CLI in a separate JVM and compares the report with the
+     * documented volatile fields removed. This is the check that actually
+     * fails if key ordering regresses, because a fresh JVM picks a fresh
+     * iteration order.
+     */
+    @Test
+    @DisplayName("produces byte-identical JSON across separate JVMs")
+    void jsonIsReproducibleAcrossProcesses() throws Exception {
+        Path first = Files.createTempFile("resqnet-det-a", ".json");
+        Path second = Files.createTempFile("resqnet-det-b", ".json");
+        try {
+            String[] args = {"--topology", "mesh", "--nodes", "8", "--messages", "20",
+                    "--seed", "4242", "--rounds", "30", "--quiet"};
+            Process p1 = separateJvm(first, args).redirectErrorStream(true).start();
+            String o1 = new String(p1.getInputStream().readAllBytes());
+            assertThat(p1.waitFor()).as("first run failed: " + o1).isZero();
+            Process p2 = separateJvm(second, args).redirectErrorStream(true).start();
+            String o2 = new String(p2.getInputStream().readAllBytes());
+            assertThat(p2.waitFor()).as("second run failed: " + o2).isZero();
+
+            assertThat(stripVolatileJson(Files.readString(first)))
+                    .as("a regression in routing must be visible as a diff in the report")
+                    .isEqualTo(stripVolatileJson(Files.readString(second)));
+        } finally {
+            Files.deleteIfExists(first);
+            Files.deleteIfExists(second);
+        }
+    }
+
+    /** Builds the command that re-runs this CLI in a separate JVM. */
+    private static ProcessBuilder separateJvm(Path output, String... args) {
+        java.util.List<String> command = new java.util.ArrayList<>();
+        command.add(javaExecutable());
+        command.add("-cp");
+        command.add(System.getProperty("java.class.path"));
+        command.add(SimulatorCli.class.getName());
+        command.addAll(List.of(args));
+        command.add("--out");
+        command.add(output.toString());
+        return new ProcessBuilder(command);
+    }
+
+    private static String javaExecutable() {
+        return java.nio.file.Paths.get(System.getProperty("java.home"), "bin", "java")
+                .toString();
+    }
+
+    /**
+     * Substitutes the documented volatile fields so the rest can be compared.
+     *
+     * <p>Written with string literals rather than a hand-rolled parser: the
+     * report is generated JSON with stable formatting, so a few targeted
+     * replacements are clearer and far less code than a real parse.
+     */
+    private static String stripVolatileJson(String json) {
+        String q = "\"";
+        String out = json;
+        // The report pretty-prints with a space after each colon.
+        out = out.replaceAll(q + "wallClockMillis" + q + "\\s*:\\s*[0-9.]+",
+                q + "wallClockMillis" + q + ": 0");
+        out = out.replaceAll(q + "throughputPerSecond" + q + "\\s*:\\s*[0-9.]+",
+                q + "throughputPerSecond" + q + ": 0");
+        out = out.replaceAll(q + "deviceId" + q + "\\s*:\\s*" + q + "[^" + q + "]*" + q,
+                q + "deviceId" + q + ": \"X\"");
+        out = out.replaceAll(q + "keyFingerprint" + q + "\\s*:\\s*" + q + "[^" + q + "]*" + q,
+                q + "keyFingerprint" + q + ": \"X\"");
+        return out;
+    }
+
 
     @Test
     @DisplayName("produces different behaviour for a different seed")
