@@ -294,6 +294,40 @@ class ApiSecurityTest {
     }
 
     @Test
+    @DisplayName("answers a disabled docs path with 404, not 500")
+    void disabledDocsPathIsNotAnInternalError() throws Exception {
+        // The OpenAPI schema is switched off outside the dev profile, so these
+        // are entirely expected requests. They were answering 500, which logged
+        // a full stack trace for a routine "this profile has no docs" and would
+        // fire any alerting watching for server errors. A path that is not
+        // served is a 404.
+        //
+        // Only the paths SecurityConfig explicitly permits are asserted here.
+        // Everything else never reaches a handler at all.
+        for (String path : new String[] { "/v3/api-docs", "/swagger-ui/index.html",
+                "/swagger-ui.html" }) {
+            mvc.perform(get(path))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                    .andExpect(jsonPath("$.trace").doesNotExist())
+                    .andExpect(jsonPath("$.exception").doesNotExist());
+        }
+    }
+
+    @Test
+    @DisplayName("denies an unlisted path outright rather than 404ing it")
+    void unlistedPathIsDenied() throws Exception {
+        // anyRequest().denyAll(). A path that is neither a documented endpoint
+        // nor explicitly permitted must not be distinguishable from a real one
+        // by its status code, so it is refused at the filter and never becomes a
+        // 404 that would confirm or deny that a resource exists.
+        for (String path : new String[] { "/no/such/endpoint", "/v3/api-docs.yaml",
+                "/actuator/loggers" }) {
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Test
     @DisplayName("echoes a request id so an action can be traced")
     void echoesRequestId() throws Exception {
         mvc.perform(get("/api/v1/incidents/overview")

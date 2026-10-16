@@ -15,6 +15,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Uniform error responses.
@@ -94,6 +95,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
                 .body(base("UNSUPPORTED_MEDIA_TYPE",
                         "This endpoint accepts application/json"));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> noResource(NoResourceFoundException e) {
+        return problem(HttpStatus.NOT_FOUND, "NOT_FOUND", "No such endpoint");
     }
 
     @ExceptionHandler(Exception.class)
