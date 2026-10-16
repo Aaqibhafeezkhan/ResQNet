@@ -40,6 +40,43 @@ adb install -r apps/android/app/build/outputs/apk/debug/app-debug.apk
 
 ---
 
+## Part 0 — The runnable demonstration (30 seconds, no infrastructure)
+
+Start here. If this does not work nothing else will, and it needs no gateway,
+no database and no phones.
+
+```bash
+mvn -q -pl packages/mesh-core install -DskipTests
+mvn -q -pl packages/mesh-simulator -am package -DskipTests
+
+CP=packages/mesh-simulator/target/classes:packages/mesh-core/target/classes
+java -cp $CP dev.resqnet.mesh.simulator.demo.DemoScenario
+```
+
+It prints seven numbered stages and exits non-zero if any of them misbehaves.
+It runs the real `MeshRouter`; only the radio is modelled.
+
+What it demonstrates, and what each line proves:
+
+1. **Composition needs no network.** The message is on disk before any send is
+   attempted, with zero peers connected.
+2. **Two hops, and the relay never reads it.** The relay's inbox stays at zero
+   while the destination's reaches one.
+3. **A link vanishes mid-flight.** The queued message is still on disk; the
+   already-confirmed message is untouched.
+4. **Recovery.** A minute later the link returns and the queued message is
+   delivered.
+5. **Sync carries metadata, not content.** The transcript asserts the payload
+   contains no message body.
+6. **`SENT_TO_PEER` and `ACKNOWLEDGED` are different states.** Both messages
+   end confirmed, and the relay inbox is still zero.
+7. **The responder view.** What opens in the console, including the advisory
+   flag a device classification carries.
+
+Say, unprompted: "this is a simulation. I have not run this on three phones."
+
+---
+
 ## Part 1 — Set up the gateway (90 seconds)
 
 ```bash
