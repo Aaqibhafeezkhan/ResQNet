@@ -115,9 +115,15 @@ public final class NearbyTransport implements MeshTransport {
     private final Object lock = new Object();
 
     /** Endpoint id to stable device id. TreeMap keeps iteration deterministic. */
-    private final Map<String, String> deviceIdByEndpoint = new TreeMap<>();
-    private final Map<String, String> endpointByDeviceId = new ConcurrentHashMap<>();
-    private final Set<String> endpointsRequested = new TreeSet<>();
+    /**
+     * Endpoint to identity mapping.
+     *
+     * <p>Held in its own class so the promotion rules can be tested without a
+     * ConnectionsClient. That is where the real defect lived: nothing ever
+     * promoted a binding, so the router compared key-derived device ids against
+     * a set of radio handles and never found a match.
+     */
+    private final PeerBindings bindings = new PeerBindings();
 
     private volatile InboundHandler inboundHandler = (peer, payload) -> {
     };
@@ -167,7 +173,7 @@ public final class NearbyTransport implements MeshTransport {
         if (!started || client == null || encodedPayload.length > NEARBY_MAX_PAYLOAD_BYTES) {
             return Optional.empty();
         }
-        String endpointId = endpointByDeviceId.get(peerDeviceId);
+        String endpointId = bindings.endpointFor(peerDeviceId);
         if (endpointId == null) {
             return Optional.empty();
         }
@@ -204,9 +210,10 @@ public final class NearbyTransport implements MeshTransport {
      */
     @Override
     public Set<String> connectedPeerIds() {
-        synchronized (lock) {
-            return Collections.unmodifiableSet(new TreeSet<>(endpointByDeviceId.keySet()));
-        }
+        // No outer lock: PeerBindings synchronises its own state, and nesting
+        // the two would make the invariant look like it spans two objects when
+        // it does not.
+        return bindings.connectedPeerIds();
     }
 
     @Override
@@ -253,9 +260,7 @@ public final class NearbyTransport implements MeshTransport {
             }
             started = false;
             ready = false;
-            deviceIdByEndpoint.clear();
-            endpointByDeviceId.clear();
-            endpointsRequested.clear();
+            bindings.clearAll();
         }
         if (client == null) {
             return;
@@ -299,7 +304,7 @@ public final class NearbyTransport implements MeshTransport {
                                 @Override
                                 public void onEndpointFound(String endpointId,
                                                             DiscoveredEndpointInfo info) {
-                                    discovered.add(endpointId);
+                                    bindings.markDiscovered(endpointId);
                                     requestConnection(endpointId);
                                 }
 
@@ -330,7 +335,7 @@ public final class NearbyTransport implements MeshTransport {
             return;
         }
         synchronized (lock) {
-            if (!endpointsRequested.add(endpointId)) {
+            if (!bindings.markRequested(endpointId)) {
                 return;
             }
         }
@@ -341,7 +346,7 @@ public final class NearbyTransport implements MeshTransport {
                                     .build())
                     .addOnFailureListener(failure -> {
                         synchronized (lock) {
-                            endpointsRequested.remove(endpointId);
+                            bindings.clearRequested(endpointId);
                         }
                         listener.onTransportError("connection",
                                 "Could not reach " + endpointId + ": " + failure.getMessage());
@@ -423,18 +428,11 @@ public final class NearbyTransport implements MeshTransport {
     // ----------------------------------------------------------------- binding
 
     private void bind(String endpointId) {
-        String resolved;
-        synchronized (lock) {
-            String existing = deviceIdByEndpoint.get(endpointId);
-            if (existing == null) {
-                // Provisional binding under the endpoint id. The router will
-                // refuse traffic from an unknown origin; this exists only so the
-                // refusal names something concrete.
-                deviceIdByEndpoint.put(endpointId, endpointId);
-                endpointByDeviceId.put(endpointId, endpointId);
-            }
-            resolved = deviceIdByEndpoint.get(endpointId);
-        }
+        // Provisional binding under the endpoint id. The router refuses
+        // traffic from an origin it has no key for, so this exists only so
+        // the refusal names something concrete, and so the peer appears in a
+        // diagnostics screen while it waits to be verified.
+        String resolved = bindings.bind(endpointId);
         connectionListener.onPeerConnected(resolved);
         listener.onPeerStateChanged(resolved, true);
     }
@@ -446,39 +444,28 @@ public final class NearbyTransport implements MeshTransport {
      * peer and the owner has confirmed the fingerprint.
      */
     public void promoteBinding(String endpointId, String verifiedDeviceId) {
-        synchronized (lock) {
-            String current = deviceIdByEndpoint.get(endpointId);
-            if (current != null && current.equals(verifiedDeviceId)) {
-                return;
-            }
-            deviceIdByEndpoint.put(endpointId, verifiedDeviceId);
-            endpointByDeviceId.put(verifiedDeviceId, endpointId);
-            endpointByDeviceId.remove(endpointId);
+        String previous = bindings.resolve(endpointId);
+        if (!bindings.promote(endpointId, verifiedDeviceId)) {
+            return;
         }
-        connectionListener.onPeerDisconnected(endpointId);
-        connectionListener.onPeerConnected(verifiedDeviceId);
+        if (!previous.equals(verifiedDeviceId)) {
+            connectionListener.onPeerDisconnected(previous);
+            connectionListener.onPeerConnected(verifiedDeviceId);
+        }
         listener.onPeerStateChanged(verifiedDeviceId, true);
     }
 
     private void unbind(String endpointId) {
-        discovered.remove(endpointId);
-        String deviceId;
-        synchronized (lock) {
-            deviceId = deviceIdByEndpoint.remove(endpointId);
-            endpointByDeviceId.values().remove(endpointId);
-            endpointsRequested.remove(endpointId);
+        String deviceId = bindings.unbind(endpointId);
+        if (deviceId == null) {
+            return;
         }
-        if (deviceId != null) {
-            connectionListener.onPeerDisconnected(deviceId);
-            listener.onPeerStateChanged(deviceId, false);
-        }
+        connectionListener.onPeerDisconnected(deviceId);
+        listener.onPeerStateChanged(deviceId, false);
     }
 
     private String resolvePeerIdentity(String endpointId) {
-        synchronized (lock) {
-            String known = deviceIdByEndpoint.get(endpointId);
-            return known != null ? known : endpointId;
-        }
+        return bindings.resolve(endpointId);
     }
 
     /** A runtime permission was refused. */
@@ -516,9 +503,7 @@ public final class NearbyTransport implements MeshTransport {
 
     /** Current endpoint to device bindings, for the nearby devices screen. */
     public Map<String, String> bindings() {
-        synchronized (lock) {
-            return Collections.unmodifiableMap(new TreeMap<>(deviceIdByEndpoint));
-        }
+        return bindings.snapshot();
     }
 
     /** This device's stable identity, used by the UI during verification. */

@@ -197,7 +197,24 @@ public final class MeshEngine {
                 return;
             }
             TrustStore.Entry entry = router.acceptPeerKey(deviceId, publicKey);
-            publish(new EngineStatus("peer-seen", DeviceIdentity.shortDeviceId(entry.deviceId())
+
+            // Promote the transport's provisional binding.
+            //
+            // Until this happens the transport knows the peer only by its
+            // Nearby endpoint id, which is a per-session radio handle. The
+            // router asks the transport which peers it can reach and compares
+            // that set against a deviceId, so with endpoint ids in place the
+            // comparison never matches and every directed message floods
+            // instead of going to the one peer that could deliver it.
+            //
+            // This is the only place that mapping can be learned from, because
+            // the claim carries the key and the key is what the device id is
+            // derived from.
+            if (fromPeerDeviceId != null) {
+                transport.promoteBinding(fromPeerDeviceId, deviceId);
+            }
+
+            publish(new EngineStatus("peer-seen", DeviceIdentity.shortDeviceId(deviceId)
                     + " wants verifying"));
             Log.i(TAG, "Learned unverified peer " + DeviceIdentity.shortDeviceId(entry.deviceId())
                     + " via " + (fromPeerDeviceId == null ? "local" : fromPeerDeviceId));
