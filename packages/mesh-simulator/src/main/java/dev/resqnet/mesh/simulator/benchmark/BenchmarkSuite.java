@@ -409,10 +409,15 @@ public final class BenchmarkSuite {
         }
 
         sb.append("\n## Hop budget decides whether a message crosses\n\n");
-        sb.append(hopSensitivity.stream().map(r -> String.format(Locale.ROOT,
-                "| %d | %d | %d | %.1f%% | %.1fx |%n", r.nodes(), r.hopLimit(),
-                r.acknowledged(), r.deliveryPercent(), r.amplification()))
-                .collect(java.util.stream.Collectors.toList()));
+        sb.append("| Nodes | Hop budget | Acknowledged | Delivery | Amplification |\n");
+        sb.append("|---:|---:|---:|---:|---:|\n");
+        // Each row appended individually. Collecting into a list and appending
+        // that prints the list's toString, which is not a table.
+        for (HopRow r : hopSensitivity) {
+            sb.append(String.format(Locale.ROOT, "| %d | %d | %d | %.1f%% | %.1fx |\n",
+                    r.nodes(), r.hopLimit(), r.acknowledged(), r.deliveryPercent(),
+                    r.amplification()));
+        }
         sb.append("\nA flood travels one hop per relay, so a mesh wider than the hop\n");
         sb.append("budget cannot be crossed however long the sender waits. This is the\n");
         sb.append("dominant factor in the sweep, which is why the size table fixes it at 32.\n\n");
@@ -433,22 +438,6 @@ public final class BenchmarkSuite {
         sb.append("- Heap delta is noisy at small sizes and only meaningful as a trend.\n");
         sb.append("- Per-node behaviour is identical across every seed; the seeds vary\n");
         sb.append("  loss and churn, not the code path.\n");
-        return sb.toString();
-    }
-
-    private static String renderMarkdownHopSensitivity(List<HopRow> rows) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("## Hop budget decides whether a message crosses\n\n");
-        sb.append("The single largest factor in the sweep. A flood has to travel one hop per\n");
-        sb.append("relay, so a mesh wider than the hop budget cannot be crossed at all no\n");
-        sb.append("matter how long the sender waits. Mesh topology, seed 43.\n\n");
-        sb.append("| Nodes | Hop budget | Acknowledged | Delivery | Amplification |\n");
-        sb.append("|---:|---:|---:|---:|---:|\n");
-        for (HopRow row : rows) {
-            sb.append(String.format(Locale.ROOT, "| %d | %d | %d | %.1f%% | %.1fx |\n",
-                    row.nodes(), row.hopLimit(), row.acknowledged(), row.deliveryPercent(),
-                    row.amplification()));
-        }
         return sb.toString();
     }
 

@@ -205,7 +205,7 @@ session would imply an accountability model that does not exist.
 | mesh-core | 141 | `mvn -pl packages/mesh-core test` |
 | simulator | 41 | `mvn -pl packages/mesh-simulator -am test` |
 | backend (H2) | 50 | `mvn -pl services/backend test` |
-| backend (PostgreSQL) | 7 | see below |
+| backend (PostgreSQL) | 7 | see below, runs in CI against `postgres:16-alpine` |
 | Android | 38 | `cd apps/android && ./gradlew testDebugUnitTest` |
 | Web | 39 | `cd apps/web && npm run test` |
 
@@ -220,7 +220,16 @@ mvn -pl services/backend -am test \
 ```
 
 with `TEST_PG_URL`, `TEST_PG_USER` and `TEST_PG_PASSWORD` pointing at a live
-instance. CI does this against a `postgres:16-alpine` service container.
+instance. The `postgres` job in CI does exactly this against a
+`postgres:16-alpine` service container, and a separate job boots the whole
+application against PostgreSQL and drives a real incident through it.
+
+Those tests cover: every Flyway migration applying to a clean PostgreSQL
+database, Hibernate validating the mappings against the schema those
+migrations produced, a millisecond timestamp surviving a `timestamptz` round
+trip, the message-id uniqueness constraint and the severity CHECK constraint
+being enforced by the database rather than only by application code, the
+incident lifecycle, and device actions being audited as `DEVICE`.
 
 ### What the tests do not cover
 
@@ -280,14 +289,33 @@ These are simulation results, not field measurements.
 
 The headline finding is that **hop budget, not mesh size, decides whether a
 message crosses**. A flood travels one hop per relay, so a mesh wider than the
-hop budget cannot be crossed no matter how long the sender waits. On a
-100-node mesh with the same seed and the same messages:
+hop budget cannot be crossed no matter how long the sender waits. Mesh
+topology, one seed, same messages at every size:
 
-| Hop budget | Delivery |
-|---:|---:|
-| 8 | 24.0% |
-| 16 | 52.0% |
-| 32 | 84.0% |
+| Nodes | 4 hops | 8 hops | 16 hops | 32 hops |
+|---:|---:|---:|---:|---:|
+| 10 | 90.0% | 90.0% | 90.0% | 90.0% |
+| 50 | 15.0% | 50.0% | 90.0% | 90.0% |
+| 100 | 24.0% | 44.0% | 76.0% | 88.0% |
+| 500 | 2.4% | 4.0% | 10.4% | 21.6% |
+
+At 10 nodes the budget does not matter at all: everything is one or two hops
+away. By 500 nodes, even the maximum budget only reaches a fifth of messages,
+and the cost of trying is visible in the heap column of the same table.
+
+Other things the sweep shows:
+
+- **Partition is worse than size.** `two-cluster` at 10 nodes acknowledges 42%
+  where `mesh` at 10 acknowledges 79%. A partition costs more than ten times
+  the node count.
+- **Amplification falls as the mesh grows** (8.7x at 10 nodes, 4.6x at 500),
+  because the fixed cost of reaching a handful of nodes is amortised over more
+  of them. It never approaches 1x, which is the honest price of flooding.
+- **Memory scales with the mesh.** 1.7 MiB at 10 nodes to 180 MiB at 500, with
+  per-node queues holding relays for messages that have not yet been confirmed.
+
+The full table, with the host, is in
+[docs/benchmarks/results.md](docs/benchmarks/results.md).
 
 ---
 

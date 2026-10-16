@@ -155,6 +155,11 @@ jobs:
           # rather than the default profile growing them.
           SPRING_PROFILES_ACTIVE: dev
         run: |
+          # The log directory has to exist before the redirect. Without this
+          # the shell cannot create target/backend.log, the redirect fails, and
+          # the JVM silently never starts - which looks identical to the
+          # application being broken.
+          mkdir -p target
           nohup java -jar services/backend/target/backend-0.1.0-SNAPSHOT.jar \
             > target/backend.log 2>&1 &
           for attempt in $(seq 1 60); do

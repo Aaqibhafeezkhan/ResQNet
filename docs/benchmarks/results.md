@@ -62,23 +62,27 @@ kept rather than dropped.
 
 ## Hop budget decides whether a message crosses
 
-[| 10 | 4 | 18 | 90.0% | 10.1x |
-, | 10 | 8 | 18 | 90.0% | 10.9x |
-, | 10 | 16 | 18 | 90.0% | 10.9x |
-, | 10 | 32 | 18 | 90.0% | 10.9x |
-, | 50 | 4 | 3 | 15.0% | 3.1x |
-, | 50 | 8 | 10 | 50.0% | 5.4x |
-, | 50 | 16 | 18 | 90.0% | 7.9x |
-, | 50 | 32 | 18 | 90.0% | 8.5x |
-, | 100 | 4 | 6 | 24.0% | 3.2x |
-, | 100 | 8 | 11 | 44.0% | 4.9x |
-, | 100 | 16 | 19 | 76.0% | 7.0x |
-, | 100 | 32 | 22 | 88.0% | 8.2x |
-, | 500 | 4 | 3 | 2.4% | 2.6x |
-, | 500 | 8 | 5 | 4.0% | 3.5x |
-, | 500 | 16 | 13 | 10.4% | 4.2x |
-, | 500 | 32 | 27 | 21.6% | 4.9x |
-]
+Mesh topology, one seed. This is the single largest factor in the sweep.
+
+| Nodes | Hop budget | Acknowledged | Delivery | Amplification |
+|---:|---:|---:|---:|---:|
+| 10 | 4 | 18 | 90.0% | 10.1x |
+| 10 | 8 | 18 | 90.0% | 10.9x |
+| 10 | 16 | 18 | 90.0% | 10.9x |
+| 10 | 32 | 18 | 90.0% | 10.9x |
+| 50 | 4 | 3 | 15.0% | 3.1x |
+| 50 | 8 | 10 | 50.0% | 5.4x |
+| 50 | 16 | 18 | 90.0% | 7.9x |
+| 50 | 32 | 18 | 90.0% | 8.5x |
+| 100 | 4 | 6 | 24.0% | 3.2x |
+| 100 | 8 | 11 | 44.0% | 4.9x |
+| 100 | 16 | 19 | 76.0% | 7.0x |
+| 100 | 32 | 22 | 88.0% | 8.2x |
+| 500 | 4 | 3 | 2.4% | 2.6x |
+| 500 | 8 | 5 | 4.0% | 3.5x |
+| 500 | 16 | 13 | 10.4% | 4.2x |
+| 500 | 32 | 27 | 21.6% | 4.9x |
+
 A flood travels one hop per relay, so a mesh wider than the hop
 budget cannot be crossed however long the sender waits. This is the
 dominant factor in the sweep, which is why the size table fixes it at 32.
