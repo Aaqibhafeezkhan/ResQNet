@@ -13,6 +13,34 @@ the responder, or until its lifetime runs out. No server is involved at any
 point. The coordination gateway is strictly optional and is never on the
 emergency path.
 
+## Status: v0.1.0-alpha, experimental
+
+[![Release](https://img.shields.io/badge/release-v0.1.0--alpha-blue)](https://github.com/Gautam-aman/ResQNet/releases/tag/v0.1.0-alpha)
+[![Java](https://img.shields.io/badge/java-21%2B-0f7b6d)](https://adoptium.net/)
+
+The first public release is
+**[v0.1.0-alpha — Experimental Developer Preview](https://github.com/Gautam-aman/ResQNet/releases/tag/v0.1.0-alpha)**,
+intended for developers, hackathon reviewers, and contributors.
+
+It ships three artifacts: a self-contained simulator JAR, a Spring Boot backend
+JAR, and a static web command centre. **No Android APK is included**, because
+physical-device networking has never been tested — see
+[Unfinished work](#unfinished-work) before you rely on any of this.
+
+> This is research software. It is not a replacement for official emergency
+> services, and it must not be relied upon as one.
+
+## Technology stack
+
+| Layer | Technology |
+|---|---|
+| Mesh core | Java 21, no framework dependencies, runs unchanged on Android |
+| Simulator | Java 21, discrete-event, deterministic from a seed |
+| Gateway | Java 21, Spring Boot 3, PostgreSQL, Flyway, JPA/Hibernate |
+| Android | Java, Android SDK, Nearby Connections `P2P_CLUSTER`, SQLite, Robolectric |
+| Web | React 19, TypeScript, Vite, Zustand, WebSocket with polling fallback |
+| CI | GitHub Actions: Java, backend (H2 + PostgreSQL), Android, web |
+
 ---
 
 ## What is actually implemented
@@ -235,43 +263,51 @@ session would imply an accountability model that does not exist.
 
 ## Release artifacts
 
-```bash
-scripts/build_release_artifacts.sh
-```
+Download the published pre-release rather than building it, if you only want to
+look: **[v0.1.0-alpha](https://github.com/Gautam-aman/ResQNet/releases/tag/v0.1.0-alpha)**.
 
-Builds everything into `dist/`, writes `SHA256SUMS.txt`, and generates
-`dist/release-notes.md` describing each artifact: what it is, how to run
-it, what was verified, what was only simulated, and what has never been
-tested at all.
+To build the same thing yourself:
+
+```bash
+scripts/build_release_artifacts.sh --exclude-android
+```
 
 ```
 dist/
-  jars/mesh-simulator-*-runnable.jar   self-contained simulator + demonstration
-  jars/backend-*.jar                   Spring Boot gateway, needs PostgreSQL
-  apk/resqnet-<version>-release.apk    unsigned unless a keystore was supplied
-  apk/resqnet-<version>-debug.apk      debug-signed, internal testing only
-  SHA256SUMS.txt
-  release-notes.md
+  jars/resqnet-simulator-v<version>.jar   self-contained simulator + demonstration
+  jars/resqnet-backend-v<version>.jar     Spring Boot gateway, needs PostgreSQL
+  web/resqnet-web-v<version>.zip          static command centre + serving notes
+  SHA256SUMS                              digest of every file above
+  RELEASE_NOTES.md  INSTALLATION.md  ARTIFACTS.md
 ```
 
+Without `--exclude-android` the script also assembles APKs into `dist/apk/` for
+local hardware testing. They are **not** published: physical-device networking
+has never been tested.
+
 ```bash
-cd dist && shasum -a 256 -c SHA256SUMS.txt   # macOS
-sha256sum -c SHA256SUMS.txt                 # Linux
+cd dist && shasum -a 256 -c SHA256SUMS   # macOS
+sha256sum -c SHA256SUMS                 # Linux
 ```
 
 The jars are byte-reproducible: two builds of the same commit produce
-the same digest. APK digests are not, because the Android toolchain
-embeds build timestamps in the zip.
+the same digest. The web zip is not, because zip records its own modification
+times. APK digests are not reproducible either, because the Android toolchain
+embeds build timestamps.
 
 Run the demonstration without any infrastructure:
 
 ```bash
-java -cp dist/jars/mesh-simulator-*-runnable.jar \
+java -cp dist/jars/resqnet-simulator-v*.jar \
   dev.resqnet.mesh.simulator.demo.DemoScenario
 ```
 
 The backend jar has no bundled H2 driver, because H2 is test scope.
 Pointing it at H2 fails at startup by design; it targets PostgreSQL.
+
+Releases are published by a manually dispatched workflow that cannot be
+triggered by a push. It verifies tests, digests and the absence of signing
+material, and defaults to a dry run.
 
 ---
 
@@ -458,16 +494,18 @@ one identity.
 
 Stated plainly so it is not discovered by a reviewer.
 
-- **The WebSocket event stream has no producer.** The handler, the security
-  configuration and the endpoint all exist; nothing calls `broadcast()`, and
-  the frontend polls instead. Wiring it is a feature, not a fix, so it is not
-  included here.
+- **The simulator cannot publish to the backend.** `SimulatorCli --gateway`
+  exists but is unfinished: it posts a run summary, while
+  `/api/v1/gateway/sync` expects per-message records, so the gateway rejects it
+  with `VALIDATION_FAILED`. The endpoint is correct; the sender is missing. The
+  dashboard's own live event stream over WebSocket works independently of this
+  and was verified against a running jar.
 - **Assignment has no UI.** `POST /incidents/{reference}/assign` exists, is
   audited and is tested, but the command centre has no control for it.
 - **Manual incident creation has no UI.** The endpoint works.
 - **The physical-device test has not been run.** This is the largest gap in
   the project and it is listed first in the test section above because it is the
-  one that matters. Seven defects found by auditing the app would each have
+  one that matters. Several defects found by auditing the app would each have
   prevented the three-phone demo on their own; they are fixed, but nothing
   proves the radio path works.
 - **Multi-hop cannot be observed when the phones are in range of each other.**
@@ -495,6 +533,28 @@ from phone A, and watch the command centre keep reporting what it actually
 knows rather than what would be convenient.
 
 ---
+
+## Contributing
+
+Issues and pull requests are welcome, and responsible bug reports are especially
+valuable — particularly about routing correctness, message integrity, or
+security.
+
+Read [docs/security/threat-model.md](docs/security/threat-model.md) before
+proposing a change to the trust or transport model. When you report a finding,
+say honestly whether you reproduced it, read it, or inferred it. Several defects
+here were found by reading the code rather than by running it, and the
+difference between a reproduced and an inferred report matters a great deal to
+whoever triages it.
+
+If you have tested the Android app on real hardware, that result is worth more
+than anything else you could send. The procedure is in
+[apps/android/DEVICE_TESTING.md](apps/android/DEVICE_TESTING.md), and no
+hardware run is recorded yet.
+
+Please keep the "what is verified / what is simulated / what is untested"
+distinction intact in any change. It is the most valuable thing in this
+repository, and it is easy to erode by accident.
 
 ## License
 

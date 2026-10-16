@@ -9,7 +9,7 @@ document is the procedure for doing it.
 build, because CI has no radios and this has not been done on a desk. Every
 checkbox is unverified.
 
-Eleven defects found by reading this code would each have prevented the
+Several defects found by reading this code would each have prevented the
 three-phone demo on their own. They are fixed. **None of them is evidence that
 the radio path works**, and this file exists so that the distinction stays
 visible rather than being quietly lost.
