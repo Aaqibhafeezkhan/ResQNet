@@ -14,7 +14,12 @@ android {
         targetSdk 34
         // 2 because 0.1.0 shipped as the debug-signed internal build.
         versionCode 2
-        versionName '0.2.0-beta.1'
+        // Mirrors the root pom.xml version. The release workflow checks the
+        // two against each other, so the tag and the artifact can never
+        // disagree. No Android binary is published in this release: physical
+        // device networking has never been tested, so the source ships and
+        // the APK waits. See apps/android/DEVICE_TESTING.md.
+        versionName '0.1.0-alpha'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
