@@ -238,7 +238,7 @@ public final class MeshRouter implements AutoCloseable {
 
         store.upsert(StoredMessage.of(signed, encoded, now));
         enforceQueueCapacity();
-        metrics.recordOriginated();
+        metrics.recordOriginated(signed.destinationDeviceId().isPresent());
 
         emit(new MeshEvent.DeliveryStateChanged(now, self.deviceId(), signed.messageId(),
                 DeliveryState.CREATED, DeliveryState.QUEUED, "composed on this device"));

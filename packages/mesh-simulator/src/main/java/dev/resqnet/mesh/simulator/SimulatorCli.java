@@ -108,6 +108,12 @@ public final class SimulatorCli {
                     "Nodes: %d | originated: %d | acknowledged: %d | delivery rate: %.1f%%%n",
                     report.nodeCount(), report.originatedCount(), report.acknowledgedCount(),
                     report.deliveryRate() * 100);
+            // Stated separately because it changes how the rate above should be
+            // read: broadcasts cannot be acknowledged, so the rate is a share of
+            // directed messages only.
+            System.out.printf(Locale.ROOT,
+                    "  directed: %d (confirmable) | broadcast: %d (cannot be acknowledged)%n",
+                    report.directedOriginatedCount(), report.broadcastOriginatedCount());
 
             if (options.output != null) {
                 writeReport(report, options.output);

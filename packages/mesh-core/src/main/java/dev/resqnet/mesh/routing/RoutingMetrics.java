@@ -23,6 +23,7 @@ public final class RoutingMetrics {
     public static final int DEFAULT_LATENCY_SAMPLES = 4096;
 
     private final LongAdder originated = new LongAdder();
+    private final LongAdder directedOriginated = new LongAdder();
     private final LongAdder accepted = new LongAdder();
     private final LongAdder delivered = new LongAdder();
     private final LongAdder forwarded = new LongAdder();
@@ -52,8 +53,11 @@ public final class RoutingMetrics {
         this.acknowledgementLatency = new LatencyReservoir(latencySamples);
     }
 
-    void recordOriginated() {
+    void recordOriginated(boolean directed) {
         originated.increment();
+        if (directed) {
+            directedOriginated.increment();
+        }
     }
 
     void recordAccepted() {
@@ -128,6 +132,18 @@ public final class RoutingMetrics {
     }
 
     /** Messages created on this device. */
+    /**
+     * Messages that named a destination and so can be confirmed end to end.
+     *
+     * <p>A broadcast is never acknowledged: {@code MeshRouter} returns empty
+     * from {@code buildAcknowledgement} when there is no destination, because
+     * there is nobody to acknowledge to. Mixing the two into one denominator
+     * caps the reported delivery rate below 100% however well the mesh works.
+     */
+    public long directedOriginatedCount() {
+        return directedOriginated.sum();
+    }
+
     public long originatedCount() {
         return originated.sum();
     }
@@ -274,6 +290,7 @@ public final class RoutingMetrics {
             return;
         }
         originated.add(other.originated.sum());
+        directedOriginated.add(other.directedOriginated.sum());
         accepted.add(other.accepted.sum());
         delivered.add(other.delivered.sum());
         forwarded.add(other.forwarded.sum());

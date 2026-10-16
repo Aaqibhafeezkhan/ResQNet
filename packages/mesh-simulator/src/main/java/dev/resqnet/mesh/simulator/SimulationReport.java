@@ -22,6 +22,10 @@ public final class SimulationReport {
     private final SimulationConfig config;
     private final int nodeCount;
     private final long originatedCount;
+    /** Originated messages that named a destination and so can be confirmed. */
+    private final long directedOriginatedCount;
+    /** Originated broadcasts, which by construction can never be acknowledged. */
+    private final long broadcastOriginatedCount;
     private final long deliveredCount;
     private final long acknowledgedCount;
     private final long expiredCount;
@@ -74,6 +78,8 @@ public final class SimulationReport {
 
         this.originatedCount = aggregate.originatedCount();
         this.acknowledgedCount = aggregate.acknowledgementReceivedCount();
+        this.directedOriginatedCount = aggregate.directedOriginatedCount();
+        this.broadcastOriginatedCount = Math.max(0, originatedCount - directedOriginatedCount);
         this.deliveredCount = countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.DELIVERED)
                 + countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.ACKNOWLEDGED);
         this.expiredCount = countNodesByState(dev.resqnet.mesh.protocol.DeliveryState.EXPIRED);
@@ -85,10 +91,20 @@ public final class SimulationReport {
         this.rejectedCount = aggregate.totalDropCount();
         this.relayedCount = aggregate.forwardedCount();
 
-        this.deliveryRate = originatedCount == 0 ? 0
-                : (double) acknowledgedCount / originatedCount;
-        this.acknowledgementRate = originatedCount == 0 ? 0
-                : (double) acknowledgedCount / originatedCount;
+        // Denominator is directed messages only.
+        //
+        // A broadcast has no destination, so MeshRouter.buildAcknowledgement
+        // returns empty for one by design: there is nobody to acknowledge it
+        // to. Counting broadcasts in the denominator therefore caps the
+        // reported rate below 100% no matter how well the mesh performs, and
+        // makes a healthy run look broken. Worse, it misstates the property a
+        // responder cares about, which is "did the person it was addressed to
+        // confirm receipt".
+        this.deliveryRate = directedOriginatedCount == 0 ? 0
+                : (double) acknowledgedCount / directedOriginatedCount;
+        // Retained for compatibility with existing reports, with the same
+        // directed-only denominator and a name that says what it means.
+        this.acknowledgementRate = this.deliveryRate;
         this.amplificationFactor = aggregate.amplificationFactor();
 
         this.medianLatencyMillis = percentile(latencySamples, 50);
@@ -128,6 +144,26 @@ public final class SimulationReport {
     /** Messages composed on origin devices during the run. */
     public long originatedCount() {
         return originatedCount;
+    }
+
+    /**
+     * Messages that named a destination, and so can be confirmed end to end.
+     *
+     * <p>This is the denominator of {@link #deliveryRate()}.
+     */
+    public long directedOriginatedCount() {
+        return directedOriginatedCount;
+    }
+
+    /**
+     * Messages originated as broadcasts.
+     *
+     * <p>Exposed rather than folded into {@link #originatedCount()} silently,
+     * because "25% of what we sent can never be acknowledged" is a fact about
+     * the workload and not a defect.
+     */
+    public long broadcastOriginatedCount() {
+        return broadcastOriginatedCount;
     }
 
     /** Messages confirmed end-to-end by an acknowledgement from the recipient. */
@@ -262,6 +298,8 @@ public final class SimulationReport {
                         .put("churnEveryRounds", config.churnEveryRounds()))
                 .put("outcome", JsonObject.object()
                         .put("originated", originatedCount)
+                        .put("directedOriginated", directedOriginatedCount)
+                        .put("broadcastOriginated", broadcastOriginatedCount)
                         .put("acknowledged", acknowledgedCount)
                         .put("deliveredRecords", deliveredCount)
                         .put("expired", expiredCount)
