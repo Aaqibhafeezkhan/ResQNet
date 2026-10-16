@@ -35,7 +35,11 @@ jobs:
           java-version: '21'
           cache: gradle
 
+      # The Gradle build lives in apps/android, not at the repository root, so
+      # every Gradle step below runs from there.
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          working-directory: apps/android
 
       # The app compiles mesh-core from source rather than consuming a jar,
       # so a mesh-core change that breaks the Android build is caught here
@@ -43,17 +47,21 @@ jobs:
       # the only automated check that mesh-core stays free of APIs the handset
       # does not have.
       - name: Unit and Robolectric tests
+        working-directory: apps/android
         run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Assemble the debug APK
+        working-directory: apps/android
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Assemble the release APK
+        working-directory: apps/android
         # Release builds run the same lint and shrink checks a published build
         # would, so a signing or minification problem surfaces in CI.
         run: ./gradlew assembleRelease --stacktrace
 
       - name: Lint
+        working-directory: apps/android
         run: ./gradlew lintDebug --stacktrace
 
       - name: Upload the debug APK
@@ -74,6 +82,8 @@ jobs:
           retention-days: 14
 
       - name: Publish the unit test count
+        # Reported rather than only logged, so a drop in coverage is visible in
+        # the run summary instead of needing a report to be opened.
         # Makes the pass/fail visible in the job summary without having to
         # open a report, and makes a drop in coverage obvious on a diff.
         run: |

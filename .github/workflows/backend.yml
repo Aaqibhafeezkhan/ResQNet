@@ -90,13 +90,13 @@ jobs:
           exit 1
 
       - name: Run the PostgreSQL integration tests
-        # `postgres` profile, so the datasource points at the service container
-        # and the postgres-profile test class runs.
+        # -DskipITs=false is required: failsafe is skipped by default so that an
+        # ordinary build does not demand a PostgreSQL server it does not have.
+        # PostgresMigrationIT selects the postgres profile itself via
+        # @ActiveProfiles, which points the datasource at the service container
+        # through TEST_PG_URL.
         run: |
-          mvn -B -ntp verify -pl services/backend -am \
-            -Dspring.profiles.active=postgres \
-            -Dtest='PostgresMigrationIT' \
-            -Dsurefire.failIfNoSpecifiedTests=false
+          mvn -B -ntp verify -pl services/backend -am -DskipITs=false
 
       - name: Upload surefire reports
         if: always()

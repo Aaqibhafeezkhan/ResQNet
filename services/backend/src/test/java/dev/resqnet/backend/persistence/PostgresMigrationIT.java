@@ -16,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import dev.resqnet.backend.domain.Category;
+import dev.resqnet.backend.domain.Incident;
 import dev.resqnet.backend.domain.IncidentStatus;
 import dev.resqnet.backend.repository.AuditEventRepository;
 import dev.resqnet.backend.repository.IncidentMessageRepository;
@@ -182,11 +183,21 @@ class PostgresMigrationIT {
                         dev.resqnet.backend.domain.ResponderRole.ADMIN, 1L),
                 "req-update");
 
-        String state = jdbc.queryForObject(
-                "SELECT status FROM incidents WHERE reference = ?", String.class, reference);
-        assertThat(state).isEqualTo(IncidentStatus.RESOLVED.name());
+        // Read through the persistence context, not raw SQL. JdbcTemplate does
+        // not share Hibernate's connection under JpaTransactionManager, so a
+        // raw SELECT here reads a different connection and sees the row as it
+        // was before the transaction flushed. That failure mode looks exactly
+        // like "the update did not persist", which is a misleading way to lose
+        // an hour.
+        assertThat(incidents.findAll())
+                .filteredOn(i -> i.getReference().equals(reference))
+                .singleElement()
+                .extracting(Incident::getStatus)
+                .isEqualTo(IncidentStatus.RESOLVED);
+        assertThat(incidentService.detail(reference).orElseThrow().incident().status())
+                .isEqualTo(IncidentStatus.RESOLVED);
         assertThat(incidentService.overview().open())
-                .as("an acknowledged incident is no longer open")
+                .as("a resolved incident is no longer open")
                 .isZero();
     }
 

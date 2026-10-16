@@ -118,6 +118,16 @@ public record SimulationConfig(
                 messageLifetimeSeconds, true);
     }
 
+    /** Copy with a different hop budget. */
+    public SimulationConfig withHopLimit(int hops) {
+        if (hops < 1 || hops > 32) {
+            throw new IllegalArgumentException("hopLimit must be within [1,32]");
+        }
+        return new SimulationConfig(topology, messageCount, broadcastRatio, startEpochSeconds,
+                stepMillis, rounds, seed, linkDropProbability, churnEveryRounds, hops,
+                messageLifetimeSeconds, startPartitioned);
+    }
+
     /** Copy with a different round count. */
     public SimulationConfig withRounds(int count) {
         return new SimulationConfig(topology, messageCount, broadcastRatio, startEpochSeconds,

@@ -42,6 +42,8 @@
     <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
     <maven.surefire.plugin.version>3.5.2</maven.surefire.plugin.version>
     <maven.failsafe.plugin.version>3.5.2</maven.failsafe.plugin.version>
+    <!-- Integration tests need a live PostgreSQL; see the failsafe config. -->
+    <skipITs>true</skipITs>
     <maven.enforcer.plugin.version>3.5.0</maven.enforcer.plugin.version>
   </properties>
 
@@ -97,12 +99,41 @@
           <version>${maven.surefire.plugin.version}</version>
           <configuration>
             <argLine>-Xmx1g -Djava.awt.headless=true</argLine>
+            <!--
+              Use the class directory, not the packaged artifact.
+
+              spring-boot:repackage replaces the project artifact with an
+              executable jar whose classes live under BOOT-INF/classes. Plain
+              classloading cannot read that layout, so without this the forked
+              test JVM fails to resolve project classes and reports
+              "ClassSelector resolution failed / NoClassDefFoundError" for
+              classes that are present on disk. Naming the directory removes the
+              ambiguity.
+            -->
+            <classesDirectory>${project.build.outputDirectory}</classesDirectory>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${maven.failsafe.plugin.version}</version>
+          <!--
+            Integration tests are opt-in, and the flag defaults to off.
+
+            failsafe runs on `mvn verify`, so without this an ordinary build
+            picks up every integration test class. The PostgreSQL ones need a
+            live server that a developer or a plain CI job does not have, and
+            the failure mode was a JUnit discovery error that looked like a
+            broken test suite rather than a missing database.
+
+            A test that needs external infrastructure should have to ask for
+            it. Enable by setting the skipITs property to false.
+          -->
+          <configuration>
+            <skipITs>${skipITs}</skipITs>
+            <!-- See the surefire note: the repackaged jar is not loadable. -->
+            <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+          </configuration>
           <executions>
             <execution>
               <goals>
