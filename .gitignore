@@ -36,7 +36,9 @@ captures/
 *.apk
 *.aab
 *.dex
-release/
+# Anchored. Unanchored, this also matched docs/release/, which silently
+# excluded the published release notes and installation guide.
+/release/
 *.hprof
 
 # ---- Node / Frontend -------------------------------------------------------
