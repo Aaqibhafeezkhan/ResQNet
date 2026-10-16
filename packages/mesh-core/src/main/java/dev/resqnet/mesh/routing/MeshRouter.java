@@ -543,9 +543,26 @@ public final class MeshRouter implements AutoCloseable {
      * message to unrelated neighbours would spend everyone's battery for no
      * chance of success. When the destination is not connected, the message
      * floods, because reaching it may require any neighbour.
+     *
+     * <p>The one exception is this node itself: a directed message that names
+     * this device is not forwarded anywhere, because the recipient already has
+     * it. Broadcasts have no such destination and keep propagating.
      */
     private List<String> selectForwardTargets(MessageEnvelope envelope, String fromPeerDeviceId) {
         if (transport == null) {
+            return List.of();
+        }
+        // A node that is the *specific* destination of a directed message has
+        // nothing left to do with it. Re-broadcasting from here spends every
+        // neighbour's battery on a duplicate, and it would also flip this
+        // node's own record from DELIVERED back to RELAYED, putting the message
+        // back into the retry queue it just left.
+        //
+        // Note this tests the explicit destination, not addressedTo(id): a
+        // broadcast is "addressed to" every node and must keep propagating.
+        if (envelope.destinationDeviceId()
+                .filter(self.deviceId()::equals)
+                .isPresent()) {
             return List.of();
         }
         Set<String> connected = transport.connectedPeerIds();

@@ -29,7 +29,28 @@ public enum DeliveryState {
 
     /** True once the message can no longer change state. */
     public boolean terminal() {
-        return this == ACKNOWLEDGED || this == EXPIRED || this == FAILED;
+        return this == DELIVERED || this == ACKNOWLEDGED || this == EXPIRED || this == FAILED;
+    }
+
+    /**
+     * The states that end a record, in the order the stores filter on.
+     *
+     * <p>Shared so the in-memory store and the Android SQLite store cannot drift
+     * apart on which rows are finished. They previously each hardcoded the
+     * list, and the two copies had already diverged once.
+     *
+     * <p>{@link #DELIVERED} is terminal here, which is the one judgement call in
+     * this enum. Delivery is not the same as confirmation, but a node that has
+     * the message has nothing left to send for it: treating DELIVERED as live
+     * put the record back in the retry queue and re-broadcast a duplicate on
+     * every sweep. End-to-end confirmation is unaffected, because it depends on
+     * the <em>origin's</em> record, which is SENT_TO_PEER and stays live until an
+     * acknowledgement arrives. The store still permits the DELIVERED to
+     * ACKNOWLEDGED transition, so a late acknowledgement is still recorded.
+     */
+    public static java.util.List<String> terminalNames() {
+        return java.util.List.of(DELIVERED.name(), ACKNOWLEDGED.name(), EXPIRED.name(),
+                FAILED.name());
     }
 
     /** True when the sender may still make progress. */

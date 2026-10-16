@@ -112,15 +112,28 @@ public final class SqliteMessageStore implements MessageStore {
         }
     }
 
+    /** Builds the SQL bind arguments for a terminal-state exclusion plus a prefix. */
+    private static String[] prepend(String first, List<String> rest) {
+        String[] all = concat(new String[] { first }, rest);
+        return all;
+    }
+
+    /** Concatenates two bind-argument arrays. */
+    private static String[] concat(String[] head, List<String> tail) {
+        String[] out = java.util.Arrays.copyOf(head, head.length + tail.size());
+        for (int i = 0; i < tail.size(); i++) {
+            out[head.length + i] = tail.get(i);
+        }
+        return out;
+    }
+
     @Override
     public List<StoredMessage> pending() {
         List<StoredMessage> result = new ArrayList<>();
         try (Cursor cursor = database.getReadableDatabase().query(
                 ResQNetDatabase.TABLE_MESSAGES, null,
-                "state NOT IN (?, ?, ?)", new String[] {
-                        DeliveryState.ACKNOWLEDGED.name(),
-                        DeliveryState.EXPIRED.name(),
-                        DeliveryState.FAILED.name() },
+                "state NOT IN (?, ?, ?, ?)", DeliveryState.terminalNames().toArray(
+                        new String[0]),
                 null, null, "expires_at ASC")) {
             while (cursor.moveToNext()) {
                 StoredMessage message = read(cursor);
@@ -194,9 +207,8 @@ public final class SqliteMessageStore implements MessageStore {
     public int pendingCount() {
         try (Cursor cursor = database.getReadableDatabase().rawQuery(
                 "SELECT COUNT(*) FROM " + ResQNetDatabase.TABLE_MESSAGES
-                        + " WHERE state NOT IN (?, ?, ?)",
-                new String[] { DeliveryState.ACKNOWLEDGED.name(),
-                        DeliveryState.EXPIRED.name(), DeliveryState.FAILED.name() })) {
+                        + " WHERE state NOT IN (?, ?, ?, ?)",
+                DeliveryState.terminalNames().toArray(new String[0]))) {
             return cursor.moveToFirst() ? cursor.getInt(0) : 0;
         }
     }
@@ -215,9 +227,8 @@ public final class SqliteMessageStore implements MessageStore {
         List<String> stale = new ArrayList<>();
         try (Cursor cursor = database.getReadableDatabase().query(
                 ResQNetDatabase.TABLE_MESSAGES, new String[] { "message_id" },
-                "expires_at <= ? AND state NOT IN (?, ?, ?)",
-                new String[] { String.valueOf(nowMillis), DeliveryState.ACKNOWLEDGED.name(),
-                        DeliveryState.EXPIRED.name(), DeliveryState.FAILED.name() },
+                "expires_at <= ? AND state NOT IN (?, ?, ?, ?)",
+                prepend(String.valueOf(nowMillis), DeliveryState.terminalNames()),
                 null, null, null)) {
             while (cursor.moveToNext()) {
                 stale.add(cursor.getString(0));
@@ -237,10 +248,9 @@ public final class SqliteMessageStore implements MessageStore {
         List<String> evictable = new ArrayList<>();
         try (Cursor cursor = database.getReadableDatabase().query(
                 ResQNetDatabase.TABLE_MESSAGES, new String[] { "message_id" },
-                "priority IN (?, ?, ?) AND state NOT IN (?, ?, ?)",
-                new String[] { Priority.LOW.name(), Priority.NORMAL.name(),
-                        Priority.URGENT.name(), DeliveryState.ACKNOWLEDGED.name(),
-                        DeliveryState.EXPIRED.name(), DeliveryState.FAILED.name() },
+                "priority IN (?, ?, ?) AND state NOT IN (?, ?, ?, ?)",
+                concat(new String[] { Priority.LOW.name(), Priority.NORMAL.name(),
+                        Priority.URGENT.name() }, DeliveryState.terminalNames()),
                 null, null, "created_at ASC")) {
             while (cursor.moveToNext()) {
                 evictable.add(cursor.getString(0));
