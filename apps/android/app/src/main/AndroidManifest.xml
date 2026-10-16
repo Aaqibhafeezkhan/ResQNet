@@ -2,12 +2,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Nearby Connections. Android 12+ splits BLUETOOTH_SCAN / BLUETOOTH_CONNECT
-         and adds NEARBY_WIFI_DEVICES; the app requests all three and degrades
-         gracefully when only Wi-Fi Direct is available. -->
+         and adds NEARBY_WIFI_DEVICES; the app requests all four and degrades
+         gracefully when only Wi-Fi Direct is available.
+
+         BLUETOOTH_ADVERTISE is not optional for P2P_CLUSTER. Without it
+         startAdvertising throws SecurityException, discovery finds nobody, and
+         the app reports a healthy "mesh on" chip over a completely dead radio.
+         That was the state before this was declared: three phones, zero peers,
+         no error anywhere.
+
+         neverForLocation on SCAN is likewise not cosmetic. Declaring SCAN
+         without it asserts the app may derive location from scans, which
+         obliges it to hold ACCESS_FINE_LOCATION. ACCESS_FINE_LOCATION is
+         capped at API 30 below, so on API 31+ that obligation cannot be met
+         and the scan grant is rejected outright: permission dialog appears,
+         grant succeeds, scanning returns nothing. -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"

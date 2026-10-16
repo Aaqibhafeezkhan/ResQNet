@@ -844,6 +844,9 @@ public final class MeshRouter implements AutoCloseable {
 
     // ---------------------------------------------------------------- identity
 
+    /** Hop budget for an identity claim. See {@link #publishIdentity()}. */
+    public static final int IDENTITY_HOP_LIMIT = 4;
+
     private RoutingOutcome handleIdentityAnnouncement(MessageEnvelope envelope,
                                                       String fromPeerDeviceId, long now) {
         if (!IdentityAnnouncement.looksLikeIdentity(envelope.payload())) {
@@ -864,7 +867,22 @@ public final class MeshRouter implements AutoCloseable {
         if (listener != null) {
             listener.onIdentityAnnouncement(envelope, announcement, fromPeerDeviceId);
         }
-        return RoutingOutcome.QUEUED_FOR_RELAY;
+
+        // Actually relay it.
+        //
+        // This used to return QUEUED_FOR_RELAY without relaying or storing
+        // anything, which is simply a lie: the claim arrived, was parsed, and
+        // died. A device could therefore only ever learn about its direct
+        // neighbours, which is the same defect as a hop budget of one, and the
+        // two compounded into "no trust is ever established across a mesh".
+        //
+        // Relayed like any other envelope, so split horizon applies and the
+        // claim still cannot loop.
+        RoutingOutcome forwarded = forwardIfEligible(envelope, fromPeerDeviceId, now, false);
+        if (forwarded == RoutingOutcome.QUEUED_FOR_RELAY) {
+            persistForRelay(envelope, now, "identity claim awaiting a peer");
+        }
+        return forwarded;
     }
 
     /**
@@ -899,7 +917,17 @@ public final class MeshRouter implements AutoCloseable {
                     .priority(Priority.LOW)
                     .createdAt(clock.nowMillis())
                     .expiresAt(clock.nowMillis() + 10L * 60 * 1000)
-                    .hopLimit(1)
+                    // Enough hops to cross a realistic mesh, not just the link
+                    // it was born on. A key claim with a budget of one reaches
+                    // only direct neighbours, so a device three phones away
+                    // could never learn who it was talking to and every later
+                    // message from it would be refused as untrusted.
+                    //
+                    // Bounded rather than broadcast-to-infinity because an
+                    // identity claim is the cheapest payload an attacker can
+                    // forge, and unbounded flooding of cheap payloads is how a
+                    // battery gets drained. Four hops covers a site.
+                    .hopLimit(IDENTITY_HOP_LIMIT)
                     .payload(IdentityAnnouncement.of(self).encode())
                     .build());
             if (listener != null) {

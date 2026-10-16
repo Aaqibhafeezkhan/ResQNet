@@ -68,6 +68,11 @@ public final class WelcomeActivity extends AppCompatActivity {
             // Connections needs both.
             addIfMissing(missing, Manifest.permission.BLUETOOTH_SCAN);
             addIfMissing(missing, Manifest.permission.BLUETOOTH_CONNECT);
+            // Advertising is a separate runtime permission on API 31+ and
+            // P2P_CLUSTER cannot work without it. Declaring it in the manifest
+            // is only half of the job: startAdvertising throws
+            // SecurityException until the user has actually granted it.
+            addIfMissing(missing, Manifest.permission.BLUETOOTH_ADVERTISE);
             addIfMissing(missing, Manifest.permission.NEARBY_WIFI_DEVICES);
         } else {
             addIfMissing(missing, Manifest.permission.ACCESS_FINE_LOCATION);

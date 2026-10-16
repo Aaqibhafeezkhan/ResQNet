@@ -21,6 +21,7 @@ import dev.resqnet.android.data.SqliteMessageStore;
 import dev.resqnet.android.identity.KeystoreIdentity;
 import dev.resqnet.android.transport.NearbyTransport;
 import dev.resqnet.mesh.crypto.SigningIdentity;
+import dev.resqnet.mesh.crypto.DeviceIdentity;
 import dev.resqnet.mesh.crypto.TrustStore;
 import dev.resqnet.mesh.protocol.EnvelopeCodec;
 import dev.resqnet.mesh.protocol.MessageEnvelope;
@@ -91,6 +92,12 @@ public final class MeshEngine {
             @Override
             public void onPeerStateChanged(String deviceId, boolean connected) {
                 publish(new EngineStatus(connected ? "peer-up" : "peer-down", deviceId));
+                if (connected) {
+                    // Re-offer the identity claim now that there is somebody to
+                    // offer it to. A claim announced while no peer was awake
+                    // used to be lost for good.
+                    executor.execute(MeshEngine.this::publishIdentityClaim);
+                }
             }
         });
 
@@ -118,6 +125,79 @@ public final class MeshEngine {
         });
 
         router.addEventListener(this::handleMeshEvent);
+
+        // Bridge the radio's connection events into the router.
+        //
+        // setConnectionListener had never been called, so peer connections and
+        // disconnections stopped at the transport: the router was never told
+        // that a peer arrived, and therefore never drained its retry queue
+        // toward it, and never released anything on the way out. The callbacks
+        // existed, were correct, and were connected to nothing.
+        //
+        // Every one is marshalled onto the engine executor. These arrive on
+        // Google Play services binder threads, and what they trigger includes a
+        // full SQLite sweep of the pending queue.
+        transport.setConnectionListener(
+                new dev.resqnet.mesh.routing.MeshTransport.ConnectionListener() {
+                    @Override
+                    public void onPeerConnected(String deviceId) {
+                        executor.execute(() -> router.handlePeerConnected(deviceId));
+                    }
+
+                    @Override
+                    public void onPeerDisconnected(String deviceId) {
+                        executor.execute(() -> router.handlePeerDisconnected(deviceId));
+                    }
+                });
+
+        // Learn peer keys from the wire.
+        //
+        // Without this the trust store has no producer at all: MeshRouter.receive
+        // refuses any envelope whose origin it does not already hold a key for,
+        // and the only other entry point, acceptPeerKey, is reachable solely
+        // through acceptPeer below, which nothing in the app called. The result
+        // was a radio that received a perfectly valid SOS, validated the
+        // envelope structure, and discarded it as untrusted with no error shown
+        // anywhere: three phones, zero deliveries, and no way to tell why.
+        //
+        // A claim is self-asserted, so this records it as UNVERIFIED rather than
+        // trusting it. The user still has to confirm a short code in person, and
+        // only then does it become VERIFIED. What this listener does is make
+        // relaying possible at all, which is a different thing from trusting.
+        router.setIdentityAnnouncementListener(this::handleIdentityAnnouncement);
+    }
+
+    /**
+     * Records a peer's self-asserted key so its traffic can be verified.
+     *
+     * <p>Never called on the main thread: MeshRouter invokes it from whatever
+     * thread delivered the envelope, which for inbound payloads is a binder
+     * thread from Google Play services.
+     */
+    private void handleIdentityAnnouncement(
+            dev.resqnet.mesh.protocol.MessageEnvelope envelope,
+            dev.resqnet.mesh.routing.IdentityAnnouncement announcement,
+            String fromPeerDeviceId) {
+        try {
+            PublicKey publicKey = dev.resqnet.mesh.crypto.DeviceIdentity
+                    .decodePublicKey(announcement.publicKeyBase64());
+            String deviceId = dev.resqnet.mesh.crypto.DeviceIdentity.deviceId(publicKey);
+            if (trustStore.entry(deviceId).isPresent()) {
+                // Already known. Re-asserting a key we hold is either a
+                // reconnect or a key change; the store decides, and a changed
+                // key under a known id is a block, not an update.
+                return;
+            }
+            TrustStore.Entry entry = router.acceptPeerKey(deviceId, publicKey);
+            publish(new EngineStatus("peer-seen", DeviceIdentity.shortDeviceId(entry.deviceId())
+                    + " wants verifying"));
+            Log.i(TAG, "Learned unverified peer " + DeviceIdentity.shortDeviceId(entry.deviceId())
+                    + " via " + (fromPeerDeviceId == null ? "local" : fromPeerDeviceId));
+        } catch (Exception e) {
+            // A malformed or unusable claim must never take the router down.
+            Log.w(TAG, "Rejected identity claim", e);
+            publish(new EngineStatus("peer-rejected", "an identity claim could not be read"));
+        }
     }
 
     // ------------------------------------------------------------- lifecycle
@@ -216,20 +296,44 @@ public final class MeshEngine {
         });
     }
 
-    /** Broadcasts this device's key claim so neighbours can prompt for verification. */
+    /**
+     * Announces this device's key claim so neighbours can prompt for verification.
+     *
+     * <p>Persisted before it is sent, and re-announced when a peer connects.
+     *
+     * <p>It used to be encoded and handed to whatever peers happened to be
+     * connected at that instant, which is usually none, because this is called
+     * from a screen's onStart and pull-to-refresh. The claim was then lost
+     * permanently: no retry, no persistence, no periodic re-announce. A phone
+     * that started its mesh before any neighbour was awake never introduced
+     * itself, and no peer ever had a key for it.
+     */
     public void publishIdentity() {
         executor.execute(() -> {
-            Optional<MessageEnvelope> claim = router.publishIdentity();
-            claim.ifPresent(envelope -> {
-                try {
-                    byte[] encoded = EnvelopeCodec.encode(envelope);
-                    for (String peer : transport.connectedPeerIds()) {
-                        transport.send(peer, encoded);
-                    }
-                } catch (dev.resqnet.mesh.protocol.ProtocolException e) {
-                    Log.w(TAG, "Could not publish identity claim", e);
+            publishIdentityClaim();
+            // If nobody was listening, the persisted copy is offered again the
+            // moment a peer arrives, from handlePeerConnected.
+        });
+    }
+
+    /** Encodes, persists and sends the identity claim. Runs on the engine executor. */
+    private void publishIdentityClaim() {
+        Optional<MessageEnvelope> claim = router.publishIdentity();
+        claim.ifPresent(envelope -> {
+            try {
+                byte[] encoded = EnvelopeCodec.encode(envelope);
+                // Persist first. A claim that is only ever in memory is a claim
+                // that is lost the first time the screen rotates.
+                store.upsert(dev.resqnet.mesh.routing.StoredMessage
+                        .of(envelope, encoded, System.currentTimeMillis())
+                        .withState(dev.resqnet.mesh.protocol.DeliveryState.QUEUED,
+                                "identity claim awaiting a peer"));
+                for (String peer : transport.connectedPeerIds()) {
+                    transport.send(peer, encoded);
                 }
-            });
+            } catch (dev.resqnet.mesh.protocol.ProtocolException e) {
+                Log.w(TAG, "Could not publish identity claim", e);
+            }
         });
     }
 
