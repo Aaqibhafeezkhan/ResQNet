@@ -145,7 +145,7 @@ public final class BenchmarkSuite {
         for (int nodes : nodeCounts) {
             hopSensitivity.addAll(runHopSensitivity(nodes, baseSeed + 1, hopBudgets));
         }
-        RoutingThroughput throughput = measureRoutingThroughput(baseSeed);
+        RoutingThroughput throughput = measureRoutingThroughput(baseSeed, quick);
         long elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000L;
 
         String json = renderJson(scale, recovery, hopSensitivity, throughput, elapsedMillis);
@@ -244,8 +244,9 @@ public final class BenchmarkSuite {
      * <p>The closest thing here to a microbenchmark: one process, one mesh, as
      * many messages as the harness will originate, divided by elapsed time.
      */
-    private static RoutingThroughput measureRoutingThroughput(long seed) throws Exception {
-        int nodes = 100;
+    private static RoutingThroughput measureRoutingThroughput(long seed, boolean quick)
+            throws Exception {
+        int nodes = quick ? 50 : 100;
         // Sized from measurement, not from optimism. Flooding 100 nodes with
         // 2000 messages over 200 rounds did not finish in half an hour on a
         // laptop; 300 messages over 60 rounds takes about six, which is long
@@ -255,11 +256,12 @@ public final class BenchmarkSuite {
         // clock, so it is a property of this host, not a specification. It is
         // published to make a large regression visible, and the host is
         // recorded alongside it for that reason.
-        int messages = 300;
+        int messages = quick ? 60 : 300;
+        int rounds = quick ? 30 : 60;
         SimulationConfig config = SimulationConfig
                 .defaults(Topology.of(Topology.Shape.MESH, nodes, 3, seed), seed)
                 .withMessageCount(messages)
-                .withRounds(60)
+                .withRounds(rounds)
                 .withHopLimit(SWEEP_HOP_LIMIT);
 
         long start = System.nanoTime();

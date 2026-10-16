@@ -79,10 +79,11 @@ jobs:
       # publish numbers. The published numbers come from a full local run.
       - name: Benchmark smoke run
         run: |
+          mkdir -p target
           java -Xmx2g -cp packages/mesh-simulator/target/classes:packages/mesh-core/target/classes \
             dev.resqnet.mesh.simulator.benchmark.BenchmarkSuite \
             --seed 42 --quick --json target/benchmark.json \
-            > /dev/null
+            > target/benchmark.md
 
       - name: Upload benchmark output
         if: always()
