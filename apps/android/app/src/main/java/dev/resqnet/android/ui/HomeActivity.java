@@ -73,6 +73,9 @@ public final class HomeActivity extends AppCompatActivity {
         actions.add(new QuickAction(getString(R.string.home_nearby),
                 getString(R.string.home_nearby),
                 () -> startActivity(new Intent(this, NearbyActivity.class))));
+        actions.add(new QuickAction(getString(R.string.home_diagnostics),
+                getString(R.string.home_diagnostics),
+                () -> startActivity(new Intent(this, DiagnosticsActivity.class))));
         actions.add(new QuickAction(getString(R.string.home_inbox), getString(R.string.home_inbox),
                 () -> startActivity(new Intent(this, InboxActivity.class))));
         actions.add(new QuickAction(getString(R.string.home_history), getString(R.string.home_history),

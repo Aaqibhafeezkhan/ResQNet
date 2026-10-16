@@ -111,6 +111,9 @@ public final class NearbyTransport implements MeshTransport {
     };
     private volatile ConnectionListener connectionListener = new ConnectionListener() {
     };
+    /** Endpoint ids discovery has reported, connected or not. */
+    private final java.util.Set<String> discovered =
+            java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
 
     private ConnectionsClient client;
     private boolean started;
@@ -284,6 +287,7 @@ public final class NearbyTransport implements MeshTransport {
                                 @Override
                                 public void onEndpointFound(String endpointId,
                                                             DiscoveredEndpointInfo info) {
+                                    discovered.add(endpointId);
                                     requestConnection(endpointId);
                                 }
 
@@ -445,6 +449,7 @@ public final class NearbyTransport implements MeshTransport {
     }
 
     private void unbind(String endpointId) {
+        discovered.remove(endpointId);
         String deviceId;
         synchronized (lock) {
             deviceId = deviceIdByEndpoint.remove(endpointId);
@@ -480,6 +485,21 @@ public final class NearbyTransport implements MeshTransport {
     private void reportFailure(String operation, String message) {
         Log.w(TAG, operation + " failed: " + message);
         listener.onTransportError(operation, message);
+    }
+
+    /**
+     * Endpoints discovery currently knows about, connected or not.
+     *
+     * <p>Added for the diagnostics screen. "Discovered but not connected"
+     * and "never discovered" are different failures with different causes:
+     * the first is a permission or a cluster-owner problem, the second is
+     * advertising. Telling them apart from the existing bindings map alone is
+     * not possible, because a binding only appears once a connection succeeds.
+     */
+    public java.util.List<String> discoveredEndpoints() {
+        java.util.List<String> found = new java.util.ArrayList<>(discovered);
+        java.util.Collections.sort(found);
+        return found;
     }
 
     /** Current endpoint to device bindings, for the nearby devices screen. */

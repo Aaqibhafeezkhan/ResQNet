@@ -86,11 +86,19 @@ public final class MeshEngine {
                 displayName, new NearbyTransport.Listener() {
             @Override
             public void onTransportError(String operation, String message) {
+                errorsLogged.incrementAndGet();
+                record("ERROR", operation + ": " + message);
                 publish(new EngineStatus("transport-error", operation + ": " + message));
             }
 
             @Override
             public void onPeerStateChanged(String deviceId, boolean connected) {
+                if (connected) {
+                    peersSeen.incrementAndGet();
+                } else {
+                    peersConnected.decrementAndGet();
+                }
+                record(connected ? "PEER UP" : "PEER DOWN", deviceId);
                 publish(new EngineStatus(connected ? "peer-up" : "peer-down", deviceId));
                 if (connected) {
                     // Re-offer the identity claim now that there is somebody to
@@ -321,6 +329,7 @@ public final class MeshEngine {
         Optional<MessageEnvelope> claim = router.publishIdentity();
         claim.ifPresent(envelope -> {
             try {
+                messagesSent.incrementAndGet();
                 byte[] encoded = EnvelopeCodec.encode(envelope);
                 // Persist first. A claim that is only ever in memory is a claim
                 // that is lost the first time the screen rotates.
@@ -402,6 +411,82 @@ public final class MeshEngine {
         return IdentityAnnouncement.shortCode(identity.keyFingerprint());
     }
 
+    // ------------------------------------------------------------ diagnostics
+
+    /**
+     * A bounded, in-memory record of what the mesh has actually done.
+     *
+     * <p>Exists because nothing else surfaces this. Every event, state change
+     * and transport error was previously published to listeners that no activity
+     * had ever registered, so a phone that silently refused every message
+     * because its trust store was empty looked exactly like a phone with no
+     * peers. For a device being taken to three other phones for the first
+     * time, being able to see "received, but refused: untrusted origin" is the
+     * difference between a five-minute diagnosis and an afternoon.
+     *
+     * <p>Bounded on purpose. An emergency handset must not grow its heap to
+     * explain itself, and the most recent few hundred lines is what a
+     * diagnostic screen ever shows.
+     */
+    public static final int DIAGNOSTIC_CAPACITY = 400;
+
+    private final java.util.Deque<String> diagnostics =
+            new java.util.concurrent.ConcurrentLinkedDeque<>();
+    private final java.util.concurrent.atomic.AtomicInteger diagnosticDropped =
+            new java.util.concurrent.atomic.AtomicInteger();
+
+    private final java.util.concurrent.atomic.AtomicLong peersSeen =
+            new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong peersConnected =
+            new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong messagesSent =
+            new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong messagesReceived =
+            new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong messagesRelayed =
+            new java.util.concurrent.atomic.AtomicLong();
+    private final java.util.concurrent.atomic.AtomicLong errorsLogged =
+            new java.util.concurrent.atomic.AtomicLong();
+
+    /** One recorded diagnostic line. */
+    public record Diagnostic(String at, String kind, String detail) {
+    }
+
+    /**
+     * Counters a tester can read at a glance.
+     *
+     * <p>{@code peersConnected} is a current value and the rest are monotonic
+     * totals, which is the distinction that matters when watching a relay come
+     * and go mid-test.
+     */
+    public record DiagnosticsSummary(long peersSeen, int peersConnected, long messagesSent,
+                                    long messagesReceived, long messagesRelayed,
+                                    long errorsLogged, int linesDropped, int lineCount,
+                                    boolean radioStarted, boolean radioReady) {
+    }
+
+    private void record(String kind, String detail) {
+        String line = System.currentTimeMillis() + "  " + kind + "  " + detail;
+        diagnostics.addFirst(line);
+        while (diagnostics.size() > DIAGNOSTIC_CAPACITY) {
+            diagnostics.pollLast();
+            diagnosticDropped.incrementAndGet();
+        }
+    }
+
+    /** Most recent diagnostics, newest first. */
+    public List<String> diagnostics() {
+        return new java.util.ArrayList<>(diagnostics);
+    }
+
+    public DiagnosticsSummary diagnosticsSummary() {
+        return new DiagnosticsSummary(peersSeen.get(),
+                transport.connectedPeerIds().size(),
+                messagesSent.get(), messagesReceived.get(), messagesRelayed.get(),
+                errorsLogged.get(), diagnosticDropped.get(), diagnostics.size(),
+                transport.isStarted(), transport.isReady());
+    }
+
     // -------------------------------------------------------------- observers
 
     /** UI-facing status change. Always delivered on the main thread. */
@@ -433,6 +518,38 @@ public final class MeshEngine {
     }
 
     private void handleMeshEvent(MeshEvent event) {
+        // Counters and the diagnostic feed are fed here rather than from each
+        // call site, so nothing can be counted in one place and missed in
+        // another.
+        if (event instanceof dev.resqnet.mesh.routing.MeshEvent.PeerConnectionChanged changed
+                && changed.connected()) {
+            peersConnected.incrementAndGet();
+            record("PEER CONNECTED", changed.deviceId());
+        }
+        if (event instanceof dev.resqnet.mesh.routing.MeshEvent.Forwarded forwarded) {
+            messagesRelayed.incrementAndGet();
+            record("RELAY", forwarded.messageId() + " -> "
+                    + forwarded.peerDeviceIds().size() + " peer(s), hop "
+                    + forwarded.hopCount());
+        }
+        if (event instanceof dev.resqnet.mesh.routing.MeshEvent.Delivered delivered) {
+            messagesReceived.incrementAndGet();
+            record("RECEIVED", delivered.envelope().messageId() + " (hop "
+                    + delivered.envelope().hopCount() + ", "
+                    + dev.resqnet.mesh.crypto.DeviceIdentity.shortDeviceId(
+                            delivered.envelope().originDeviceId()) + ")");
+        }
+        if (event instanceof dev.resqnet.mesh.routing.MeshEvent.Rejected rejected) {
+            errorsLogged.incrementAndGet();
+            record("REJECTED", rejected.reason() + ": " + rejected.detail());
+        }
+        if (event instanceof dev.resqnet.mesh.routing.MeshEvent.DeliveryStateChanged changed) {
+            record("STATE", changed.messageId() + " " + changed.previous() + " -> "
+                    + changed.current());
+        }
+        if (event instanceof dev.resqnet.mesh.routing.MeshEvent.AcknowledgementReceived ack) {
+            record("ACK RECEIVED", ack.messageId());
+        }
         if (event instanceof dev.resqnet.mesh.routing.MeshEvent.Delivered delivered) {
             MessageEnvelope envelope = delivered.envelope();
             new android.os.Handler(android.os.Looper.getMainLooper())

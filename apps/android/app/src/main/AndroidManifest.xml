@@ -66,6 +66,8 @@
             android:screenOrientation="portrait" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.NearbyActivity" android:exported="false"
             android:screenOrientation="portrait" />
+        <activity android:name=".ui.DiagnosticsActivity" android:exported="false"
+            android:screenOrientation="portrait" />
         <activity android:name=".ui.InboxActivity" android:exported="false"
             android:screenOrientation="portrait" />
         <activity android:name=".ui.MessageDetailActivity" android:exported="false"

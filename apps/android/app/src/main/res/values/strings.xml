@@ -133,4 +133,11 @@
     <string name="action_back">Back</string>
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
+    <string name="home_diagnostics">Diagnostics</string>
+    <string name="diagnostics_title">Mesh diagnostics</string>
+    <string name="diagnostics_subtitle">Live counters and the last few hundred events. Select and copy this screen when reporting a problem.</string>
+    <string name="diagnostics_feed_label">EVENT LOG</string>
+    <string name="diagnostics_engine_absent">The mesh engine is not running. Start the mesh from the home screen first.</string>
+    <string name="diagnostics_no_events">No events yet.</string>
+    <string name="diagnostics_hint">A message that arrives and is never shown here was refused. Look for a REJECTED line: UNTRUSTED_ORIGIN means the peer key has not been accepted yet.</string>
 </resources>

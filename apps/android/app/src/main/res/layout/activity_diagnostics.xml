@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Diagnostic screen.
+
+  Deliberately dense and deliberately dull. Its job is to let somebody holding
+  three phones answer the question "why did that message not arrive", and a
+  screen designed to look good is worse at that than a list of facts.
+
+  Every field shown here is something a tester will otherwise have to guess at:
+  whether the radio is actually up, which peers are visible, how many messages
+  moved in each direction, and what the mesh refused and why.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/surface_sunken"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/diagnosticsTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/diagnostics_title"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/diagnosticsSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="@string/diagnostics_subtitle"
+        android:textColor="@color/text_disabled"
+        android:textSize="11sp" />
+
+    <!-- Radio and trust state. The two things whose absence explains everything. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@color/surface_base"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/diagnosticsRadio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:id="@+id/diagnosticsCounters"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="monospace"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:id="@+id/diagnosticsPeers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="monospace"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:textIsSelectable="true" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="@string/diagnostics_feed_label"
+        android:textColor="@color/text_disabled"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/diagnosticsFeed"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="6dp"
+        android:layout_weight="1"
+        android:background="@color/surface_base"
+        android:fontFamily="monospace"
+        android:padding="10dp"
+        android:scrollbars="vertical"
+        android:textColor="@color/text_secondary"
+        android:textSize="11sp"
+        android:textIsSelectable="true" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/diagnostics_hint"
+        android:textColor="@color/text_disabled"
+        android:textSize="11sp" />
+</LinearLayout>
