@@ -140,7 +140,7 @@ jobs:
             echo "Tag: \`${{ inputs.tag }}\` at \`${{ github.sha }}\`"
             echo
             echo '```'
-            cat dist/SHA256SUMS.txt
+            cat dist/SHA256SUMS
             echo '```'
             echo
             echo "No Android binary is included: physical-device networking"
