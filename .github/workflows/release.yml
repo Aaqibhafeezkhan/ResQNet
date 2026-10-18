@@ -184,13 +184,17 @@ jobs:
           elif [ -f artifacts/RELEASE_NOTES.md ]; then
             cp artifacts/RELEASE_NOTES.md /tmp/notes.md
           else
-            printf 'Experimental beta for ResQNet.\n\nSee the repository README.\n' \
+            printf 'Experimental developer preview of ResQNet.\n\nSee the README.\n' \
               > /tmp/notes.md
           fi
+          # The notes file may not end in a newline. If it does not, `cat`
+          # and the delimiter share one line, and the runner reports
+          # "Matching delimiter not found" for a value that was written
+          # correctly. A newline first guarantees the delimiter starts its own.
           {
-            echo 'notes<<RESQNET_EOF'
+            printf 'notes<<RESQNET_EOF\n'
             cat /tmp/notes.md
-            echo 'RESQNET_EOF'
+            printf '\nRESQNET_EOF\n'
           } >> "$GITHUB_OUTPUT"
 
       - name: Create the pre-release
