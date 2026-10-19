@@ -274,14 +274,17 @@ scripts/build_release_artifacts.sh --exclude-android
 
 ```
 dist/
-  jars/resqnet-simulator-v<version>.jar   self-contained simulator + demonstration
-  jars/resqnet-backend-v<version>.jar     Spring Boot gateway, needs PostgreSQL
-  web/resqnet-web-v<version>.zip          static command centre + serving notes
-  SHA256SUMS                              digest of every file above
+  resqnet-simulator-v<version>.jar   self-contained simulator + demonstration
+  resqnet-backend-v<version>.jar     Spring Boot gateway, needs PostgreSQL
+  resqnet-web-v<version>.zip         static command centre + serving notes
+  SHA256SUMS                         digest of every file above
   RELEASE_NOTES.md  INSTALLATION.md  ARTIFACTS.md
 ```
 
-Without `--exclude-android` the script also assembles APKs into `dist/apk/` for
+`dist/` is deliberately flat, because GitHub release assets are. One layout
+means the checksum file names paths that exist wherever you downloaded it.
+
+Without `--exclude-android` the script also assembles APKs into `dist/` for
 local hardware testing. They are **not** published: physical-device networking
 has never been tested.
 
@@ -298,7 +301,7 @@ embeds build timestamps.
 Run the demonstration without any infrastructure:
 
 ```bash
-java -cp dist/jars/resqnet-simulator-v*.jar \
+java -cp dist/resqnet-simulator-v*.jar \
   dev.resqnet.mesh.simulator.demo.DemoScenario
 ```
 

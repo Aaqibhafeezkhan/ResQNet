@@ -50,9 +50,11 @@ fi
 GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 NOTES_SRC="$ROOT/docs/release/$VERSION"
 
-JARS="$DIST/jars"
-WEB="$DIST/web"
-APKS="$DIST/apk"
+# Flat, deliberately. GitHub release assets are always flat, so a nested
+# dist/ and a flat release mean two layouts for one set of files and a
+# checksum file that names paths nobody will have. One layout, one digest
+# file, and `sha256sum -c` works identically from dist/ and from a
+# downloaded release.
 CHECKSUMS="$DIST/SHA256SUMS"
 MANIFEST="$DIST/ARTIFACTS.md"
 
@@ -63,7 +65,7 @@ echo "==> ResQNet $VERSION (commit $GIT_SHA)"
 # published as if it belonged to this release, which is exactly the kind of
 # mistake that is invisible until somebody downloads it.
 rm -rf "$DIST"
-mkdir -p "$JARS" "$WEB"
+mkdir -p "$DIST"
 
 # ---------------------------------------------------------------- Java ----
 echo "==> Building Java modules"
@@ -95,10 +97,10 @@ fi
 # ------------------------------------------------------------ Packages ----
 echo "==> Collecting artifacts"
 cp packages/mesh-simulator/target/*-runnable.jar \
-   "$JARS/resqnet-simulator-v$VERSION.jar" 2>/dev/null \
+   "$DIST/resqnet-simulator-v$VERSION.jar" 2>/dev/null \
    || { echo "error: runnable simulator jar was not produced" >&2; exit 1; }
 cp services/backend/target/backend-*.jar \
-   "$JARS/resqnet-backend-v$VERSION.jar" 2>/dev/null \
+   "$DIST/resqnet-backend-v$VERSION.jar" 2>/dev/null \
    || { echo "error: backend jar was not produced" >&2; exit 1; }
 
 # A flat archive of the built assets plus the instructions needed to serve
@@ -112,7 +114,7 @@ cp "$NOTES_SRC/INSTALLATION.md" "$STAGE/INSTALLATION.md"
 # Compression is stored rather than deflated: the JavaScript inside is already
 # gzip-servable and a command centre is often deployed to a small device over a
 # slow link, where inflating an already-compressed bundle is wasted work.
-(cd "$STAGE" && zip -q -0 -r "$WEB/resqnet-web-v$VERSION.zip" . -x '.*')
+(cd "$STAGE" && zip -q -0 -r "$DIST/resqnet-web-v$VERSION.zip" . -x '.*')
 
 # ------------------------------------------------------------- Android ----
 APK_NOTE="**No APK in this release.** Physical-device networking has never
@@ -123,16 +125,15 @@ if [ "$INCLUDE_ANDROID" -eq 1 ]; then
     # Signing properties, if the developer has them, come from the user's
     # Gradle home and are never read from the repository.
     (cd apps/android && ./gradlew --quiet assembleDebug assembleRelease)
-    mkdir -p "$APKS"
     APK_SRC_RELEASE="apps/android/app/build/outputs/apk/release/app-release.apk"
     APK_SRC_UNSIGNED="apps/android/app/build/outputs/apk/release/app-release-unsigned.apk"
     if [ -f "$APK_SRC_RELEASE" ]; then
-        cp "$APK_SRC_RELEASE" "$APKS/resqnet-$VERSION-release.apk"
+        cp "$APK_SRC_RELEASE" "$DIST/resqnet-$VERSION-release.apk"
     elif [ -f "$APK_SRC_UNSIGNED" ]; then
-        cp "$APK_SRC_UNSIGNED" "$APKS/resqnet-$VERSION-release-UNSIGNED.apk"
+        cp "$APK_SRC_UNSIGNED" "$DIST/resqnet-$VERSION-release-UNSIGNED.apk"
     fi
     cp apps/android/app/build/outputs/apk/debug/app-debug.apk \
-       "$APKS/resqnet-$VERSION-debug.apk"
+       "$DIST/resqnet-$VERSION-debug.apk"
 else
     echo "==> Skipping Android (--exclude-android)"
 fi
@@ -151,9 +152,9 @@ directory. The human-written documents are \`RELEASE_NOTES.md\` and
 
 | File | What it is | Verified |
 |---|---|---|
-| \`jars/resqnet-simulator-v$VERSION.jar\` | Self-contained simulator and the demonstration. Java $JAVA_MIN+. | Deterministic; demonstration exits 0 |
-| \`jars/resqnet-backend-v$VERSION.jar\` | Spring Boot coordination gateway. Needs PostgreSQL $JAVA_MIN+. No bundled H2 driver. | Unit + integration + real PostgreSQL |
-| \`web/resqnet-web-v$VERSION.zip\` | Production static assets for the command centre, plus serving instructions. | lint, typecheck, unit tests, production build |
+| \`resqnet-simulator-v$VERSION.jar\` | Self-contained simulator and the demonstration. Java $JAVA_MIN+. | Deterministic; demonstration exits 0 |
+| \`resqnet-backend-v$VERSION.jar\` | Spring Boot coordination gateway. Needs PostgreSQL $JAVA_MIN+. No bundled H2 driver. | Unit + integration + real PostgreSQL |
+| \`resqnet-web-v$VERSION.zip\` | Production static assets for the command centre, plus serving instructions. | lint, typecheck, unit tests, production build |
 $(if [ "$INCLUDE_ANDROID" -eq 1 ]; then echo "| \`apk/*\` | Android app. | Unit tests only — **never run on hardware** |"; else echo "| _(none)_ | $APK_NOTE | — |"; fi)
 
 ## Integrity
@@ -164,9 +165,9 @@ shasum -a 256 -c SHA256SUMS # macOS
 \`\`\`
 
 The jars are byte-reproducible: two builds of the same commit produce the
-same digest. \`web/*.zip\` is not, because zip records its own modification
-time. APK digests are not reproducible either, because the Android
-toolchain embeds build timestamps.
+same digest. \`resqnet-web-v$VERSION.zip\` is not, because zip records its
+own modification time. APK digests are not reproducible either, because the
+Android toolchain embeds build timestamps.
 
 ## Not verified
 
@@ -194,7 +195,7 @@ echo "==> Checksums"
 # -b keeps the digest on one line with a two-space separator, which is what
 # both `sha256sum --check` and `shasum --check` expect. SHA256SUMS cannot
 # contain its own digest, so it is written last and excluded.
-( cd "$DIST" && find . -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | while read -r f; do
+( cd "$DIST" && find . -maxdepth 1 -type f ! -name SHA256SUMS | sed 's|^\./||' | sort | while read -r f; do
     printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f"
 done ) > "$CHECKSUMS"
 cat "$CHECKSUMS"
