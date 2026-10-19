@@ -1,0 +1,125 @@
+name: Android instrumented
+
+# Emulator-backed instrumentation tests. Deliberately a separate workflow from
+# android.yml so the existing assemble/unit/lint gate keeps its history and its
+# runtime; a slow emulator job must never be able to delay or mask that check.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/android/**'
+      - 'packages/mesh-core/**'
+      - '.github/workflows/android-instrumented.yml'
+  pull_request:
+    paths:
+      - 'apps/android/**'
+      - 'packages/mesh-core/**'
+      - '.github/workflows/android-instrumented.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: android-instrumented-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  instrumented:
+    name: emulator instrumentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          working-directory: apps/android
+
+      # Nested virtualisation is off by default on the hosted runners. Without
+      # this udev rule the emulator cannot open /dev/kvm and every boot fails.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run instrumentation in two phases
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          working-directory: apps/android
+          # Two instrumentation runs, not one. GrantPermissionRule grants for the
+          # remainder of a run and never takes a permission back, so a class that
+          # asserts the "user denied" path must run in its own run, on a state
+          # where nothing is granted yet, or it would pass without ever seeing a
+          # dialog. Phases are therefore: denied first, granted second.
+          script: |
+            set -euo pipefail
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+            adb shell svc power stayon true
+
+            ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+
+            adb install -r -t app/build/outputs/apk/debug/app-debug.apk
+            adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            # Fresh app data and reset runtime permissions: the first-run tests
+            # are meaningless if a previous run already granted or denied them.
+            adb shell pm clear dev.resqnet.android.debug
+
+            echo "### phase 1: nothing granted" >> "$GITHUB_STEP_SUMMARY"
+            ./gradlew --no-daemon connectedDebugAndroidTest \
+              -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.PermissionFlowTest
+
+            echo "### phase 2: everything granted" >> "$GITHUB_STEP_SUMMARY"
+            ./gradlew --no-daemon connectedDebugAndroidTest \
+              -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.GrantedPermissionFlowTest,dev.resqnet.android.HomeNavigationTest,dev.resqnet.android.SosFlowTest,dev.resqnet.android.IdentityTest,dev.resqnet.android.ErrorHandlingTest
+
+      - name: Collect device log
+        if: always()
+        run: adb logcat -d -v brief > "$RUNNER_TEMP/logcat.txt" || true
+
+      - name: Upload instrumentation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-instrumented-reports
+          path: |
+            apps/android/app/build/reports/androidTests/
+            apps/android/app/build/outputs/androidTest-results/
+            ${{ runner.temp }}/logcat.txt
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Publish the instrumentation count
+        if: always()
+        working-directory: apps/android
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import glob, re
+          total = failures = errors = ignored = 0
+          for path in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+              head = open(path, encoding='utf-8').read(800)
+              def num(tag):
+                  m = re.search(rf'{tag}="(\d+)"', head)
+                  return int(m.group(1)) if m else 0
+              total += num('tests')
+              failures += num('failures')
+              errors += num('errors')
+              ignored += num('ignored')
+          print(f"\n**Instrumented:** {total} tests, {failures} failures, "
+                f"{errors} errors, {ignored} ignored\n")
+          PY
