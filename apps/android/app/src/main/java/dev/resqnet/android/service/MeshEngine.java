@@ -191,10 +191,41 @@ public final class MeshEngine {
             PublicKey publicKey = dev.resqnet.mesh.crypto.DeviceIdentity
                     .decodePublicKey(announcement.publicKeyBase64());
             String deviceId = dev.resqnet.mesh.crypto.DeviceIdentity.deviceId(publicKey);
-            if (trustStore.entry(deviceId).isPresent()) {
-                // Already known. Re-asserting a key we hold is either a
-                // reconnect or a key change; the store decides, and a changed
-                // key under a known id is a block, not an update.
+            Optional<TrustStore.Entry> known = trustStore.entry(deviceId);
+            if (known.isPresent()) {
+                TrustStore.Entry existing = known.get();
+                if (existing.trust() == TrustStore.Trust.BLOCKED) {
+                    Log.i(TAG, "Ignored an identity claim from blocked peer "
+                            + DeviceIdentity.shortDeviceId(deviceId));
+                    return;
+                }
+                if (!existing.keyFingerprint()
+                        .equals(DeviceIdentity.fingerprint(publicKey))) {
+                    Log.w(TAG, "Refused a key change under known identity "
+                            + DeviceIdentity.shortDeviceId(deviceId));
+                    return;
+                }
+
+                // Known and unchanged: this is a reconnect, and Nearby issues a
+                // fresh endpoint id every time a link is re-established.
+                //
+                // The provisional binding made when the peer came back is
+                // therefore under an endpoint id that no longer says who it is,
+                // while the stale mapping still points at the old one. Re-pointing
+                // it here is what keeps directed messages reaching a live radio
+                // handle instead of one that died with the previous link. The call
+                // used to be skipped on the strength of "we already know this
+                // peer", which is exactly the condition a reconnect creates, so
+                // every reconnection silently unaddressed the peer again.
+                //
+                // Safe to run for a peer we already hold: the device id is derived
+                // from the key, so a claimant presenting a foreign key computes a
+                // different id, lands in the unknown-peer branch below, and can
+                // never capture this mapping. Nothing here is user-visible because
+                // there is nothing new to verify.
+                if (fromPeerDeviceId != null) {
+                    transport.promoteBinding(fromPeerDeviceId, deviceId);
+                }
                 return;
             }
             TrustStore.Entry entry = router.acceptPeerKey(deviceId, publicKey);

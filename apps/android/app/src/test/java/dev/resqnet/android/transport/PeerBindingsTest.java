@@ -85,6 +85,35 @@ public class PeerBindingsTest {
         assertEquals("rqn1_abc", bindings.bind("endpoint-A"));
     }
 
+    /**
+     * A reconnect arrives under a fresh endpoint id, which is what Nearby does
+     * every time a link is re-established.
+     *
+     * <p>Nothing unbinds the old handle first: the OS simply stops mentioning
+     * it, which is exactly what a stale handle looks like. The reverse mapping
+     * has to follow the device to its new endpoint, or the only route to a peer
+     * this device already trusts is one that no longer exists.
+     */
+    @Test
+    public void aReconnectUnderAFreshEndpointMovesTheBinding() {
+        PeerBindings bindings = new PeerBindings();
+        bindings.bind("endpoint-A");
+        bindings.promote("endpoint-A", "rqn1_abc");
+
+        assertTrue("the reconnect must be recognised as a change",
+                bindings.promote("endpoint-B", "rqn1_abc"));
+
+        assertEquals("the device must resolve to the live handle",
+                "endpoint-B", bindings.snapshot().get("rqn1_abc"));
+        assertEquals("endpoint-B", bindings.endpointFor("rqn1_abc"));
+        assertEquals("the new handle must resolve back to the device",
+                "rqn1_abc", bindings.resolve("endpoint-B"));
+        assertFalse("the dead handle must not linger as a peer of its own",
+                bindings.connectedPeerIds().contains("endpoint-A"));
+        assertEquals("one device must not be advertised twice after a reconnect",
+                1, bindings.connectedPeerIds().size());
+    }
+
     @Test
     public void unbindReportsTheIdentityThatWasBound() {
         PeerBindings bindings = new PeerBindings();
