@@ -71,6 +71,7 @@ public final class MeshEngine {
     private final ExecutorService executor;
     private final List<EngineListener> listeners = new CopyOnWriteArrayList<>();
     private final AtomicBoolean running = new AtomicBoolean();
+    private volatile Thread sweepThread;
 
     public MeshEngine(@NonNull Context context, @NonNull String displayName)
             throws GeneralSecurityException, java.io.IOException {
@@ -238,13 +239,20 @@ public final class MeshEngine {
             publish(new EngineStatus("started", transport.isStarted()
                     ? "mesh running" : "mesh degraded: radio unavailable"));
         });
-        executor.execute(this::sweepLoop);
+        Thread thread = new Thread(this::sweepLoop, "resqnet-sweep");
+        thread.setDaemon(true);
+        sweepThread = thread;
+        thread.start();
     }
 
     /** Stops the radio. The durable queue is untouched. Idempotent. */
     public void stop() {
         if (!running.compareAndSet(true, false)) {
             return;
+        }
+        Thread thread = sweepThread;
+        if (thread != null) {
+            thread.interrupt();
         }
         executor.execute(() -> {
             transport.stop();
@@ -268,12 +276,16 @@ public final class MeshEngine {
             if (!running.get()) {
                 return;
             }
-            try {
-                store.expireStale(System.currentTimeMillis());
-                router.attemptPending();
-            } catch (RuntimeException e) {
-                Log.e(TAG, "Retry sweep failed", e);
-            }
+            executor.execute(this::sweepOnce);
+        }
+    }
+
+    private void sweepOnce() {
+        try {
+            store.expireStale(System.currentTimeMillis());
+            router.attemptPending();
+        } catch (RuntimeException e) {
+            Log.e(TAG, "Retry sweep failed", e);
         }
     }
 
