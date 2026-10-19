@@ -144,4 +144,14 @@ dependencies {
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    androidTestImplementation 'androidx.test:core:1.5.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    // RecyclerViewActions (Home quick actions are rows in a RecyclerView).
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.5.1'
+    // Only where a test must reach outside the app's own window, e.g. the
+    // system permission dialog. Everything else uses Espresso against our own
+    // view hierarchy, because a UiAutomator selector is a string that rots
+    // silently when someone renames a button.
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
 }
