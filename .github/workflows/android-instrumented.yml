@@ -65,50 +65,35 @@ jobs:
           # asserts the "user denied" path must run in its own run, on a state
           # where nothing is granted yet, or it would pass without ever seeing a
           # dialog. Phases are therefore: denied first, granted second.
-          # NOTE: the runner executes this with /usr/bin/sh, which on the
-          # ubuntu images is dash, so `set -o pipefail` is not an option here.
-          # -eu is used instead; nothing below is piped.
+          #
+          # The action does not hand `script` to one shell. Its parser splits it
+          # on newlines and executes each resulting line as its own
+          # `sh -c "<line>"`, stopping the step on the first non-zero exit
+          # (src/script-parser.ts, src/main.ts). Every line below is therefore one
+          # complete command: no set -e (it would only affect a shell that dies
+          # immediately), no backslash continuations, and no multi-line
+          # constructs such as if/fi or for/done. Leading '#' lines are dropped by
+          # the parser, so these comments are documentation only.
           script: |
-            set -eu
-            # The emulator runner has already waited for boot_completed, but a
-            # single extra wait costs nothing and keeps every adb command below
-            # from racing an emulator that is still half up.
             adb wait-for-device
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
             adb shell svc power stayon true
-
-            # Geometry first: a view that reports an empty getGlobalVisibleRect
-            # means either a screen it does not fit on or a frame that has not
-            # been committed yet, and the two are indistinguishable from the
-            # assertion alone. Recorded on every run so a failure is readable.
+            # Geometry first: a view reporting an empty getGlobalVisibleRect is
+            # either off a screen it does not fit on or asserted before the first
+            # frame is committed, and those look identical from the assertion.
             echo "wm size: $(adb shell wm size 2>/dev/null)"
             echo "wm density: $(adb shell wm density 2>/dev/null)"
             adb shell dumpsys window displays 2>/dev/null | grep -E "init=|cur=|displayId|Display: " | head -20
-
             ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
-
             adb install -r -t app/build/outputs/apk/debug/app-debug.apk
             adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             # Fresh app data and reset runtime permissions: the first-run tests
             # are meaningless if a previous run already granted or denied them.
             adb shell pm clear dev.resqnet.android.debug
-
-            # NOTE: no backslash line continuations anywhere in this script.
-            # The runner passes `script` to /usr/bin/sh in a way that does not
-            # survive them: Gradle was invoked with a literal '\' task name and
-            # failed with "Task '\' not found". Each command is one line.
             echo "### phase 1: nothing granted" >> "$GITHUB_STEP_SUMMARY"
-            if ! ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.PermissionFlowTest; then
-              echo "::group::phase 1 failure diagnostics"
-              adb shell uiautomator dump /sdcard/ci-ui.xml 2>/dev/null || true
-              adb pull /sdcard/ci-ui.xml "$GITHUB_WORKSPACE/ci-ui-dump.xml" 2>/dev/null || true
-              adb shell dumpsys window displays 2>/dev/null | head -40 || true
-              adb shell dumpsys activity activities 2>/dev/null | grep -A6 -i "ResQNet\|mResumedActivity" | head -40 || true
-              echo "::endgroup::"
-              exit 1
-            fi
+            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.PermissionFlowTest || { adb shell uiautomator dump /sdcard/ci-ui.xml >/dev/null 2>&1; adb pull /sdcard/ci-ui.xml "$GITHUB_WORKSPACE/ci-ui-dump.xml" >/dev/null 2>&1; adb shell dumpsys window displays | head -40; false; }
 
             echo "### phase 2: everything granted" >> "$GITHUB_STEP_SUMMARY"
             ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.GrantedPermissionFlowTest,dev.resqnet.android.HomeNavigationTest,dev.resqnet.android.SosFlowTest,dev.resqnet.android.IdentityTest,dev.resqnet.android.ErrorHandlingTest
