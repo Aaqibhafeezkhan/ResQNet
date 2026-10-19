@@ -96,7 +96,7 @@ jobs:
             ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.PermissionFlowTest || { adb shell uiautomator dump /sdcard/ci-ui.xml >/dev/null 2>&1; adb pull /sdcard/ci-ui.xml "$GITHUB_WORKSPACE/ci-ui-dump.xml" >/dev/null 2>&1; adb shell dumpsys window displays | head -40; false; }
 
             echo "### phase 2: everything granted" >> "$GITHUB_STEP_SUMMARY"
-            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.GrantedPermissionFlowTest,dev.resqnet.android.HomeNavigationTest,dev.resqnet.android.SosFlowTest,dev.resqnet.android.IdentityTest,dev.resqnet.android.ErrorHandlingTest
+            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.GrantedPermissionFlowTest,dev.resqnet.android.HomeNavigationTest,dev.resqnet.android.SosFlowTest,dev.resqnet.android.IdentityTest,dev.resqnet.android.ErrorHandlingTest,dev.resqnet.android.IdentityRebindingTest
 
       - name: Collect device log
         if: always()
