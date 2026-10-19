@@ -3,13 +3,16 @@ package dev.resqnet.android;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
+import static androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static dev.resqnet.android.TestSupport.eventually;
 import static dev.resqnet.android.TestSupport.isResumed;
 import static dev.resqnet.android.TestSupport.permissionsGranted;
+import static dev.resqnet.android.TestSupport.scrollToEnd;
 import static org.junit.Assert.assertTrue;
 
+import androidx.core.widget.NestedScrollView;
 import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.rule.GrantPermissionRule;
@@ -55,6 +58,7 @@ public class GrantedPermissionFlowTest {
         assertTrue("the rule must actually have granted what the app asks for",
                 permissionsGranted());
 
+        onView(isAssignableFrom(NestedScrollView.class)).perform(scrollToEnd());
         onView(withId(R.id.welcomeContinue)).perform(click());
 
         // No dialog is dismissed anywhere in this test: reaching home is only

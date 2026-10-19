@@ -5,14 +5,20 @@ import static org.junit.Assert.fail;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.view.View;
 
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.NestedScrollView;
 import androidx.test.core.app.ApplicationProvider;
+import androidx.test.espresso.UiController;
+import androidx.test.espresso.ViewAction;
 
 import dev.resqnet.android.data.ResQNetDatabase;
 import dev.resqnet.android.service.MeshEngine;
 import dev.resqnet.android.service.MeshService;
 import dev.resqnet.mesh.routing.StoredMessage;
+
+import org.hamcrest.Matcher;
 
 import java.util.List;
 import java.util.Locale;
@@ -158,6 +164,38 @@ public final class TestSupport {
     /** Fails the test loudly when a precondition is not met, rather than skipping. */
     static void require(boolean condition, String message) {
         assertTrue(message, condition);
+    }
+
+    /**
+     * Scrolls the enclosing {@link NestedScrollView} to its end.
+     *
+     * <p>Espresso's own {@code ViewActions.scrollTo()} only accepts subclasses of
+     * {@code ScrollView} and {@code HorizontalScrollView}, and the welcome screen
+     * is a {@code NestedScrollView}, which is neither — built-in scrolling throws
+     * for it. The welcome buttons are the last children of a scrolled layout, so
+     * on a screen short enough for them to start below the fold an assertion made
+     * before scrolling fails on geometry rather than on anything the screen got
+     * wrong. On a screen tall enough to show them this is a no-op.
+     */
+    static ViewAction scrollToEnd() {
+        return new ViewAction() {
+            @Override
+            public Matcher<View> getConstraints() {
+                return androidx.test.espresso.matcher.ViewMatchers
+                        .isAssignableFrom(NestedScrollView.class);
+            }
+
+            @Override
+            public String getDescription() {
+                return "scroll the NestedScrollView to its end";
+            }
+
+            @Override
+            public void perform(UiController uiController, View view) {
+                ((NestedScrollView) view).fullScroll(View.FOCUS_DOWN);
+                uiController.loopMainThreadUntilIdle();
+            }
+        };
     }
 
     /**

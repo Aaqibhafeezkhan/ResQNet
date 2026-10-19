@@ -3,6 +3,7 @@ package dev.resqnet.android;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
+import static androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
@@ -10,9 +11,11 @@ import static dev.resqnet.android.TestSupport.denyPermissionDialogs;
 import static dev.resqnet.android.TestSupport.eventually;
 import static dev.resqnet.android.TestSupport.isResumed;
 import static dev.resqnet.android.TestSupport.permissionsGranted;
+import static dev.resqnet.android.TestSupport.scrollToEnd;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
 
+import androidx.core.widget.NestedScrollView;
 import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
@@ -47,14 +50,20 @@ public class PermissionFlowTest {
         onView(withId(R.id.welcomeHeadline)).check(matches(isDisplayed()));
         onView(withId(R.id.permissionNearby)).check(matches(isDisplayed()));
         onView(withId(R.id.permissionLocation)).check(matches(isDisplayed()));
-        onView(withId(R.id.welcomeContinue)).check(matches(isDisplayed()));
-        onView(withId(R.id.welcomeNotNow)).check(matches(isDisplayed()));
 
-        // Present as text, not merely as views occupying space.
+        // Present as text, not merely as views occupying space. Asserted before
+        // scrolling, because scrolling to the buttons takes these off screen.
         onView(withId(R.id.permissionNearby))
                 .check(matches(withText(R.string.welcome_permission_nearby)));
         onView(withId(R.id.permissionLocation))
                 .check(matches(withText(R.string.welcome_permission_location)));
+
+        // The buttons are the last children of a scrolled layout, so on a screen
+        // short enough they start below the fold and would otherwise fail the
+        // visibility check on geometry alone.
+        onView(isAssignableFrom(NestedScrollView.class)).perform(scrollToEnd());
+        onView(withId(R.id.welcomeContinue)).check(matches(isDisplayed()));
+        onView(withId(R.id.welcomeNotNow)).check(matches(isDisplayed()));
     }
 
     /**
@@ -69,6 +78,7 @@ public class PermissionFlowTest {
         assumeFalse("permissions already granted; the dialog would never appear",
                 permissionsGranted());
 
+        onView(isAssignableFrom(NestedScrollView.class)).perform(scrollToEnd());
         onView(withId(R.id.welcomeContinue)).perform(click());
         denyPermissionDialogs();
 
@@ -84,6 +94,7 @@ public class PermissionFlowTest {
     /** "Not now" must reach the app and must still enable the mesh flag. */
     @Test
     public void notNowReachesHomeAndEnablesTheMesh() {
+        onView(isAssignableFrom(NestedScrollView.class)).perform(scrollToEnd());
         onView(withId(R.id.welcomeNotNow)).perform(click());
 
         eventually("home screen via Not now", 20_000L,
