@@ -87,13 +87,15 @@ jobs:
             # are meaningless if a previous run already granted or denied them.
             adb shell pm clear dev.resqnet.android.debug
 
+            # NOTE: no backslash line continuations anywhere in this script.
+            # The runner passes `script` to /usr/bin/sh in a way that does not
+            # survive them: Gradle was invoked with a literal '\' task name and
+            # failed with "Task '\' not found". Each command is one line.
             echo "### phase 1: nothing granted" >> "$GITHUB_STEP_SUMMARY"
-            ./gradlew --no-daemon connectedDebugAndroidTest \
-              -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.PermissionFlowTest
+            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.PermissionFlowTest
 
             echo "### phase 2: everything granted" >> "$GITHUB_STEP_SUMMARY"
-            ./gradlew --no-daemon connectedDebugAndroidTest \
-              -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.GrantedPermissionFlowTest,dev.resqnet.android.HomeNavigationTest,dev.resqnet.android.SosFlowTest,dev.resqnet.android.IdentityTest,dev.resqnet.android.ErrorHandlingTest
+            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.GrantedPermissionFlowTest,dev.resqnet.android.HomeNavigationTest,dev.resqnet.android.SosFlowTest,dev.resqnet.android.IdentityTest,dev.resqnet.android.ErrorHandlingTest
 
       - name: Collect device log
         if: always()
