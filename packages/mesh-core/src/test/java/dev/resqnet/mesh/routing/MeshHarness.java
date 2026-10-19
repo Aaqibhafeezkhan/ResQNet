@@ -101,6 +101,21 @@ final class MeshHarness {
         return this;
     }
 
+    /**
+     * Makes the node's radio refuse every handoff while still advertising a
+     * populated link table.
+     *
+     * <p>Distinct from {@link #dropProbability}: that loses a frame that was
+     * accepted for transmission. This never lets it out of the device at all,
+     * which is what a radio that failed to come up does, and it is the only way
+     * to tell "nothing to send to" apart from "something to send to that
+     * refused".
+     */
+    MeshHarness failSends(Node node, boolean value) {
+        node.transport.failSends = value;
+        return this;
+    }
+
     /** When false, nodes must explicitly accept each other's keys. */
     MeshHarness trustEveryone(boolean value) {
         this.trustEveryone = value;
@@ -272,6 +287,8 @@ final class MeshHarness {
         private final Set<String> peers = new LinkedHashSet<>();
         private InboundHandler inbound = (from, payload) -> {
         };
+        /** When true, {@link #send} refuses every copy though peers still list. */
+        boolean failSends;
         private MeshTransport.ConnectionListener listener = new MeshTransport.ConnectionListener() {
         };
         private boolean started;
@@ -282,7 +299,7 @@ final class MeshHarness {
 
         @Override
         public java.util.Optional<Long> send(String peerDeviceId, byte[] encodedPayload) {
-            if (!started || !peers.contains(peerDeviceId)) {
+            if (!started || failSends || !peers.contains(peerDeviceId)) {
                 return java.util.Optional.empty();
             }
             inFlight.add(new Frame(selfId, peerDeviceId, encodedPayload.clone()));

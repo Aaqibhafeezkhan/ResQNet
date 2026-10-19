@@ -152,11 +152,17 @@ class StoreAndForwardTest {
     void givesUpAfterRetryBudget() throws Exception {
         mesh.lifetimeMillis(6 * 60 * 60 * 1000);
         MeshHarness.Node a = mesh.addNode("A");
-        mesh.addNode("B");
+        MeshHarness.Node b = mesh.addNode("B");
+        mesh.link(a, b);
         mesh.trustAll().startAll();
+        // The neighbour is advertised and every handoff is refused: real
+        // attempts that really failed. This is the case the budget exists for.
+        // Being alone with nobody to send to is not, and is covered by
+        // ZeroPeerRetryTest.
+        mesh.failSends(a, true);
 
-        MessageEnvelope sent = a.router.originate("rqn1_" + "b".repeat(64), MessageType.TEXT,
-                Priority.LOW, body("nobody"), 0L);
+        MessageEnvelope sent = a.router.originate(b.id(), MessageType.TEXT,
+                Priority.LOW, body("the radio is broken"), 0L);
 
         for (int i = 0; i < 40; i++) {
             mesh.advance(120_000L);

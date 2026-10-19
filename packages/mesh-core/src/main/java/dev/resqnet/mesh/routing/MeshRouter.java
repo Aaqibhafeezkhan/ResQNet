@@ -516,7 +516,9 @@ public final class MeshRouter implements AutoCloseable {
 
         if (delivered.isEmpty()) {
             persistForRelay(relayed, now, "peer sessions dropped mid-forward");
-            return RoutingOutcome.QUEUED_FOR_RELAY;
+            // Peers existed and every handoff was refused: a real attempt that
+            // really failed, so it is worth charging against the retry budget.
+            return RoutingOutcome.QUEUED_SEND_REFUSED;
         }
 
         metrics.recordForwarded(delivered.size(), 1);
@@ -811,7 +813,10 @@ public final class MeshRouter implements AutoCloseable {
 
             RoutingOutcome outcome = forwardIfEligible(envelope, null, now,
                     envelope.addressedTo(self.deviceId()));
-            if (outcome == RoutingOutcome.RELAYED || outcome == RoutingOutcome.QUEUED_FOR_RELAY) {
+            if (outcome == RoutingOutcome.RELAYED
+                    || outcome == RoutingOutcome.QUEUED_SEND_REFUSED) {
+                // Either the handoff succeeded or the radio refused a real one.
+                // Both are transmissions, and the budget counts transmissions.
                 int attempts = message.attemptCount() + 1;
                 long nextAttempt = retryPolicy.delayBeforeAttempt(attempts, now);
                 // Re-read rather than reusing the snapshot: the forward attempt
@@ -824,6 +829,28 @@ public final class MeshRouter implements AutoCloseable {
                 if (outcome == RoutingOutcome.RELAYED) {
                     sent++;
                 }
+            } else if (outcome == RoutingOutcome.QUEUED_FOR_RELAY) {
+                // Isolation, not failure. Nothing reached the radio, so nothing
+                // may be charged against the retry budget: a device that has
+                // been alone all night has not failed to send anything, and
+                // spending twelve no-op passes would record somebody's SOS as
+                // "gave up after 12 attempts" without a single transmission.
+                //
+                // The schedule still defers, so the sweep does less work the
+                // longer the silence runs. It is keyed to how long the message
+                // has been waiting rather than to attempts made, because those
+                // are different quantities and only one of them is a failure.
+                // It stays bounded by the policy ceiling, and none of this
+                // delays the real send: handlePeerConnected forces a pass the
+                // moment a link appears.
+                long waitingFor = Math.max(0L, now - message.createdAt());
+                long base = retryPolicy.baseDelayMillis();
+                long steps = base <= 0 ? 1L : waitingFor / base;
+                int backoffStep = (int) Math.min(steps + 1L, 24L);
+                long nextAttempt = retryPolicy.delayBeforeAttempt(backoffStep, now);
+                store.find(message.messageId())
+                        .ifPresent(latest -> store.upsert(latest.withRetry(
+                                latest.attemptCount(), nextAttempt)));
             }
         }
         return sent;

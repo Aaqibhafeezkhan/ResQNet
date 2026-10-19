@@ -15,6 +15,15 @@ public enum RoutingOutcome {
     RELAYED(true),
     /** A copy was queued for delivery or relay when a peer becomes reachable. */
     QUEUED_FOR_RELAY(true),
+    /**
+     * A neighbour was eligible and the radio refused every copy, so the message
+     * was re-queued for a later pass.
+     *
+     * <p>Separate from {@link #QUEUED_FOR_RELAY}, which means there was nobody
+     * to hand it to. That difference is what stops a device alone in a field
+     * spending its whole retry budget on attempts it never made.
+     */
+    QUEUED_SEND_REFUSED(true),
     /** A locally originated message was handed to at least one neighbour. */
     ORIGINATED_AND_SENT(true),
     /** End-to-end acknowledgement received for one of our messages. */
