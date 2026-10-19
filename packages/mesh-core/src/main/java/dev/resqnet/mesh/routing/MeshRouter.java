@@ -515,7 +515,14 @@ public final class MeshRouter implements AutoCloseable {
         }
 
         if (delivered.isEmpty()) {
-            persistForRelay(relayed, now, "peer sessions dropped mid-forward");
+            // Nothing reached the radio, so store the frame as it arrived and
+            // not the copy that was meant to go out. `relayed` has already spent
+            // a hop; keeping it would charge a hop this frame never used, and
+            // the retry would spend the same hop a second time - a two-hop path
+            // reported to its recipient as three, and a relay with a tight
+            // budget able to declare the frame hop-exhausted before it had left
+            // the device once.
+            persistForRelay(envelope, now, "peer sessions dropped mid-forward");
             // Peers existed and every handoff was refused: a real attempt that
             // really failed, so it is worth charging against the retry budget.
             return RoutingOutcome.QUEUED_SEND_REFUSED;
