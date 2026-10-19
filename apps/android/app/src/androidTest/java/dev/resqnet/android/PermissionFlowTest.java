@@ -20,6 +20,7 @@ import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import dev.resqnet.android.data.ResQNetDatabase;
+import dev.resqnet.android.service.MeshService;
 import dev.resqnet.android.service.SettingsKeys;
 import dev.resqnet.android.ui.HomeActivity;
 import dev.resqnet.android.ui.WelcomeActivity;
@@ -72,11 +73,21 @@ public class PermissionFlowTest {
      * <p>If a previous class already granted them, this is skipped rather than
      * asserted: an assumed precondition is honest, a green check over a dialog
      * that never appeared is not.
+     *
+     * <p>Also the regression test for the "Continue" half of onboarding:
+     * Continue is the action that opts the user in, so it is the one that must
+     * persist the enablement flag and start the mesh.
      */
     @Test
     public void denyingEveryPermissionStillLeavesAUsableApp() {
         assumeFalse("permissions already granted; the dialog would never appear",
                 permissionsGranted());
+
+        ResQNetDatabase.get(TestSupport.app())
+                .putSetting(SettingsKeys.MESH_ENABLED, "false");
+        MeshService.stop(TestSupport.app());
+        eventually("the mesh to be down before Continue is pressed", 20_000L,
+                () -> !MeshService.isRunning());
 
         onView(isAssignableFrom(NestedScrollView.class)).perform(scrollToEnd());
         onView(withId(R.id.welcomeContinue)).perform(click());
@@ -89,11 +100,36 @@ public class PermissionFlowTest {
 
         onView(withId(R.id.sosButton)).check(matches(isDisplayed()));
         onView(withId(R.id.quickActions)).check(matches(isDisplayed()));
+
+        assertEquals("'Continue' is the opt-in, so it must persist the flag",
+                "true",
+                ResQNetDatabase.get(TestSupport.app())
+                        .getSetting(SettingsKeys.MESH_ENABLED)
+                        .orElse(""));
+        eventually("'Continue' must also start the mesh", 20_000L,
+                MeshService::isRunning);
     }
 
-    /** "Not now" must reach the app and must still enable the mesh flag. */
+    /**
+     * "Not now" must decline, not enable.
+     *
+     * <p>Both welcome buttons used to write the same value, which made the
+     * choice decorative: a user who pressed "Not now" still got a mesh that ran
+     * in the background and was restored again after every reboot, forever,
+     * from a decision they never made.
+     *
+     * <p>Seeded with the flag already on and the service already down so the
+     * assertions cannot pass by accident: the only things that can turn the
+     * flag off and keep the service down are this path's own behaviour.
+     */
     @Test
-    public void notNowReachesHomeAndEnablesTheMesh() {
+    public void notNowDeclinesTheMeshAndStillReachesHome() {
+        ResQNetDatabase.get(TestSupport.app())
+                .putSetting(SettingsKeys.MESH_ENABLED, "true");
+        MeshService.stop(TestSupport.app());
+        eventually("the mesh to be down before Not now is pressed", 20_000L,
+                () -> !MeshService.isRunning());
+
         onView(isAssignableFrom(NestedScrollView.class)).perform(scrollToEnd());
         onView(withId(R.id.welcomeNotNow)).perform(click());
 
@@ -101,10 +137,13 @@ public class PermissionFlowTest {
                 () -> isResumed(HomeActivity.class));
 
         assertEquals(
-                "both welcome paths must write the mesh enablement flag",
-                "true",
+                "'Not now' must record a decline rather than a silent opt-in",
+                "false",
                 ResQNetDatabase.get(TestSupport.app())
                         .getSetting(SettingsKeys.MESH_ENABLED)
                         .orElse(""));
+        eventually("a declined first run must not start background participation",
+                20_000L,
+                () -> !MeshService.isRunning());
     }
 }

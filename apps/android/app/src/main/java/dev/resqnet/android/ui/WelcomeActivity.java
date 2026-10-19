@@ -27,8 +27,15 @@ import java.util.List;
 /**
  * First run.
  *
- * <p>Does three things and no more: explains what the app does, asks for the two
- * permissions that actually matter, and starts the mesh.
+ * <p>Does four things and no more: explains what the app does, asks for the two
+ * permissions that actually matter, records which of the two buttons the user
+ * pressed, and starts the mesh when they asked for it.
+ *
+ * <p>The recorded choice is the whole point of there being two buttons. It is
+ * what {@code BootCompletedReceiver} reads, so a button that quietly wrote the
+ * same value as the other one was not a choice at all: it was a decision the app
+ * had already made on the user's behalf, and it started a radio service on every
+ * reboot for someone who had never asked for one.
  *
  * <p>No device key is generated here. Creating the identity before the user has
  * read what happens to it would be a small lie, and it would make the first-run
@@ -48,7 +55,7 @@ public final class WelcomeActivity extends AppCompatActivity {
                 results -> onPermissionsResolved());
 
         findViewById(R.id.welcomeContinue).setOnClickListener(v -> requestPermissions());
-        findViewById(R.id.welcomeNotNow).setOnClickListener(v -> openHome());
+        findViewById(R.id.welcomeNotNow).setOnClickListener(v -> declineMesh());
     }
 
     private void requestPermissions() {
@@ -98,12 +105,34 @@ public final class WelcomeActivity extends AppCompatActivity {
             ((TextView) findViewById(R.id.welcomeEmergencyNotice))
                     .setText(R.string.welcome_permission_nearby);
         }
+        // Continue is the opt-in. The user asked for the network, so record that
+        // before bringing the radio up: the record is what survives a reboot.
+        setMeshEnabled(true);
         MeshService.start(this);
         openHome();
     }
 
+    /**
+     * The decline path.
+     *
+     * <p>"Not now" used to persist the same enablement flag as "Continue", which
+     * made it the strongest possible opt-in: the mesh ran immediately and was
+     * restored again after every reboot, indefinitely, from a press that was
+     * meant to mean the opposite. Recording the decline leaves the home screen
+     * exactly where it was, and the user can start the mesh from there whenever
+     * they decide they want it.
+     */
+    private void declineMesh() {
+        setMeshEnabled(false);
+        openHome();
+    }
+
+    private void setMeshEnabled(boolean enabled) {
+        ResQNetDatabase.get(this).putSetting(SettingsKeys.MESH_ENABLED,
+                String.valueOf(enabled));
+    }
+
     private void openHome() {
-        ResQNetDatabase.get(this).putSetting(SettingsKeys.MESH_ENABLED, "true");
         startActivity(new Intent(this, HomeActivity.class));
         finish();
     }

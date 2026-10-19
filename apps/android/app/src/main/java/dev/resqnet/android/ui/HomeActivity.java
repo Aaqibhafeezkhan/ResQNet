@@ -16,8 +16,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import dev.resqnet.android.R;
+import dev.resqnet.android.data.ResQNetDatabase;
 import dev.resqnet.android.service.MeshEngine;
 import dev.resqnet.android.service.MeshService;
+import dev.resqnet.android.service.SettingsKeys;
 import dev.resqnet.mesh.protocol.DeliveryState;
 
 import java.util.ArrayList;
@@ -32,6 +34,12 @@ import java.util.List;
  *
  * <p>The mesh status is shown honestly: stopped, running, or degraded. It is
  * never shown as "connected" on the strength of a successful radio handover.
+ *
+ * <p>"Stopped" is a state the user can choose, not only a failure they suffer.
+ * Someone who pressed "Not now" on the welcome screen has declined the mesh and
+ * is told plainly that it is off; tapping the status starts it and remembers the
+ * choice. A screen that showed a deliberate "off" as "degraded — check
+ * permissions" would be blaming the user for a decision they made on purpose.
  */
 public final class HomeActivity extends AppCompatActivity {
 
@@ -63,6 +71,11 @@ public final class HomeActivity extends AppCompatActivity {
         findViewById(R.id.sosButton).setOnClickListener(v -> startActivity(
                 new Intent(this, SosComposerActivity.class)));
 
+        // The status chip is also the control. There is no other way back in for
+        // a user who declined on the welcome screen, and a choice that can only
+        // ever be made once is not a choice.
+        meshChip.setOnClickListener(v -> setMeshEnabled(!meshEnabled()));
+
         RecyclerView actions = findViewById(R.id.quickActions);
         actions.setLayoutManager(new LinearLayoutManager(this));
         actions.setAdapter(new QuickActionAdapter(buildActions()));
@@ -88,7 +101,14 @@ public final class HomeActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        MeshService.start(this);
+        // Only the mesh the user asked for gets started. Auto-starting
+        // unconditionally made the welcome screen's decline meaningless: the
+        // service came up on the next screen regardless of what was pressed.
+        if (meshEnabled()) {
+            MeshService.start(this);
+        } else {
+            MeshService.stop(this);
+        }
         serviceBound = true;
         handler.post(poll);
     }
@@ -99,12 +119,37 @@ public final class HomeActivity extends AppCompatActivity {
         super.onStop();
     }
 
+    private boolean meshEnabled() {
+        return ResQNetDatabase.get(this)
+                .getSetting(SettingsKeys.MESH_ENABLED)
+                .map("true"::equals)
+                .orElse(Boolean.FALSE);
+    }
+
+    /** Records the choice and starts the mesh now that the user has made it. */
+    private void setMeshEnabled(boolean enabled) {
+        ResQNetDatabase.get(this)
+                .putSetting(SettingsKeys.MESH_ENABLED, String.valueOf(enabled));
+        if (enabled) {
+            MeshService.start(this);
+        } else {
+            MeshService.stop(this);
+        }
+        render();
+    }
+
     private void render() {
+        boolean enabled = meshEnabled();
         boolean radioUp = engine.transport().isStarted();
         int peers = engine.transport().connectedPeerIds().size();
         int queued = engine.store().pendingCount();
 
-        if (!radioUp) {
+        if (!enabled) {
+            // Chosen, not broken. The same cyan chip the layout starts with.
+            meshChip.setText(R.string.home_mesh_off);
+            meshChip.setTextColor(getColor(R.color.network_cyan));
+            meshChip.setBackgroundResource(R.drawable.bg_status_chip);
+        } else if (!radioUp) {
             meshChip.setText(R.string.home_mesh_degraded);
             meshChip.setTextColor(getColor(R.color.warning_amber));
             meshChip.setBackgroundResource(R.drawable.bg_status_chip_pending);
