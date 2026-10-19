@@ -79,6 +79,14 @@ jobs:
             adb shell settings put global animator_duration_scale 0
             adb shell svc power stayon true
 
+            # Geometry first: a view that reports an empty getGlobalVisibleRect
+            # means either a screen it does not fit on or a frame that has not
+            # been committed yet, and the two are indistinguishable from the
+            # assertion alone. Recorded on every run so a failure is readable.
+            echo "wm size: $(adb shell wm size 2>/dev/null)"
+            echo "wm density: $(adb shell wm density 2>/dev/null)"
+            adb shell dumpsys window displays 2>/dev/null | grep -E "init=|cur=|displayId|Display: " | head -20
+
             ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
 
             adb install -r -t app/build/outputs/apk/debug/app-debug.apk
@@ -92,7 +100,15 @@ jobs:
             # survive them: Gradle was invoked with a literal '\' task name and
             # failed with "Task '\' not found". Each command is one line.
             echo "### phase 1: nothing granted" >> "$GITHUB_STEP_SUMMARY"
-            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.PermissionFlowTest
+            if ! ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.PermissionFlowTest; then
+              echo "::group::phase 1 failure diagnostics"
+              adb shell uiautomator dump /sdcard/ci-ui.xml 2>/dev/null || true
+              adb pull /sdcard/ci-ui.xml "$GITHUB_WORKSPACE/ci-ui-dump.xml" 2>/dev/null || true
+              adb shell dumpsys window displays 2>/dev/null | head -40 || true
+              adb shell dumpsys activity activities 2>/dev/null | grep -A6 -i "ResQNet\|mResumedActivity" | head -40 || true
+              echo "::endgroup::"
+              exit 1
+            fi
 
             echo "### phase 2: everything granted" >> "$GITHUB_STEP_SUMMARY"
             ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.resqnet.android.GrantedPermissionFlowTest,dev.resqnet.android.HomeNavigationTest,dev.resqnet.android.SosFlowTest,dev.resqnet.android.IdentityTest,dev.resqnet.android.ErrorHandlingTest
@@ -117,6 +133,7 @@ jobs:
           path: |
             apps/android/app/build/reports/androidTests/
             apps/android/app/build/outputs/androidTest-results/
+            ci-ui-dump.xml
             ${{ runner.temp }}/logcat.txt
           retention-days: 14
           if-no-files-found: warn
