@@ -160,7 +160,39 @@ jobs:
           # the JVM silently never starts - which looks identical to the
           # application being broken.
           mkdir -p target
-          nohup java -jar services/backend/target/backend-0.1.0-SNAPSHOT.jar \
+
+          # Resolve the jar instead of naming it.
+          #
+          # Maven builds backend-<version>.jar, where <version> is the parent
+          # version, and that string moves on every release bump. This step used
+          # to hardcode backend-0.1.0-SNAPSHOT.jar, which stopped matching the
+          # moment the project version became 0.1.0-alpha. The result was
+          # "Unable to access jarfile", the JVM never started, and the job then
+          # spent two minutes timing out against a health endpoint that was
+          # never going to answer - a failure that reads exactly like a broken
+          # application. The release script and the Dockerfile already glob for
+          # this reason; this is the last place that assumed a fixed name.
+          #
+          # Exactly one match is required rather than "whatever comes first".
+          # A second jar means a stale build or a version bump nobody noticed,
+          # and starting the wrong one is worse than not starting at all.
+          count=0
+          jar=""
+          for candidate in services/backend/target/backend-*.jar; do
+            if [ -f "$candidate" ]; then
+              count=$((count + 1))
+              jar="$candidate"
+            fi
+          done
+          if [ "$count" -ne 1 ]; then
+            echo "expected exactly one packaged backend jar, found $count" >&2
+            echo "services/backend/target contains:" >&2
+            ls -la services/backend/target >&2
+            exit 1
+          fi
+          echo "starting $jar"
+
+          nohup java -jar "$jar" \
             > target/backend.log 2>&1 &
           for attempt in $(seq 1 60); do
             if curl -fsS http://localhost:8080/actuator/health | grep -q '"UP"'; then

@@ -182,7 +182,7 @@ relay offline.
 ### Run the gateway
 
 ```bash
-java -jar services/backend/target/backend-0.1.0-SNAPSHOT.jar \
+java -jar services/backend/target/backend-*.jar \
   --spring.profiles.active=dev
 ```
 
@@ -198,7 +198,7 @@ To use PostgreSQL rather than H2:
 ```bash
 RESQNET_DB_URL=jdbc:postgresql://localhost:5432/resqnet \
 RESQNET_DB_USER=resqnet RESQNET_DB_PASSWORD=resqnet \
-java -jar services/backend/target/backend-0.1.0-SNAPSHOT.jar \
+java -jar services/backend/target/backend-*.jar \
   --spring.profiles.active=dev
 ```
 

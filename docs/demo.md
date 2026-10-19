@@ -86,7 +86,7 @@ export RESQNET_DB_URL="jdbc:h2:file:/tmp/resqnet-demo;MODE=PostgreSQL;DATABASE_T
 export RESQNET_DB_USER=sa
 export RESQNET_DB_PASSWORD=""
 
-java -jar services/backend/target/backend-0.1.0-SNAPSHOT.jar \
+java -jar services/backend/target/backend-*.jar \
   --spring.profiles.active=dev &
 ```
 
@@ -145,7 +145,7 @@ Open `http://localhost:5173/command`, sign in as `admin` / `resqnet-dev`.
 Stop the gateway:
 
 ```bash
-kill %1          # or pkill -f backend-0.1.0-SNAPSHOT
+kill %1          # or pkill -f 'backend-.*\.jar'
 ```
 
 Wait thirty seconds — one polling interval — and watch the header.
