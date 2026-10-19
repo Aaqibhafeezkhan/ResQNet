@@ -67,6 +67,10 @@ jobs:
           # dialog. Phases are therefore: denied first, granted second.
           script: |
             set -euo pipefail
+            # The emulator runner has already waited for boot_completed, but a
+            # single extra wait costs nothing and keeps every adb command below
+            # from racing an emulator that is still half up.
+            adb wait-for-device
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
@@ -90,7 +94,15 @@ jobs:
 
       - name: Collect device log
         if: always()
-        run: adb logcat -d -v brief > "$RUNNER_TEMP/logcat.txt" || true
+        # Bounded on purpose. After the emulator step tears down, adb can block
+        # indefinitely waiting on a device that is already gone; an unbounded
+        # logcat here starves the remaining steps and the job is then killed by
+        # its own 45 minute timeout instead of finishing with a real conclusion,
+        # which also means no logs are published.
+        run: |
+          ADB="${ANDROID_HOME:-/opt/android}/platform-tools/adb"
+          [ -x "$ADB" ] || ADB=adb
+          timeout 90 "$ADB" logcat -d -v brief > "$RUNNER_TEMP/logcat.txt" || true
 
       - name: Upload instrumentation reports
         if: always()
