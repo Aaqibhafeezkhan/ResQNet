@@ -65,8 +65,11 @@ jobs:
           # asserts the "user denied" path must run in its own run, on a state
           # where nothing is granted yet, or it would pass without ever seeing a
           # dialog. Phases are therefore: denied first, granted second.
+          # NOTE: the runner executes this with /usr/bin/sh, which on the
+          # ubuntu images is dash, so `set -o pipefail` is not an option here.
+          # -eu is used instead; nothing below is piped.
           script: |
-            set -euo pipefail
+            set -eu
             # The emulator runner has already waited for boot_completed, but a
             # single extra wait costs nothing and keeps every adb command below
             # from racing an emulator that is still half up.
