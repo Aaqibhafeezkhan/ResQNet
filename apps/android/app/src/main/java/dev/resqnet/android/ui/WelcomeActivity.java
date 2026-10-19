@@ -98,12 +98,12 @@ public final class WelcomeActivity extends AppCompatActivity {
             ((TextView) findViewById(R.id.welcomeEmergencyNotice))
                     .setText(R.string.welcome_permission_nearby);
         }
-        ResQNetDatabase.get(this).putSetting(SettingsKeys.MESH_ENABLED, "true");
         MeshService.start(this);
         openHome();
     }
 
     private void openHome() {
+        ResQNetDatabase.get(this).putSetting(SettingsKeys.MESH_ENABLED, "true");
         startActivity(new Intent(this, HomeActivity.class));
         finish();
     }
