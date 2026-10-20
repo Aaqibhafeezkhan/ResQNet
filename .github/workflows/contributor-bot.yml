@@ -1,0 +1,37 @@
+name: Contributor bot
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+# Serialize comments on the same issue. A second lock below also serializes
+# one contributor's requests across different issues for the two-issue limit.
+concurrency:
+  group: contributor-bot-issue-${{ github.repository }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  respond:
+    if: >-
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.type != 'Bot' &&
+      github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: contributor-bot-user-${{ github.repository }}-${{ github.event.comment.user.id }}
+      cancel-in-progress: false
+    steps:
+      # issue_comment runs from the default branch. Explicitly check out only
+      # that trusted branch; contributor comment text is never workflow code.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Respond to issue comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/contributor-bot.mjs
