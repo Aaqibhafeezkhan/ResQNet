@@ -1,0 +1,37 @@
+name: Documentation improvement
+description: Report incorrect, stale, or missing documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: File and section, or a URL.
+      placeholder: Readme.md section 15, "Test suites"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing?
+      description: Quote the current text if it is short. Say whether it is incorrect, stale, ambiguous, or absent.
+    validations:
+      required: true
+
+  - type: textarea
+    id: change
+    attributes:
+      label: Suggested change
+      description: What should the documentation say instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Command output, source references, or a reproduction that supports the change.
+    validations:
+      required: false

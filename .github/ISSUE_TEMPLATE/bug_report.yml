@@ -1,0 +1,114 @@
+name: Bug report
+description: Report a reproducible or source-confirmed defect
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report security vulnerabilities here. Follow [SECURITY.md](https://github.com/Gautam-aman/ResQNet/blob/main/SECURITY.md).
+
+        Say plainly whether you reproduced this, read it from source, or inferred it. The project treats those as different evidence levels.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences describing the defect.
+      placeholder: Diagnostics reports zero discovered peers even when a peer is connected.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Android app
+        - mesh-core
+        - Simulator
+        - Backend gateway
+        - Web command centre
+        - Documentation or CI
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: evidence
+    attributes:
+      label: Evidence level
+      description: How do you know this is a defect?
+      options:
+        - Reproduced locally
+        - Read from source
+        - Inferred from behaviour
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and reproduction steps
+      description: What happens, and the exact steps or commands that show it. Include seeds, topology, device models, or browser versions where relevant.
+      placeholder: |
+        1. Start the app with two devices nearby.
+        2. Open Diagnostics.
+        3. The discovered count is 0 although a peer is connected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What should happen instead?
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Commit or version, OS, JDK or Node version, device or emulator, Android version.
+      placeholder: main @ 21319be, macOS 15, emulator API 34, 1080x2400
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Relevant code
+      description: File and line references, or a link to the exact revision.
+      placeholder: apps/android/app/src/main/java/dev/resqnet/android/transport/NearbyTransport.java:498
+    validations:
+      required: false
+
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+      description: Optional. How would you fix it, and what could go wrong?
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for this issue to be closed?
+      placeholder: |
+        - A discovered endpoint appears on the diagnostics screen.
+        - A lost endpoint is removed.
+        - A unit test covers both transitions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, screenshots, related issues, or constraints. Remove secrets and personal data.
+    validations:
+      required: false
