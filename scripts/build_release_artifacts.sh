@@ -160,7 +160,7 @@ directory. The human-written documents are \`RELEASE_NOTES.md\` and
 | File | What it is | Verified |
 |---|---|---|
 | \`resqnet-simulator-v$VERSION.jar\` | Self-contained simulator and the demonstration. Java $JAVA_MIN+. | Deterministic; demonstration exits 0 |
-| \`resqnet-backend-v$VERSION.jar\` | Spring Boot coordination gateway. Needs PostgreSQL $JAVA_MIN+. No bundled H2 driver. | Unit + integration + real PostgreSQL |
+ | \`resqnet-backend-v$VERSION.jar\` | Spring Boot coordination gateway. Needs Java $JAVA_MIN+ and PostgreSQL 14+. No bundled H2 driver. | Unit + integration + real PostgreSQL |
 | \`resqnet-web-v$VERSION.zip\` | Production static assets for the command centre, plus serving instructions. | lint, typecheck, unit tests, production build |
 $(if [ "$INCLUDE_ANDROID" -eq 1 ]; then
   if [ "${APK_SIGNED:-0}" -eq 1 ]; then
