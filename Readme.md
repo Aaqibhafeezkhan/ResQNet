@@ -231,7 +231,7 @@ data is presented as field telemetry.
 
 ## 10. Installation and quick start
 
-Requires **JDK 21**, **Maven 3.9+**, **Node 21+**.
+Requires **JDK 21**, **Maven 3.9+**, **Node.js 24 LTS** for the web app.
 
 ```bash
 git clone https://github.com/Gautam-aman/ResQNet.git
