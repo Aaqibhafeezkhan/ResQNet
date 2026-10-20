@@ -4,6 +4,12 @@
 
 ### When the Internet Goes Down, Communication Doesn't Have To.
 
+**Created and maintained by [@Gautam-aman](https://github.com/Gautam-aman).**
+
+Open-source contributions are welcome! 🤝
+
+---
+
 Offline-first emergency messaging over a peer-to-peer device mesh.
 
 [![Java](https://img.shields.io/badge/Java-21%2B-0f7b6d?logo=openjdk&logoColor=white)](https://adoptium.net/)
