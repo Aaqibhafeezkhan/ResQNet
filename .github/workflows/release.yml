@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag, for example v0.1.0-alpha'
+        description: 'Release tag, for example v0.2.0-beta'
         required: true
         type: string
       prerelease:
@@ -63,6 +63,22 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           working-directory: apps/android
+
+      # The runner image ships an Android SDK, but "ships one" is not the same
+      # as "guarantees a usable build-tools" and the difference only shows up
+      # at the signature check. Resolved explicitly so a missing apksigner is a
+      # setup failure rather than a mysterious one late in the job.
+      - name: Ensure the Android build tools are present
+        run: |
+          if [ -z "${ANDROID_HOME:-}" ] || [ ! -d "$ANDROID_HOME" ]; then
+            echo "::error::ANDROID_HOME is not set on this runner"
+            exit 1
+          fi
+          if ! find "$ANDROID_HOME/build-tools" -name apksigner 2>/dev/null | grep -q .; then
+            echo "==> no build-tools present; installing"
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;34.0.0" >/dev/null
+          fi
+          echo "apksigner: $(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)"
 
       - name: Check the requested tag matches the project version
         id: meta
@@ -121,11 +137,110 @@ jobs:
       - name: Java tests including the slow ones
         run: mvn -B -ntp verify -DexcludedTestGroups=
 
-      # No Android binary is published: physical-device networking has never
-      # been tested. The script is told so explicitly rather than relying on
-      # someone remembering to delete the APK directory afterwards.
+      # Staged BEFORE the build, because Gradle reads these from the runner's
+      # Gradle home while it is assembling the release APK. Reading them from
+      # the checkout is impossible: the "no key material in the tree" check
+      # above would have refused the run already.
+      - name: Stage the release keystore
+        env:
+          RESQNET_KEYSTORE_BASE64: ${{ secrets.RESQNET_KEYSTORE_BASE64 }}
+          RESQNET_KEYSTORE_PASSWORD: ${{ secrets.RESQNET_KEYSTORE_PASSWORD }}
+          RESQNET_KEY_ALIAS: ${{ secrets.RESQNET_KEY_ALIAS }}
+          RESQNET_KEY_PASSWORD: ${{ secrets.RESQNET_KEY_PASSWORD }}
+        run: |
+          if [ -z "$RESQNET_KEYSTORE_BASE64" ] || [ -z "$RESQNET_KEYSTORE_PASSWORD" ] \
+             || [ -z "$RESQNET_KEY_ALIAS" ] || [ -z "$RESQNET_KEY_PASSWORD" ]; then
+            echo "::error::release signing secrets are not configured."
+            echo "::error::Set RESQNET_KEYSTORE_BASE64, RESQNET_KEYSTORE_PASSWORD," \
+                 "RESQNET_KEY_ALIAS and RESQNET_KEY_PASSWORD. An unsigned APK will" \
+                 "not be published. See docs/release/0.2.0-beta/INSTALLATION.md."
+            exit 1
+          fi
+          # Written to the runner's Gradle home, which is outside the checkout.
+          # Nothing here is echoed: the passwords are in the environment and in
+          # the file, and in neither place do they reach the log.
+          KEYSTORE="$RUNNER_TEMP/resqnet-release.jks"
+          printf '%s' "$RESQNET_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
+          umask 077
+          mkdir -p "$HOME/.gradle"
+          {
+            printf 'RESQNET_KEYSTORE_FILE=%s\n' "$KEYSTORE"
+            printf 'RESQNET_KEYSTORE_PASSWORD=%s\n' "$RESQNET_KEYSTORE_PASSWORD"
+            printf 'RESQNET_KEY_ALIAS=%s\n' "$RESQNET_KEY_ALIAS"
+            printf 'RESQNET_KEY_PASSWORD=%s\n' "$RESQNET_KEY_PASSWORD"
+          } > "$HOME/.gradle/gradle.properties"
+          chmod 600 "$KEYSTORE" "$HOME/.gradle/gradle.properties"
+          echo "signing material staged outside the checkout"
+
+      # No Android binary was published until v0.2.0-beta, because nothing had
+      # ever been run on a handset and a binary would have been decorative. It
+      # is built by the same script as everything else, so what is tested is
+      # what is published rather than a second build path that could drift.
       - name: Build the release artifacts
-        run: bash scripts/build_release_artifacts.sh --exclude-android
+        run: bash scripts/build_release_artifacts.sh
+
+      - name: Verify the APK signature and record what it is
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          APK="dist/resqnet-v$VERSION-release.apk"
+          if [ ! -f "$APK" ]; then
+            echo "::error::expected a SIGNED release APK at $APK"
+            echo "dist/ contains:"; ls -la dist/
+            echo "::error::an unsigned build is named -UNSIGNED.apk and is not published."
+            exit 1
+          fi
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)"
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::apksigner not found under $ANDROID_HOME/build-tools"
+            exit 1
+          fi
+          echo "==> apksigner verify --print-certs $APK"
+          "$APKSIGNER" verify --print-certs "$APK" | tee /tmp/apk-certs.txt
+
+          # The signing certificate is the thing a user cannot check for
+          # themselves, so it is printed rather than merely asserted. An APK
+          # signed with a different key than the previous release is a different
+          # application as far as Android is concerned, and the upgrade will be
+          # refused.
+          CERT_SHA256=$(grep -i "SHA-256 digest" /tmp/apk-certs.txt | head -1 | awk '{print $3}')
+
+          {
+            aapt2=$(find "$ANDROID_HOME/build-tools" -name aapt2 | sort -V | tail -1)
+            PKG=$("$aapt2" dump badging "$APK" | sed -n "s|package: name='\([^']*\)'.*|\1|p")
+            VN=$("$aapt2" dump badging "$APK" | sed -n "s|.*versionName='\([^']*\)'.*|\1|p")
+            VC=$("$aapt2" dump badging "$APK" | sed -n "s|.*versionCode='\([^']*\)'.*|\1|p")
+            MINS=$("$aapt2" dump badging "$APK" | sed -n "s|sdkVersion:'\([^']*\)'.*|\1|p")
+            echo "## Android APK"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| File | \`resqnet-v$VERSION-release.apk\` |"
+            echo "| Size | $(du -h "$APK" | cut -f1) |"
+            echo "| Package | \`$PKG\` |"
+            echo "| versionName | \`$VN\` |"
+            echo "| versionCode | \`$VC\` |"
+            echo "| Minimum Android | API $MINS |"
+            echo "| SHA-256 | \`$(shasum -a 256 "$APK" | cut -d' ' -f1)\` |"
+            echo "| Signing cert SHA-256 | \`$CERT_SHA256\` |"
+            echo "| Signature | \`apksigner verify\` passed |"
+            echo
+            echo "**Physical multi-hop routing is unverified.** See the release notes."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # The debug build is deliberately never attached. It exists so a
+          # release and a debug build can sit side by side on one handset.
+          if ls "dist/resqnet-v$VERSION-debug.apk" >/dev/null 2>&1; then
+            rm -f "dist/resqnet-v$VERSION-debug.apk"
+            echo "debug APK removed from dist/; it is not a publishable artifact"
+          fi
+          # SHA256SUMS was written before the debug APK was removed, so it would
+          # name a file that is no longer here and `sha256sum -c` would fail for
+          # anyone who downloaded the release. Regenerate it over what remains.
+          ( cd dist && find . -maxdepth 1 -type f ! -name SHA256SUMS \
+              | sed 's|^\./||' | sort | while read -r f; do
+              printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f"
+            done ) > dist/SHA256SUMS
 
       - name: Verify the published checksums
         run: |
@@ -142,9 +257,6 @@ jobs:
             echo '```'
             cat dist/SHA256SUMS
             echo '```'
-            echo
-            echo "No Android binary is included: physical-device networking"
-            echo "has never been tested. See \`apps/android/DEVICE_TESTING.md\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifacts
@@ -184,7 +296,7 @@ jobs:
           elif [ -f artifacts/RELEASE_NOTES.md ]; then
             cp artifacts/RELEASE_NOTES.md /tmp/notes.md
           else
-            printf 'Experimental developer preview of ResQNet.\n\nSee the README.\n' \
+            printf 'Experimental pre-release of ResQNet.\n\nSee the README.\n' \
               > /tmp/notes.md
           fi
           # The notes file may not end in a newline. If it does not, `cat`
@@ -201,14 +313,19 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag }}
-          name: ${{ inputs.tag }} — Experimental Developer Preview
+          name: ${{ inputs.tag }} — Android Experimental Preview
           body: ${{ steps.body.outputs.notes }}
           prerelease: ${{ inputs.prerelease }}
           draft: false
+          # dist/ is deliberately flat, so these are flat globs. They used to
+          # name jars/ and web/ subdirectories that the build script has never
+          # produced, which would have attached nothing but the checksum file.
           files: |
-            artifacts/jars/*.jar
-            artifacts/web/*.zip
+            artifacts/*.jar
+            artifacts/*.zip
+            artifacts/*.apk
             artifacts/SHA256SUMS
+            artifacts/ARTIFACTS.md
             artifacts/RELEASE_NOTES.md
             artifacts/INSTALLATION.md
 
@@ -217,10 +334,14 @@ jobs:
           cat <<'SUMMARY' >> "$GITHUB_STEP_SUMMARY"
           ## Release created
 
-          **Experimental developer preview.** No Android binary is attached:
-          two physical Android phones have never exchanged a message. The
-          defects that would each have prevented it were found by reading the
-          code, and none of that is proof the radio path works.
+          **Experimental pre-release.** The Android APK is attached and was
+          verified with `apksigner` in the previous job.
+
+          **Hardware evidence is a user report.** The developer reports the app
+          working on two physical phones. Two handsets in range of each other
+          connect directly under `P2P_CLUSTER`, with no third device to relay
+          through, so that is not evidence of multi-hop routing. Three-device
+          multi-hop remains unverified.
 
           Verify with `sha256sum -c SHA256SUMS` beside the artifacts.
           SUMMARY

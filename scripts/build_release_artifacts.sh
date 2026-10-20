@@ -130,17 +130,17 @@ if [ "$INCLUDE_ANDROID" -eq 1 ]; then
     APK_SRC_UNSIGNED="apps/android/app/build/outputs/apk/release/app-release-unsigned.apk"
     APK_SIGNED=0
     if [ -f "$APK_SRC_RELEASE" ]; then
-        cp "$APK_SRC_RELEASE" "$DIST/resqnet-$VERSION-release.apk"
+        cp "$APK_SRC_RELEASE" "$DIST/resqnet-v$VERSION-release.apk"
         APK_SIGNED=1
     elif [ -f "$APK_SRC_UNSIGNED" ]; then
-        cp "$APK_SRC_UNSIGNED" "$DIST/resqnet-$VERSION-release-UNSIGNED.apk"
+        cp "$APK_SRC_UNSIGNED" "$DIST/resqnet-v$VERSION-release-UNSIGNED.apk"
         echo "WARNING: the release APK is UNSIGNED." >&2
         echo "         RESQNET_KEYSTORE_* were not all supplied, so Gradle produced" >&2
         echo "         the unsigned fallback. It is named -UNSIGNED and the manifest" >&2
         echo "         records it as such. It is not installable as a release build." >&2
     fi
     cp apps/android/app/build/outputs/apk/debug/app-debug.apk \
-       "$DIST/resqnet-$VERSION-debug.apk"
+       "$DIST/resqnet-v$VERSION-debug.apk"
 else
     echo "==> Skipping Android (--exclude-android)"
 fi
