@@ -598,6 +598,11 @@ Issues and pull requests are welcome, and responsible bug reports are especially
 valuable — particularly about routing correctness, message integrity, or
 security.
 
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) for setup, test commands, evidence
+expectations, and pull request guidance. Participation is governed by
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Report vulnerabilities privately as
+described in [SECURITY.md](SECURITY.md), never in a public issue.
+
 Read [docs/security/threat-model.md](docs/security/threat-model.md) before
 proposing a change to the trust or transport model.
 
