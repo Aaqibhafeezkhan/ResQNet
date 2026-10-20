@@ -100,7 +100,8 @@ public final class Dtos {
     }
 
     /** Assignment request. */
-    public record AssignRequest(@NotBlank Long accountId) {
+    public record AssignRequest(
+            @NotNull(message = "Account ID is required") Long accountId) {
     }
 
     /** Manual creation by a responder. */
