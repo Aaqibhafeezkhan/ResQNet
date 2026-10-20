@@ -9,7 +9,7 @@
   <!-- Single version authority for the whole repository. Every module
        inherits it, and the Android app mirrors it in build.gradle, so the
        release tag and the shipped artifacts cannot drift apart. -->
-  <version>0.1.0-alpha</version>
+  <version>0.2.0-beta</version>
   <packaging>pom</packaging>
 
   <name>ResQNet Parent</name>

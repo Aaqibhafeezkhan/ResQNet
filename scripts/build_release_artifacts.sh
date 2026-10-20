@@ -11,9 +11,10 @@
 #   scripts/build_release_artifacts.sh
 #   scripts/build_release_artifacts.sh --exclude-android
 #
-# --exclude-android skips Gradle entirely and emits no APK. Used for the
-# v0.1.0-alpha release, because physical-device networking has never been
-# tested and no Android binary may be published until it has been.
+# --exclude-android skips Gradle entirely and emits no APK. It was the path
+# taken for v0.1.0-alpha, when nothing had ever been run on a handset and
+# publishing a binary would have been decorative. Releases since v0.2.0-beta
+# include the APK; the flag remains for anyone who wants the jars alone.
 #
 # Writes to dist/. Nothing outside dist/ and the build directories is
 # touched, and no signing material is read from the repository.
@@ -117,8 +118,8 @@ cp "$NOTES_SRC/INSTALLATION.md" "$STAGE/INSTALLATION.md"
 (cd "$STAGE" && zip -q -0 -r "$DIST/resqnet-web-v$VERSION.zip" . -x '.*')
 
 # ------------------------------------------------------------- Android ----
-APK_NOTE="**No APK in this release.** Physical-device networking has never
-been tested, so no Android binary is published. Source is in the repository."
+APK_NOTE="**No APK in this release.** The Android binary was deliberately
+left out. Source is in the repository."
 
 if [ "$INCLUDE_ANDROID" -eq 1 ]; then
     echo "==> Building the Android app"
@@ -127,10 +128,16 @@ if [ "$INCLUDE_ANDROID" -eq 1 ]; then
     (cd apps/android && ./gradlew --quiet assembleDebug assembleRelease)
     APK_SRC_RELEASE="apps/android/app/build/outputs/apk/release/app-release.apk"
     APK_SRC_UNSIGNED="apps/android/app/build/outputs/apk/release/app-release-unsigned.apk"
+    APK_SIGNED=0
     if [ -f "$APK_SRC_RELEASE" ]; then
         cp "$APK_SRC_RELEASE" "$DIST/resqnet-$VERSION-release.apk"
+        APK_SIGNED=1
     elif [ -f "$APK_SRC_UNSIGNED" ]; then
         cp "$APK_SRC_UNSIGNED" "$DIST/resqnet-$VERSION-release-UNSIGNED.apk"
+        echo "WARNING: the release APK is UNSIGNED." >&2
+        echo "         RESQNET_KEYSTORE_* were not all supplied, so Gradle produced" >&2
+        echo "         the unsigned fallback. It is named -UNSIGNED and the manifest" >&2
+        echo "         records it as such. It is not installable as a release build." >&2
     fi
     cp apps/android/app/build/outputs/apk/debug/app-debug.apk \
        "$DIST/resqnet-$VERSION-debug.apk"
@@ -155,7 +162,15 @@ directory. The human-written documents are \`RELEASE_NOTES.md\` and
 | \`resqnet-simulator-v$VERSION.jar\` | Self-contained simulator and the demonstration. Java $JAVA_MIN+. | Deterministic; demonstration exits 0 |
 | \`resqnet-backend-v$VERSION.jar\` | Spring Boot coordination gateway. Needs PostgreSQL $JAVA_MIN+. No bundled H2 driver. | Unit + integration + real PostgreSQL |
 | \`resqnet-web-v$VERSION.zip\` | Production static assets for the command centre, plus serving instructions. | lint, typecheck, unit tests, production build |
-$(if [ "$INCLUDE_ANDROID" -eq 1 ]; then echo "| \`apk/*\` | Android app. | Unit tests only — **never run on hardware** |"; else echo "| _(none)_ | $APK_NOTE | — |"; fi)
+$(if [ "$INCLUDE_ANDROID" -eq 1 ]; then
+  if [ "${APK_SIGNED:-0}" -eq 1 ]; then
+    echo "| \`resqnet-v$VERSION-release.apk\` | Android app, release build. Package \`dev.resqnet.android\`. Min SDK 26. | Signed; \`apksigner\` verified. Unit + Robolectric + emulator instrumentation. **Physical multi-hop unverified** |"
+    echo "| \`resqnet-v$VERSION-debug.apk\` | Android app, debug build (\`.debug\` application id). For side-by-side hardware testing only. | Debug-signed. Never publish this one. |"
+  else
+    echo "| \`resqnet-v$VERSION-release-UNSIGNED.apk\` | Android app, release build with **no signing key applied**. | Unsigned, therefore not installable as a release. Do not publish. |"
+    echo "| \`resqnet-v$VERSION-debug.apk\` | Android app, debug build (\`.debug\` application id). | Debug-signed. Never publish this one. |"
+  fi
+else echo "| _(none)_ | $APK_NOTE | — |"; fi)
 
 ## Integrity
 
@@ -171,11 +186,14 @@ Android toolchain embeds build timestamps.
 
 ## Not verified
 
-- **Two physical Android phones have never exchanged a message.** The
-  Android app has never been run on hardware at all. Defects that would
-  each have prevented it were found by reading the code and fixed; none of
-  that is evidence that the radio path works. The procedure is
-  \`apps/android/DEVICE_TESTING.md\` and the result does not exist.
+- **Three-device multi-hop routing has never been verified on physical
+  hardware.** The developer reports the Android app working on two phones.
+  That is a user report, not independently verified evidence, and two
+  phones cannot demonstrate multi-hop: \`P2P_CLUSTER\` connects every device
+  in range to every other, so with two handsets there is no third device to
+  relay through and no hop is taken. The procedure for a proper hardware
+  run is \`apps/android/DEVICE_TESTING.md\` and no result from it is
+  recorded.
 - Every benchmark figure in \`docs/benchmarks/results.md\` describes the
   routing engine against a **modelled radio**. Nothing here measures real
   range, real latency through rubble, or real battery life.
