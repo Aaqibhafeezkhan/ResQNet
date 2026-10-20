@@ -4,7 +4,7 @@ import { Info, Play, Pause, Zap } from 'lucide-react';
 import { StatusChip } from '@/components/primitives/StatusChip';
 import { millis, percent, relativeTime } from '@/lib/format';
 import type { SimulationEvent, SimulationRun } from '@/lib/api';
-import { buildLinks, buildNodes } from '@/components/landing/meshLayout';
+import { buildLinks, buildNodes } from '@/components/mesh/meshLayout';
 import { useDocumentVisible } from '@/lib/useVisibility';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 

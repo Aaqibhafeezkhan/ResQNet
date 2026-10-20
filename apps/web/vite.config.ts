@@ -10,8 +10,11 @@ import { fileURLToPath, URL } from 'node:url';
  * the dashboard should not download MapLibre. The chunk boundaries below mean
  * each route pulls exactly what it needs.
  */
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  define: {
+    __PUBLIC_SITE_ONLY__: JSON.stringify(mode === 'public'),
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -35,7 +38,7 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    sourcemap: true,
+    sourcemap: mode !== 'public',
     cssCodeSplit: true,
     reportCompressedSize: false,
     rollupOptions: {
@@ -51,4 +54,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

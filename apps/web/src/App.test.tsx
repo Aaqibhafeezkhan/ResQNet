@@ -1,52 +1,91 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './app/App';
 
-/**
- * A smoke test that the whole route tree renders without throwing.
- *
- * <p>The canvas visualisations cannot be asserted visually in jsdom, so what
- * this covers is what actually breaks in practice: a bad import, a hook used
- * outside its rules, a provider missing.
- */
+function renderRoute(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <App />
+    </MemoryRouter>,
+  );
+}
+
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe('App', () => {
-  it('renders the landing page', async () => {
-    render(
-      <MemoryRouter>
-        <App />
-      </MemoryRouter>,
-    );
+  it('renders the landing page narrative', async () => {
+    renderRoute('/');
 
     expect(
-      await screen.findByRole('heading', { name: /when everything/i }),
+      await screen.findByRole('heading', { name: /when the signal/i }),
     ).toBeDefined();
+    expect(screen.getByText(/a radio handoff is not a delivery/i)).toBeDefined();
+    expect(screen.getByText(/latest android build/i)).toBeDefined();
   });
 
-  it('exposes the mesh visualisation with a label', async () => {
-    render(
-      <MemoryRouter>
-        <App />
-      </MemoryRouter>,
-    );
+  it('exposes an interactive, labelled mesh map', async () => {
+    renderRoute('/demo');
 
-    const canvas = await screen.findByTestId('mesh-field');
-    expect(canvas.getAttribute('role')).toBe('img');
-    expect(canvas.getAttribute('aria-label')).toMatch(/mesh relaying/i);
+    const map = await screen.findByRole('group', {
+      name: /interactive mesh simulation map/i,
+    });
+    expect(map).toBeDefined();
+    expect(screen.getByRole('button', { name: /send sos/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /cut jonas relay/i })).toBeDefined();
   });
 
-  it('offers only calls to action that go somewhere', async () => {
-    render(
-      <MemoryRouter>
-        <App />
-      </MemoryRouter>,
-    );
+  it('queues a message when the origin is isolated', async () => {
+    renderRoute('/demo');
 
-    const demo = await screen.findByRole('link', { name: /explore live demo/i });
-    expect(demo.getAttribute('href')).toBe('/command');
+    fireEvent.click(await screen.findByRole('button', { name: /cut jonas relay/i }));
+    fireEvent.click(screen.getByRole('button', { name: /cut mei relay/i }));
+    fireEvent.click(screen.getByRole('button', { name: /send sos/i }));
 
-    const architecture = await screen.findByRole('link', { name: /view architecture/i });
+    expect(
+      await screen.findByText(/no route to the field post/i),
+    ).toBeDefined();
+    expect(screen.getByText(/queued locally/i)).toBeDefined();
+  });
+
+  it('offers calls to action that go somewhere real', async () => {
+    renderRoute('/');
+
+    const demo = await screen.findByRole('link', { name: /run the mesh lab/i });
+    expect(demo.getAttribute('href')).toBe('/demo');
+
+    const download = await screen.findByRole('link', {
+      name: /get the android build/i,
+    });
+    expect(download.getAttribute('href')).toBe('/download');
+
+    const architecture = await screen.findByRole('link', {
+      name: /see the architecture/i,
+    });
     expect(architecture.getAttribute('href')).toBe('#architecture');
+  });
+
+  it('renders the about page with the concept film', async () => {
+    renderRoute('/about');
+
+    expect(
+      await screen.findByRole('heading', { name: /a small network/i }),
+    ).toBeDefined();
+    expect(
+      screen.getByLabelText(/concept animation showing a two-hop sos relay/i),
+    ).toBeDefined();
   });
 });

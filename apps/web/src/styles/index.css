@@ -23,7 +23,7 @@
   }
 
   body {
-    @apply bg-base-900 text-ink-primary font-sans antialiased;
+    @apply bg-base-950 text-ink-primary font-sans antialiased;
     /* Reserve the scrollbar gutter so navigating between routes does not
        shift the layout by a few pixels. */
     scrollbar-gutter: stable;
@@ -31,7 +31,7 @@
   }
 
   ::selection {
-    background: rgba(46, 211, 230, 0.28);
+    background: rgba(67, 216, 220, 0.28);
   }
 
   /* A single, visible focus treatment everywhere. The default outline is
@@ -87,6 +87,14 @@
 }
 
 @layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
+  }
+
+  .section-space {
+    @apply py-20 sm:py-28 lg:py-32;
+  }
+
   /* A restrained surface. Shadows on near-black read as mud; a hairline edge
      reads as an edge. */
   .surface {
@@ -105,6 +113,21 @@
   /* Body copy that is measured, not squeezed. */
   .prose-measure {
     @apply max-w-[62ch] text-ink-secondary leading-relaxed;
+  }
+
+  .grid-field {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+
+  .hairline {
+    @apply border-base-600;
+  }
+
+  .display-balance {
+    text-wrap: balance;
   }
 
   /* Numerals in a metric should not jitter as they change. */

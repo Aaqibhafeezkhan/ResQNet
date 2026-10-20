@@ -12,10 +12,11 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc -b --noEmit false --emitDeclarationOnly false",
+    "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "analyze": "vite build --mode analyze && node scripts/report-bundle.mjs"
+    "analyze": "vite build --mode analyze && node scripts/report-bundle.mjs",
+    "build:public": "tsc -b && vite build --mode public && node scripts/generate-site.mjs"
   },
   "dependencies": {
     "framer-motion": "^11.15.0",

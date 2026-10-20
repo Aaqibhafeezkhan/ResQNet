@@ -16,49 +16,55 @@ export default {
     extend: {
       colors: {
         base: {
-          900: '#07090B',
-          850: '#0B0E11',
-          800: '#11151A',
-          750: '#14181D',
-          700: '#1B2127',
-          600: '#252D36',
-          500: '#2A323B',
+          950: '#050708',
+          900: '#080B0D',
+          850: '#0C1012',
+          800: '#111619',
+          750: '#151B1E',
+          700: '#1C2428',
+          600: '#273136',
+          500: '#354147',
         },
         ink: {
-          primary: '#F3F6F8',
-          secondary: '#9BA7B4',
-          tertiary: '#6B7885',
-          disabled: '#4A555F',
+          primary: '#F2F0E9',
+          secondary: '#A9B0AC',
+          tertiary: '#818C86',
+          disabled: '#4B5550',
         },
         emergency: {
-          DEFAULT: '#E03B3B',
-          pressed: '#B72C2C',
+          DEFAULT: '#E74B4B',
+          pressed: '#C03434',
           soft: 'rgba(224, 59, 59, 0.14)',
         },
         network: {
-          DEFAULT: '#2ED3E6',
-          soft: 'rgba(46, 211, 230, 0.14)',
+          DEFAULT: '#43D8DC',
+          soft: 'rgba(67, 216, 220, 0.13)',
         },
         delivered: {
-          DEFAULT: '#35C98A',
-          soft: 'rgba(53, 201, 138, 0.14)',
+          DEFAULT: '#45D19A',
+          soft: 'rgba(69, 209, 154, 0.13)',
         },
         pending: {
-          DEFAULT: '#E8A33D',
-          soft: 'rgba(232, 163, 61, 0.14)',
+          DEFAULT: '#EDB35C',
+          soft: 'rgba(237, 179, 92, 0.13)',
         },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['Iowan Old Style', 'Baskerville', 'Palatino Linotype', 'Book Antiqua', 'Georgia', 'serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       letterSpacing: {
-        tightest: '-0.03em',
+        tightest: '-0.035em',
         widest: '0.18em',
       },
+      maxWidth: {
+        '8xl': '88rem',
+      },
       boxShadow: {
-        lift: '0 1px 0 rgba(255,255,255,0.04) inset, 0 18px 40px -24px rgba(0,0,0,0.9)',
-        glow: '0 0 0 1px rgba(46,211,230,0.28), 0 0 28px -8px rgba(46,211,230,0.42)',
+        lift: '0 1px 0 rgba(255,255,255,0.04) inset, 0 22px 60px -30px rgba(0,0,0,0.95)',
+        glow: '0 0 0 1px rgba(67,216,220,0.24), 0 0 44px -12px rgba(67,216,220,0.38)',
+        edge: '0 1px 0 rgba(255,255,255,0.05) inset',
       },
       transitionTimingFunction: {
         // A critically-damped-looking curve. State changes settle rather than

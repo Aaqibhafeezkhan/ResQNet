@@ -1,28 +1,64 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#07090B" />
-    <title>ResQNet — offline emergency messaging</title>
+    <meta name="theme-color" content="#050708" />
+    <meta name="robots" content="index, follow" />
+    <title>ResQNet — when the signal disappears, the message keeps moving</title>
     <meta
       name="description"
-      content="ResQNet is a decentralised emergency communication network. Nearby phones pass SOS messages directly to each other, with no internet, no cell tower and no account. If someone is out of range, their phone relays for you."
+      content="ResQNet is an open-source, local-first emergency messaging prototype. Nearby Android phones sign, store and relay SOS messages without a tower, server or account."
+    />
+    <meta name="author" content="ResQNet contributors" />
+    <meta property="og:site_name" content="ResQNet" />
+    <meta property="og:title" content="ResQNet — when the signal disappears, the message keeps moving" />
+    <meta
+      property="og:description"
+      content="A local-first emergency messaging prototype. Nearby Android phones carry signed SOS messages without a tower, server or account."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ResQNet — when the signal disappears, the message keeps moving" />
+    <meta
+      name="twitter:description"
+      content="A local-first emergency messaging prototype. Nearby Android phones carry signed SOS messages without a tower, server or account."
     />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <!-- site-meta -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "ResQNet",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Android 8.0+",
+        "description": "An open-source, local-first emergency messaging prototype that uses nearby Android phones to store and relay signed SOS messages without a tower, server or account.",
+        "codeRepository": "https://github.com/Gautam-aman/ResQNet",
+        "license": "https://github.com/Gautam-aman/ResQNet/blob/main/LICENSE",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <noscript>
-      ResQNet's command centre requires JavaScript. The Android application works
-      without it.
+      The ResQNet website and browser simulator need JavaScript. The Android
+      mesh itself does not, and the project is available from
+      https://github.com/Gautam-aman/ResQNet.
     </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
