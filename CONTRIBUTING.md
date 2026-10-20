@@ -51,7 +51,7 @@ Comment on the issue before starting so work is not duplicated.
 
 - JDK 21
 - Maven 3.9+
-- Node 21+ (the web package declares `engines.node >= 20.19`)
+- Node.js 24 LTS (the web package declares `engines.node >=24 <25`)
 - Android SDK with API 34 and build tools for the Android app
 - PostgreSQL 14+ only if you want to run the gateway against a real database;
   the backend test suite uses H2
