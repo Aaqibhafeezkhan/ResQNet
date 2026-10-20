@@ -28,9 +28,12 @@ test('welcomes interest once per contributor', async () => {
   await handle(state.event, state.api);
   assert.match(state.replies[0], /Comment `\/assign`/);
   assert.match(state.replies[0], /CONTRIBUTING\.md/);
-  const again = setup('Can I take this issue?', { comments: [{ body: state.replies[0] }] });
+  const again = setup('Can I take this issue?', { comments: [{ body: state.replies[0], user: { type: 'Bot' } }] });
   await handle(again.event, again.api);
   assert.equal(again.replies.length, 0);
+  const forged = setup('Can I take this issue?', { comments: [{ body: state.replies[0], user: { type: 'User' } }] });
+  await handle(forged.event, forged.api);
+  assert.equal(forged.replies.length, 1);
 });
 
 test('assigns an unassigned issue and confirms', async () => {

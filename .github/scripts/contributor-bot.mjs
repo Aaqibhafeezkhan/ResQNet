@@ -35,7 +35,7 @@ export async function handle(event, api) {
   if (command === 'interest') {
     const marker = `${MARKER}${login.toLowerCase()} -->`;
     const comments = await api.comments(number);
-    if (comments.some((item) => item.body?.includes(marker))) return;
+    if (comments.some((item) => item.user?.type === 'Bot' && item.body?.includes(marker))) return;
     await say(`${marker}\nHey @${login}! Thanks for your interest in ResQNet! 🚀\n\nFeel free to take this up. Comment \`/assign\` to claim the issue. Our [setup and contribution guide](${GUIDE_URL}) can help you get started. Looking forward to your PR!`);
     return;
   }
