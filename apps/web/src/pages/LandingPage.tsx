@@ -1,40 +1,34 @@
-import { Capabilities } from '@/components/landing/Capabilities';
-import { Architecture } from '@/components/landing/Architecture';
-import { DemoCta } from '@/components/landing/DemoCta';
-import { Hero } from '@/components/landing/Hero';
-import { HowItWorks } from '@/components/landing/HowItWorks';
-import { MessageJourney } from '@/components/landing/MessageJourney';
-import { Resilience } from '@/components/landing/Resilience';
-import { RunLocally } from '@/components/landing/RunLocally';
-import { Security } from '@/components/landing/Security';
-import { Footer } from '@/components/Footer';
-import { SiteHeader } from '@/components/SiteHeader';
+import { ArchitectureSection } from '@/components/public/landing/ArchitectureSection';
+import { AndroidSection } from '@/components/public/landing/AndroidSection';
+import { ClosingSection } from '@/components/public/landing/ClosingSection';
+import { ContributeSection } from '@/components/public/landing/ContributeSection';
+import { DemoSection } from '@/components/public/landing/DemoSection';
+import { FailureSection } from '@/components/public/landing/FailureSection';
+import { HeroSection } from '@/components/public/landing/HeroSection';
+import { MechanismSection } from '@/components/public/landing/MechanismSection';
+import { StorySection } from '@/components/public/landing/StorySection';
+import { SiteLayout } from '@/components/SiteLayout';
+import { usePageMeta } from '@/lib/seo';
 
-/**
- * Public site.
- *
- * A single scrolling document rather than a routed marketing site: the
- * argument is sequential, and a page that a responder has to navigate to find
- * the part they are looking for is the wrong shape for this content.
- */
 export function LandingPage() {
+  usePageMeta({
+    title: 'ResQNet — when the signal disappears, the message keeps moving',
+    description:
+      'ResQNet is an open-source, local-first emergency messaging prototype. Nearby Android phones sign, store and relay SOS messages without a tower, server or account.',
+    path: '/',
+  });
+
   return (
-    <div className="min-h-screen bg-base-900">
-      <SiteHeader />
-      <main id="main">
-        <Hero />
-        <div id="how">
-          <MessageJourney />
-          <HowItWorks />
-        </div>
-        <Resilience />
-        <Capabilities />
-        <Architecture />
-        <Security />
-        <DemoCta />
-        <RunLocally />
-      </main>
-      <Footer />
-    </div>
+    <SiteLayout>
+      <HeroSection />
+      <StorySection />
+      <MechanismSection />
+      <DemoSection />
+      <FailureSection />
+      <AndroidSection />
+      <ContributeSection />
+      <ArchitectureSection />
+      <ClosingSection />
+    </SiteLayout>
   );
 }

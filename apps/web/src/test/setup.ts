@@ -24,6 +24,13 @@ if (!window.matchMedia) {
   });
 }
 
+
+window.scrollTo = (() => undefined) as typeof window.scrollTo;
+
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => undefined;
+}
+
 /**
  * Framer Motion's whileInView uses IntersectionObserver, which jsdom does not
  * implement. The stub reports every element as visible so reveal animations

@@ -8,7 +8,7 @@ interface RevealProps {
   className?: string;
   /** Travel distance in pixels. Lower is calmer. */
   distance?: number;
-  as?: 'div' | 'section' | 'li' | 'article' | 'h2' | 'p' | 'span';
+  as?: 'div' | 'section' | 'li' | 'article' | 'h1' | 'h2' | 'p' | 'span' | 'ul';
 }
 
 /**
