@@ -179,10 +179,13 @@ sha256sum -c SHA256SUMS     # Linux
 shasum -a 256 -c SHA256SUMS # macOS
 \`\`\`
 
-The jars are byte-reproducible: two builds of the same commit produce the
-same digest. \`resqnet-web-v$VERSION.zip\` is not, because zip records its
-own modification time. APK digests are not reproducible either, because the
-Android toolchain embeds build timestamps.
+\`resqnet-simulator-v$VERSION.jar\` is byte-reproducible: two builds of the
+same commit produce the same digest. \`resqnet-backend-v$VERSION.jar\` is
+not, because Spring Boot's repackaging step is not byte-stable. Verify
+against the \`SHA256SUMS\` published with this build, not against a digest
+from a different build. \`resqnet-web-v$VERSION.zip\` is not reproducible
+either, because zip records its own modification time. APK digests are not
+reproducible either, because the Android toolchain embeds build timestamps.
 
 ## Not verified
 

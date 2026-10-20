@@ -344,8 +344,11 @@ unsigned in the manifest. It does not fall back to the debug key, because a
 debug-signed APK is installable and looks exactly like a release until somebody
 tries to ship it.
 
-The jars are byte-reproducible: two builds of the same commit yield identical
-digests. The web zip and the APK are not, because they record build timestamps.
+The simulator jar is byte-reproducible: two builds of the same commit yield
+identical digests. The backend jar is not, because Spring Boot's repackaging
+step is not byte-stable; check it against the `SHA256SUMS` published with the
+build rather than against a digest from another build. The web zip and the APK
+are not reproducible either, because they record build timestamps.
 
 Run the tests before trusting any of it:
 
