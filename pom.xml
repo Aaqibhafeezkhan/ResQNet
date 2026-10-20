@@ -49,14 +49,14 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <junit.version>5.11.4</junit.version>
-    <assertj.version>3.27.3</assertj.version>
+    <assertj.version>3.27.7</assertj.version>
     <spring.boot.version>3.5.9</spring.boot.version>
     <springdoc.version>2.8.9</springdoc.version>
 
-    <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
-    <maven.surefire.plugin.version>3.5.2</maven.surefire.plugin.version>
-    <maven.failsafe.plugin.version>3.5.2</maven.failsafe.plugin.version>
-    <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
+    <maven.compiler.plugin.version>3.16.0</maven.compiler.plugin.version>
+    <maven.surefire.plugin.version>3.6.0</maven.surefire.plugin.version>
+    <maven.failsafe.plugin.version>3.6.0</maven.failsafe.plugin.version>
+    <maven.shade.plugin.version>3.6.2</maven.shade.plugin.version>
     <!-- Integration tests need a live PostgreSQL; see the failsafe config. -->
     <skipITs>true</skipITs>
     <!-- Overridden to an empty value by the CI step that runs slow tests. -->
