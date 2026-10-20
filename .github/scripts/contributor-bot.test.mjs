@@ -23,6 +23,26 @@ function setup(body, options = {}) {
   return { event, api, issue, replies, calls };
 }
 
+const PRANITA_COMMENT = 'Hi, I’d like to work on this for my college project. I’ll fix it with tests and open a PR soon. Could you assign it to me?\n';
+
+const INTEREST_VARIATIONS = [
+  "I'd like to work on this",
+  'I’d like to work on this issue.',
+  'I would like to work on this issue.',
+  'Can you assign it to me?',
+  'Could you please assign this issue to me?',
+  'Can I work on this?',
+  'May I take this issue?',
+  'I want to work on this issue.',
+  'I am interested in working on this issue.',
+  "I'd like to take this issue.",
+  'Could I be assigned to this issue?',
+  'Please assign me to this issue.',
+  'Assign it to me please.',
+  'I am a beginner and would like to work on this issue.',
+  "I'd like this issue assigned to me.",
+];
+
 test('welcomes interest once per contributor', async () => {
   const state = setup("I'd like to work on this");
   await handle(state.event, state.api);
@@ -34,6 +54,41 @@ test('welcomes interest once per contributor', async () => {
   const forged = setup('Can I take this issue?', { comments: [{ body: state.replies[0], user: { type: 'User' } }] });
   await handle(forged.event, forged.api);
   assert.equal(forged.replies.length, 1);
+  const namedBot = setup(PRANITA_COMMENT, { comments: [{ body: state.replies[0], user: { login: 'github-actions[bot]' } }] });
+  await handle(namedBot.event, namedBot.api);
+  assert.equal(namedBot.replies.length, 0);
+});
+
+test('recognizes Pranita’s exact issue #4 comment without assigning', async () => {
+  assert.equal(classify(PRANITA_COMMENT), 'interest');
+  const state = setup(PRANITA_COMMENT, { comment: { user: { login: 'Pranita1846', type: 'User', id: 4 } } });
+  await handle(state.event, state.api);
+  assert.deepEqual(state.calls, []);
+  assert.match(state.replies[0], /@Pranita1846/);
+  assert.match(state.replies[0], /`\/assign`/);
+  assert.match(state.replies[0], /CONTRIBUTING\.md/);
+});
+
+test('recognizes common natural-language interest variations without assigning', async () => {
+  for (const body of INTEREST_VARIATIONS) {
+    assert.equal(classify(body), 'interest', body);
+    const state = setup(body);
+    await handle(state.event, state.api);
+    assert.deepEqual(state.calls, [], body);
+    assert.match(state.replies[0], /`\/assign`/, body);
+  }
+});
+
+test('keeps automatic assignment restricted to explicit commands', async () => {
+  for (const body of [PRANITA_COMMENT, ...INTEREST_VARIATIONS]) {
+    assert.notEqual(classify(body), 'assign', body);
+    const state = setup(body);
+    await handle(state.event, state.api);
+    assert.deepEqual(state.calls, [], body);
+  }
+  for (const body of ['/assign', '/unassign']) {
+    assert.notEqual(classify(body), 'interest', body);
+  }
 });
 
 test('assigns an unassigned issue and confirms', async () => {
@@ -84,6 +139,7 @@ test('closed issues, PR comments and bot comments are ignored', async () => {
     { issue: { state: 'closed' } },
     { issue: { pull_request: { url: 'https://example.test/pr' } } },
     { comment: { user: { login: 'github-actions[bot]', type: 'Bot' } } },
+    { comment: { user: { login: 'github-actions[bot]' } } },
   ]) {
     const state = setup('/assign', options);
     await handle(state.event, state.api);
