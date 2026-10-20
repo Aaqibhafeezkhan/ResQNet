@@ -35,6 +35,20 @@ Good places to start are issues labelled
 [`good first issue`](https://github.com/Gautam-aman/ResQNet/labels/good%20first%20issue).
 Comment on the issue before starting so work is not duplicated.
 
+### Claiming an issue
+
+On an open issue, comment `/assign` to claim it. The contributor bot assigns
+one person per issue and allows up to two open issue assignments per person.
+It will point you to other issues if one is already assigned. Security issues
+are assigned by maintainers. The bot may ask you to contact a maintainer if
+GitHub cannot assign your account automatically.
+
+Comment `/unassign` on an issue assigned to you if you need to release it. You
+can also ask a maintainer for help in the issue comments. Assignment helps
+coordinate work; it does not grant exclusive ownership forever. After opening
+a PR, link the issue and respond to review or let maintainers know if your
+plans change.
+
 ## Repository layout
 
 | Path | What it contains |
@@ -136,8 +150,8 @@ obvious from the diff.
 
 1. Pick an issue labelled `good first issue`, or ask on an issue where you would
    like to help.
-2. Comment that you are taking it. If you change your mind, comment again so
-   somebody else can pick it up.
+2. Comment `/assign` to claim it. If you change your mind, comment `/unassign`
+   so somebody else can pick it up.
 3. Fork the repository and create a branch from `main`:
    `git switch -c fix/short-description`.
 4. Reproduce the problem before changing code. For a bug, write down the
