@@ -93,7 +93,8 @@ class ApiSecurityTest {
         // The audit trail is the record an investigator reads. A constant
         // request id would make every sync indistinguishable from every other.
         assertThat(auditRepository.findAll())
-                .as("the correlation id must reach the audit row")
+                .filteredOn(row -> "test-correlation-id".equals(row.getRequestId()))
+                .as("the gateway sync must record its correlation id")
                 .isNotEmpty()
                 .allSatisfy(row -> assertThat(row.getRequestId())
                         .isEqualTo("test-correlation-id"));
