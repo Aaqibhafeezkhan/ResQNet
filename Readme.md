@@ -98,19 +98,21 @@ than as delivered.
 ## 5. How offline mesh networking works
 
 ```mermaid
-sequenceDiagram
-    participant A as Phone A<br/>(sender)
-    participant B as Phone B<br/>(relay)
-    participant C as Phone C<br/>(responder)
 
-    Note over A: No network. Compose SOS.<br/>Triage runs on-device.
-    A->>B: Signed envelope<br/>hopCount 0 → 1
-    Note over B: Persist to SQLite,<br/>then forward.
-    B->>C: Signed envelope<br/>hopCount 1 → 2
-    Note over C: Verify signature<br/>against pinned key.
+sequenceDiagram
+    participant A as Phone A - Sender
+    participant B as Phone B - Relay
+    participant C as Phone C - Responder
+
+    Note over A: No internet. Compose SOS offline.
+    A->>B: Signed SOS envelope - hop 1
+    Note over B: Persist to SQLite and forward
+    B->>C: Signed SOS envelope - hop 2
+    Note over C: Verify origin signature
     C-->>B: Application-level ACK
-    C-->>A: Application-level ACK
-    Note over A,B,C: A Nearby payload transfer is<br/>NOT proof of delivery.<br/>Only an ACK is.
+    B-->>A: Forward ACK to sender
+    Note over A,C: Peer transfer alone does not prove final delivery
+
 ```
 
 Four rules govern forwarding:
