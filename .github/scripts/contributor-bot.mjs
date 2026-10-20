@@ -4,12 +4,30 @@ const LIMIT = 2;
 const HELP_URL = 'https://github.com/Gautam-aman/ResQNet/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22';
 const GUIDE_URL = 'https://github.com/Gautam-aman/ResQNet/blob/main/CONTRIBUTING.md';
 const MARKER = '<!-- resqnet-contributor-bot:interest:';
+const INTEREST_PATTERNS = [
+  /\b(?:i(?:'d| would)?|we(?:'d| would)?|would|'d)?(?:\s+(?:really|also|just))*\s*(?:like|love|want) to (?:work on|contribute(?: to)?|help(?: (?:with|on))?|take(?: on)?|handle|fix|resolve|implement|improve|be assigned)\b/i,
+  /\b(?:i(?:'m| am)|we(?:'re| are)) (?:very |really )?interested in (?:working on|contributing(?: to)?|helping(?: (?:with|on))?|taking(?: on)?|this|the)\b/i,
+  /\binterested in (?:working on|contributing(?: to)?|helping(?: (?:with|on))?|taking(?: on)?|this (?:issue|problem|task)|the (?:issue|problem|task))\b/i,
+  /\b(?:can|could|may|would) (?:i|we) (?:please )?(?:work on|contribute(?: to)?|help(?: (?:with|on))?|take(?: on)?|handle|fix|resolve|implement|improve|be assigned|try)\b/i,
+  /\b(?:can|could|would|will) (?:you|someone|anyone|a maintainer) (?:please )?assign (?:me|this|it|the (?:issue|problem|task))\b/i,
+  /\bplease (?:assign|add) (?:me|this|it|the (?:issue|problem|task))\b/i,
+  /\b(?:assign|add) (?:me|this|it|the (?:issue|problem|task))\b/i,
+  /\b(?:i(?:'d| would)? (?:like|love|want)|please) (?:to be|be) assigned(?: to)? (?:this|it|the (?:issue|problem|task))?\b/i,
+  /\b(?:i(?:'d| would)? (?:like|love|want)|(?:can|could|may) i have) (?:this (?:issue|problem|task)|this|it|the (?:issue|problem|task)) (?:to be )?assigned to me\b/i,
+];
+const NOT_INTERESTED = /\b(?:not interested|no longer interested|(?:do not|don't) want|(?:do not|don't) plan|(?:can't|cannot|won't|unable to) work|(?:do not|don't|please don't) assign)\b/i;
+
+function isBot(user) {
+  return user?.type === 'Bot' || /\[bot\]$/i.test(user?.login ?? '');
+}
 
 export function classify(body) {
   const message = body.trim();
-  if (/^\/assign$/i.test(message)) return 'assign';
-  if (/^\/unassign$/i.test(message)) return 'unassign';
-  if (/^(?:i(?: would|’d|'d)? like to (?:work on this|contribute)|can i take this issue\??|please assign this to me)[.!?\s]*$/i.test(message)) return 'interest';
+  const normalized = message.replace(/[‘’]/g, "'");
+  if (/^\/assign$/i.test(normalized)) return 'assign';
+  if (/^\/unassign$/i.test(normalized)) return 'unassign';
+  if (/\$\{/.test(normalized) || NOT_INTERESTED.test(normalized)) return null;
+  if (INTEREST_PATTERNS.some((pattern) => pattern.test(normalized))) return 'interest';
   return null;
 }
 
@@ -20,8 +38,7 @@ function sensitive(issue) {
 
 export async function handle(event, api) {
   const { issue, comment } = event;
-  if (!issue || !comment || issue.pull_request || issue.state !== 'open'
-      || comment.user?.type === 'Bot' || /\[bot\]$/i.test(comment.user?.login ?? '')) return;
+  if (!issue || !comment || issue.pull_request || issue.state !== 'open' || isBot(comment.user)) return;
   const command = classify(comment.body ?? '');
   if (!command) return;
   const login = comment.user.login;
@@ -35,7 +52,7 @@ export async function handle(event, api) {
   if (command === 'interest') {
     const marker = `${MARKER}${login.toLowerCase()} -->`;
     const comments = await api.comments(number);
-    if (comments.some((item) => item.user?.type === 'Bot' && item.body?.includes(marker))) return;
+    if (comments.some((item) => isBot(item.user) && item.body?.includes(marker))) return;
     await say(`${marker}\nHey @${login}! Thanks for your interest in ResQNet! 🚀\n\nFeel free to take this up. Comment \`/assign\` to claim the issue. Our [setup and contribution guide](${GUIDE_URL}) can help you get started. Looking forward to your PR!`);
     return;
   }
