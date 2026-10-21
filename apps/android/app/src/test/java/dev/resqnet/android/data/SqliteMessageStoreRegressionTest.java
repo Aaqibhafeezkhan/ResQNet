@@ -37,14 +37,22 @@ public class SqliteMessageStoreRegressionTest {
 
     @Before
     public void setUp() {
-        database = ResQNetDatabase.get(ApplicationProvider.getApplicationContext());
+        database = ResQNetDatabase.openIsolated(ApplicationProvider.getApplicationContext());
         store = new SqliteMessageStore(database, 16,
                 (messageId, previous, current, detail) -> { });
     }
 
     @After
     public void tearDown() throws Exception {
-        offMain(() -> store.delete("msg-regression"));
+        try {
+            offMain(() -> {
+                store.delete("msg-regression");
+                store.delete("msg-regression-second");
+                return null;
+            });
+        } finally {
+            database.close();
+        }
     }
 
     @Test
@@ -75,17 +83,23 @@ public class SqliteMessageStoreRegressionTest {
     @Test
     public void upsertKeepsRowIdentityStable() throws Exception {
         upsert(message());
-        long first = find("msg-regression").localId();
+        upsert(secondMessage());
 
-        StoredMessage stored = find("msg-regression");
-        upsert(stored.withRetry(1, System.currentTimeMillis() + 5000));
+        long originalId = find("msg-regression-second").localId();
 
-        long second = find("msg-regression").localId();
-        assertThat(second)
-                .as("local_id is the row identity; replacing the row changed it and"
-                        + " broke anything holding a reference to it")
-                .isEqualTo(first);
+        StoredMessage stored = find("msg-regression-second");
+        StoredMessage updated = upsert(
+                stored.withRetry(1, System.currentTimeMillis() + 5000));
+
+        assertThat(updated.localId())
+                .as("upsert must return the existing message's local_id")
+                .isEqualTo(originalId);
+
+        assertThat(find("msg-regression-second").localId())
+                .as("upsert must preserve the message's row identity")
+                .isEqualTo(originalId);
     }
+
 
     @Test
     public void upsertPreservesTriage() throws Exception {
@@ -220,4 +234,20 @@ public class SqliteMessageStoreRegressionTest {
                 .build();
         return StoredMessage.of(envelope, EnvelopeCodec.encode(envelope), now);
     }
+    private static StoredMessage secondMessage() throws Exception {
+        long now = System.currentTimeMillis();
+        MessageEnvelope envelope = MessageEnvelope.builder()
+                .messageId("msg-regression-second")
+                .origin("rqn1_" + "a".repeat(64))
+                .originKeyFingerprint("b".repeat(64))
+                .destination("rqn1_" + "c".repeat(64))
+                .type(MessageType.SOS)
+                .priority(Priority.SOS)
+                .createdAt(now)
+                .expiresAt(now + 900_000L)
+                .payload("help second".getBytes(StandardCharsets.UTF_8))
+                .build();
+        return StoredMessage.of(envelope, EnvelopeCodec.encode(envelope), now);
+    }
+
 }
