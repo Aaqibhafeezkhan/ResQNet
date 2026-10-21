@@ -140,6 +140,10 @@ public final class PeerBindings {
         discovered.add(endpointId);
     }
 
+    public synchronized boolean isDiscovered(String endpointId) {
+        return discovered.contains(endpointId);
+    }
+
     /** Marks a connection as requested, so it is not requested twice. */
     public synchronized boolean markRequested(String endpointId) {
         return endpointsRequested.add(endpointId);

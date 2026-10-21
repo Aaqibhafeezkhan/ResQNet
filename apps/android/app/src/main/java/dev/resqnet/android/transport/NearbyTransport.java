@@ -2,6 +2,8 @@ package dev.resqnet.android.transport;
 
 import android.content.Context;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -25,6 +27,7 @@ import com.google.android.gms.nearby.connection.Strategy;
 import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -89,6 +92,7 @@ public final class NearbyTransport implements MeshTransport {
 
     /** Discovery namespace. Scoped to this project so it cannot collide. */
     private static final String SERVICE_ID = "resqnet-mesh-v1";
+    private static final long CONNECTION_RETRY_MILLIS = 15_000L;
 
     /**
      * Largest frame this transport will hand to Nearby.
@@ -126,7 +130,12 @@ public final class NearbyTransport implements MeshTransport {
      */
     private final PeerBindings bindings = new PeerBindings();
     private final LinkIdentityProof identityProof;
+    private final Handler proofRetryHandler = new Handler(Looper.getMainLooper());
+    private final Map<String, ProofRequest> proofRequests = new HashMap<>();
+    private final Map<String, Runnable> connectionRetries = new HashMap<>();
     private volatile java.util.function.Predicate<String> bindingApproval = id -> false;
+
+    private record ProofRequest(String deviceId, PublicKey key) { }
 
     private volatile InboundHandler inboundHandler = (peer, payload) -> {
     };
@@ -136,8 +145,8 @@ public final class NearbyTransport implements MeshTransport {
     private final java.util.Set<String> discovered =
             java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
 
-    private ConnectionsClient client;
-    private boolean started;
+    private volatile ConnectionsClient client;
+    private volatile boolean started;
     private volatile boolean ready;
 
     /** Observability hook for the nearby devices screen. */
@@ -169,17 +178,46 @@ public final class NearbyTransport implements MeshTransport {
 
     /** Challenge a direct provisional neighbour; relayed announcements cannot bind. */
     public void requestBindingProof(String endpointId, String deviceId, PublicKey key) {
-        byte[] challenge;
+        ProofRequest request;
         synchronized (lock) {
-            if (!endpointId.equals(bindings.resolve(endpointId)) || client == null) {
+            if (!started || client == null || endpointId == null
+                    || !endpointId.equals(bindings.resolve(endpointId))) {
                 return;
             }
-            challenge = identityProof.challenge(endpointId, deviceId, key);
+            ProofRequest current = proofRequests.get(endpointId);
+            if (current != null && current.deviceId().equals(deviceId)) {
+                return;
+            }
+            request = new ProofRequest(deviceId, key);
+            proofRequests.put(endpointId, request);
         }
+        issueProofChallenge(endpointId, request);
+    }
+
+    /** Retry with a new nonce after a missing, failed, or invalid response. */
+    private void issueProofChallenge(String endpointId, ProofRequest request) {
+        byte[] challenge;
+        ConnectionsClient activeClient;
+        synchronized (lock) {
+            if (!started || proofRequests.get(endpointId) != request
+                    || !endpointId.equals(bindings.resolve(endpointId))
+                    || client == null) {
+                return;
+            }
+            challenge = identityProof.challenge(endpointId, request.deviceId(), request.key());
+            activeClient = client;
+        }
+        proofRetryHandler.postDelayed(() -> issueProofChallenge(endpointId, request),
+                LinkIdentityProof.TIMEOUT_MILLIS + 1L);
         if (challenge != null) {
-            client.sendPayload(endpointId, Payload.fromBytes(challenge))
-                    .addOnFailureListener(error -> reportFailure("identity-proof",
-                            "challenge failed for " + endpointId));
+            try {
+                activeClient.sendPayload(endpointId, Payload.fromBytes(challenge))
+                        .addOnFailureListener(error -> reportFailure("identity-proof",
+                                "challenge failed for " + endpointId));
+            } catch (RuntimeException error) {
+                reportFailure("identity-proof", "challenge failed for " + endpointId
+                        + ": " + error.getMessage());
+            }
         }
     }
 
@@ -267,10 +305,16 @@ public final class NearbyTransport implements MeshTransport {
             // run without it and the UI has to say so rather than look healthy.
             Log.e(TAG, "Play Services unavailable", t);
             listener.onTransportError("client", "Google Play services unavailable on this device");
+            synchronized (lock) {
+                started = false;
+            }
             return;
         }
         if (client == null) {
             listener.onTransportError("client", "Nearby Connections client unavailable");
+            synchronized (lock) {
+                started = false;
+            }
             return;
         }
         startAdvertising();
@@ -288,7 +332,10 @@ public final class NearbyTransport implements MeshTransport {
             ready = false;
             bindings.clearAll();
             identityProof.clear();
+            proofRequests.clear();
+            connectionRetries.clear();
         }
+        proofRetryHandler.removeCallbacksAndMessages(null);
         if (client == null) {
             return;
         }
@@ -331,6 +378,9 @@ public final class NearbyTransport implements MeshTransport {
                                 @Override
                                 public void onEndpointFound(String endpointId,
                                                             DiscoveredEndpointInfo info) {
+                                    if (!started) {
+                                        return;
+                                    }
                                     bindings.markDiscovered(endpointId);
                                     requestConnection(endpointId);
                                 }
@@ -351,14 +401,15 @@ public final class NearbyTransport implements MeshTransport {
     }
 
     /**
-     * Opens a connection to a discovered endpoint, at most once per session.
+     * Opens a connection to a discovered endpoint, at most once per attempt.
+     * Failed attempts are retried while discovery still reports the endpoint.
      *
      * <p>Under {@link Strategy#P2P_CLUSTER} the discovering side is responsible
      * for requesting connections; Nearby does not connect discovered peers on its
      * own.
      */
     private void requestConnection(String endpointId) {
-        if (client == null || endpointId == null) {
+        if (!started || client == null || endpointId == null) {
             return;
         }
         synchronized (lock) {
@@ -375,11 +426,35 @@ public final class NearbyTransport implements MeshTransport {
                         synchronized (lock) {
                             bindings.clearRequested(endpointId);
                         }
+                        scheduleConnectionRetry(endpointId);
                         listener.onTransportError("connection",
                                 "Could not reach " + endpointId + ": " + failure.getMessage());
                     });
         } catch (SecurityException e) {
+            bindings.clearRequested(endpointId);
+            scheduleConnectionRetry(endpointId);
             reportError("requestConnection", e);
+        }
+    }
+
+    /** Retry a failed request while discovery still reports the endpoint. */
+    private void scheduleConnectionRetry(String endpointId) {
+        synchronized (lock) {
+            if (!started || !bindings.isDiscovered(endpointId)
+                    || connectionRetries.containsKey(endpointId)) {
+                return;
+            }
+            Runnable retry = () -> {
+                synchronized (lock) {
+                    connectionRetries.remove(endpointId);
+                    if (!started || !bindings.isDiscovered(endpointId)) {
+                        return;
+                    }
+                }
+                requestConnection(endpointId);
+            };
+            connectionRetries.put(endpointId, retry);
+            proofRetryHandler.postDelayed(retry, CONNECTION_RETRY_MILLIS);
         }
     }
 
@@ -391,7 +466,7 @@ public final class NearbyTransport implements MeshTransport {
                 public void onConnectionInitiated(String endpointId, ConnectionInfo info) {
                     // Someone wants to talk to us. Accepting is automatic on
                     // purpose; see the class comment.
-                    if (client == null) {
+                    if (!started || client == null) {
                         return;
                     }
                     try {
@@ -408,6 +483,8 @@ public final class NearbyTransport implements MeshTransport {
                     if (code == ConnectionsStatusCodes.STATUS_OK) {
                         bind(endpointId);
                     } else {
+                        bindings.clearRequested(endpointId);
+                        scheduleConnectionRetry(endpointId);
                         listener.onTransportError("connection",
                                 endpointId + ": " + resolution.getStatus().getStatusMessage());
                     }
@@ -423,6 +500,9 @@ public final class NearbyTransport implements MeshTransport {
 
         @Override
         public void onPayloadReceived(String endpointId, Payload payload) {
+            if (!started) {
+                return;
+            }
             if (payload.getType() != Payload.Type.BYTES) {
                 return;
             }
@@ -437,6 +517,7 @@ public final class NearbyTransport implements MeshTransport {
                         result = identityProof.receive(endpointId, bytes);
                         if (result.verifiedDeviceId() != null
                                 && bindingApproval.test(result.verifiedDeviceId())) {
+                            proofRequests.remove(endpointId);
                             promoteBinding(endpointId, result.verifiedDeviceId());
                         }
                     }
@@ -477,6 +558,14 @@ public final class NearbyTransport implements MeshTransport {
         // diagnostics screen while it waits to be verified.
         String resolved;
         synchronized (lock) {
+            if (!started) {
+                return;
+            }
+            proofRequests.remove(endpointId);
+            Runnable retry = connectionRetries.remove(endpointId);
+            if (retry != null) {
+                proofRetryHandler.removeCallbacks(retry);
+            }
             resolved = bindings.bind(endpointId);
             identityProof.connected(endpointId);
         }
@@ -506,6 +595,11 @@ public final class NearbyTransport implements MeshTransport {
         String deviceId;
         synchronized (lock) {
             identityProof.disconnected(endpointId);
+            proofRequests.remove(endpointId);
+            Runnable retry = connectionRetries.remove(endpointId);
+            if (retry != null) {
+                proofRetryHandler.removeCallbacks(retry);
+            }
             deviceId = bindings.unbind(endpointId);
         }
         if (deviceId == null) {
