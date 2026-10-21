@@ -46,8 +46,26 @@ GitHub cannot assign your account automatically.
 Comment `/unassign` on an issue assigned to you if you need to release it. You
 can also ask a maintainer for help in the issue comments. Assignment helps
 coordinate work; it does not grant exclusive ownership forever. After opening
-a PR, link the issue and respond to review or let maintainers know if your
-plans change.
+a PR, link the issue with `Closes #123`, `Fixes #123`, or `Resolves #123` and
+respond to review or let maintainers know if your plans change. Please claim
+the issue before opening the PR so maintainers can see that work is coordinated.
+
+The PR assignment bot checks linked issues when a PR is opened, updated, or
+reopened, and when issue assignments change. It checks each issue separately
+and compares the PR author with the current assignees. If you are not assigned,
+the bot posts an advisory reminder; it does not close the PR or block review.
+Comment `/assign` on an unassigned issue and wait for the existing Contributor
+Bot to confirm. If someone else is assigned, coordinate with them or a
+maintainer instead of changing the assignment yourself. If the warning is
+incorrect, check the issue reference and assignment, then ask a maintainer to
+review it.
+
+Documentation-only or maintenance PRs that do not need an issue can be approved
+by a maintainer applying the `no-issue-required` label. Contributors should not
+add this label themselves. Maintainer PRs and trusted automation are allowed
+through the advisory policy. The `awaiting-issue-assignment` and
+`contribution-policy-ok` labels are managed by the bot; they do not affect the
+merge decision.
 
 ## Repository layout
 
@@ -150,8 +168,8 @@ obvious from the diff.
 
 1. Pick an issue labelled `good first issue`, or ask on an issue where you would
    like to help.
-2. Comment `/assign` to claim it. If you change your mind, comment `/unassign`
-   so somebody else can pick it up.
+2. Comment `/assign` to claim it and wait for confirmation. If you change your
+   mind, comment `/unassign` so somebody else can pick it up.
 3. Fork the repository and create a branch from `main`:
    `git switch -c fix/short-description`.
 4. Reproduce the problem before changing code. For a bug, write down the
@@ -160,6 +178,8 @@ obvious from the diff.
 6. Run the relevant commands from the table above. State exactly what you ran
    and what passed in the pull request.
 7. Open a pull request using the template. Link the issue with `Closes #123`.
+   The PR assignment bot provides advisory feedback if the issue is missing or
+   not assigned to you; it does not block review or merging.
 8. Respond to review. Maintainers may ask for evidence or for the change to be
    split; this is about keeping safety-critical claims defensible, not about
    gatekeeping.

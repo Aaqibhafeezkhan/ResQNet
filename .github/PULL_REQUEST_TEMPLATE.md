@@ -4,7 +4,15 @@
 
 ## Related issue
 
-<!-- Closes #123, or explain why there is no issue. -->
+<!-- Claim the issue first with /assign, then use Closes #123 (or Fixes/Resolves #123).
+     For documentation or maintenance work without an issue, explain why here;
+     a maintainer can approve the exception with the no-issue-required label. -->
+
+Closes #
+
+If no issue is needed, explain why:
+
+
 
 ## Verification
 
