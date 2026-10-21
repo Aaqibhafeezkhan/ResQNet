@@ -8,11 +8,11 @@ Android APK.
 | File | Purpose |
 |---|---|
 | `resqnet-v0.2.0-beta-release.apk` | **Android app, release build.** Package `dev.resqnet.android`. Min SDK 26. |
-| `resqnet-v0.2.0-beta-debug.apk` | Android app, debug build (`.debug` application id). For side-by-side hardware testing only. Never publish this one. |
 | `resqnet-simulator-v0.2.0-beta.jar` | Self-contained simulator and demonstration. No external services. |
 | `resqnet-backend-v0.2.0-beta.jar` | Spring Boot coordination gateway. Requires PostgreSQL. |
 | `resqnet-web-v0.2.0-beta.zip` | Production static assets for the command centre. |
 | `SHA256SUMS` | SHA-256 digest of every other file here. |
+| `ARTIFACTS.md` | Manifest of the files published with this release. |
 | `RELEASE_NOTES.md` | What this release contains and its limitations. |
 | `INSTALLATION.md` | This file. |
 
@@ -61,12 +61,13 @@ thing tying the file you downloaded to the file that was uploaded.
    used as a relay without its owner understanding that.
 7. Test with a second device.
 
-### Do not install the debug APK
+### Building a debug APK for local testing
 
-`resqnet-v0.2.0-beta-debug.apk` is included so that a release build and a debug
-build can be installed side by side on one handset — it carries the `.debug`
-application-id suffix, so installing it does not replace the release build. It
-is debug-signed and is not a substitute for the release APK.
+A debug APK is not attached to this release. If you need side-by-side hardware
+testing, build the debug variant locally from source with `cd apps/android &&
+./gradlew assembleDebug`. The locally built variant carries the `.debug`
+application-id suffix, so it can be installed alongside the release build. It is
+debug-signed and is not a substitute for the signed release APK.
 
 ### What this build has and has not been tested on
 
