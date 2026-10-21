@@ -31,15 +31,17 @@ Outcome:           not started / partial / complete
 
 | Area | How | Status |
 |---|---|---|
-| Protocol encode/decode and validation | 141 JVM tests in `mesh-core` | Verified |
+| Protocol encode/decode and validation | JVM tests in `mesh-core` | Verified |
 | Multi-hop routing, dedup, hop and expiry limits | JVM tests over real `MeshRouter` instances | Verified |
 | Both cluster topologies (full mesh and chain) | `ClusterTopologyTest` | Verified |
 | Router reaches the graph's structural ceiling | `RoutingEfficiencyTest` | Verified |
 | Store-and-forward, retry, expiry, acknowledgement | JVM tests | Verified |
 | Adversarial cases: replay, tampering, origin substitution, flooding | JVM tests | Verified |
 | Simulator reproducibility across JVMs | forked-process test | Verified |
-| SQLite queue, peer store, audit trail | 55 Robolectric tests | Verified |
+| SQLite queue, peer store, audit trail | Android unit and Robolectric tests | Verified |
 | Endpoint to identity binding and promotion | `PeerBindingsTest` | Verified |
+| Fresh link proof, replay, endpoint swap, timeout and disconnect handling | `LinkIdentityProofTest` on the JVM | Verified in logic tests only |
+| Public claim cannot create a stable endpoint binding | `IdentityRebindingTest` on an API 34 emulator; failed against the prior code and passed after the fix | Verified in emulator only |
 | API 26 compatibility of mesh-core | app compiles mesh-core from source | Verified |
 | APK assembles, debug and release | `:app:assembleDebug assembleRelease` | Verified |
 
@@ -53,6 +55,7 @@ than a crash discovered in a collapsed building.
 |---|---|
 | Two phones discovering each other | **Unverified** |
 | A peer being resolvable by device identity | **Unverified** |
+| Challenge and signed response crossing a real Nearby connection | **Unverified** |
 | A message traversing A → B → C | **Unverified** |
 | Delivery with no network at all | **Unverified** |
 | Queued messages surviving a partition | **Unverified** |
@@ -288,6 +291,23 @@ is a human act:
 9.10 is not a failure, it is the design: a peer's key is self-asserted until a
 person confirms it, and messages from an unconfirmed peer are refused with a
 reason rather than silently dropped.
+
+### Peer identity rebinding security check
+
+Use only test phones and synthetic messages. Record endpoint ids and device ids
+from Diagnostics on each phone. After A has verified B's short code, disconnect
+B and reconnect it. Confirm A first sees a provisional endpoint, then binds B's
+stable id after the signed response. Send a directed test message and confirm it
+reaches B. Repeat after restarting B and after a permission interruption.
+
+On a third phone C, replay B's captured public identity announcement without
+B's private key. Confirm C never appears as B's stable id on A and directed
+messages continue to target B when B is present. Replay a captured response,
+delay a response beyond 15 seconds, and move a response to a different Nearby
+connection; each must leave the attacker endpoint provisional. Block B on A and
+confirm it cannot rebind even with B's valid private-key response. Capture the
+full Diagnostics logs and Play services versions for each case. This procedure
+has not been executed; automated tests cannot establish real radio behavior.
 
 ---
 
