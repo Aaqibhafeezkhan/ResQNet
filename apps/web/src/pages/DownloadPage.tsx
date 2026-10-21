@@ -155,7 +155,7 @@ export function DownloadPage() {
               href={GITHUB_DEVICE_TESTING}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
+              className="mt-6 inline-flex min-h-[28px] items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
             >
               Read the device testing procedure
               <ArrowUpRight size={12} aria-hidden="true" />
@@ -166,7 +166,7 @@ export function DownloadPage() {
 
       <section className="section-space">
         <div className="container-page grid gap-8 lg:grid-cols-[1fr_1fr]">
-          <div className="rounded-2xl border border-base-600 bg-base-850 p-6 sm:p-8">
+          <div className="rounded-2xl border border-base-600 bg-base-850 p-6 transition-[transform,border-color] duration-500 ease-cinematic hover:-translate-y-1 hover:border-network/35 sm:p-8">
             <Smartphone size={18} className="text-network" aria-hidden="true" />
             <h2 className="mt-5 text-lg font-semibold text-ink-primary">Prefer the simulator?</h2>
             <p className="mt-2 text-[13px] leading-relaxed text-ink-secondary">
@@ -178,14 +178,14 @@ export function DownloadPage() {
               href={GITHUB_RELEASES}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary"
+              className="mt-5 inline-flex min-h-[28px] items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary"
             >
               Browse release artifacts
               <ArrowUpRight size={12} aria-hidden="true" />
             </a>
           </div>
 
-          <div className="rounded-2xl border border-pending/25 bg-pending-soft p-6 sm:p-8">
+          <div className="rounded-2xl border border-pending/25 bg-pending-soft p-6 transition-[transform,border-color] duration-500 ease-cinematic hover:-translate-y-1 hover:border-pending/50 sm:p-8">
             <Download size={18} className="text-pending" aria-hidden="true" />
             <h2 className="mt-5 text-lg font-semibold text-ink-primary">Found a problem?</h2>
             <p className="mt-2 text-[13px] leading-relaxed text-ink-secondary">
@@ -196,7 +196,7 @@ export function DownloadPage() {
               href={GITHUB_SECURITY}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-pending transition-colors hover:text-ink-primary"
+              className="mt-5 inline-flex min-h-[28px] items-center gap-1.5 text-xs font-medium text-pending transition-colors hover:text-ink-primary"
             >
               Read the security policy
               <ArrowUpRight size={12} aria-hidden="true" />

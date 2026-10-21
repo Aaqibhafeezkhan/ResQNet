@@ -1,37 +1,71 @@
+import {
+  HERO_LINKS,
+  HERO_NODES,
+  heroLinkId,
+  type HeroNodeId,
+  type HeroState,
+} from './heroScene';
+
 interface StaticNetworkProps {
+  state: HeroState;
   className?: string;
 }
 
 /**
- * The hero's non-WebGL composition.
+ * Projection from world units to the SVG viewBox.
  *
- * It is not a loading placeholder: on reduced-motion devices, old GPUs and
- * browsers with WebGL disabled this is the finished illustration. The same
- * geometry is drawn by the live scene, so the page has one visual language
- * whether or not a canvas is available.
+ * The WebGL scene and this illustration share one set of world coordinates, so
+ * a device sits in the same place in both. The fallback is not a placeholder:
+ * on a device with no WebGL, or with reduced motion requested, this is the
+ * finished illustration of the same story.
  */
-const PRIMARY_NODES = [
-  { x: 86, y: 620, color: '#FF5C35', label: 'SENDER' },
-  { x: 284, y: 386, color: '#5CE1DF', label: 'RELAY' },
-  { x: 506, y: 536, color: '#5CE1DF', label: 'RELAY' },
-  { x: 724, y: 302, color: '#5CE1DF', label: 'RELAY' },
-  { x: 982, y: 430, color: '#5CE1DF', label: 'RELAY' },
-  { x: 1228, y: 316, color: '#62E6B5', label: 'RECIPIENT' },
-] as const;
+const VIEW_WIDTH = 1000;
+const VIEW_HEIGHT = 560;
+const SCALE = 82;
+const ORIGIN_X = VIEW_WIDTH / 2;
+const ORIGIN_Y = VIEW_HEIGHT / 2;
 
-export function StaticNetwork({ className = '' }: StaticNetworkProps) {
+function project(position: readonly [number, number, number]): [number, number] {
+  const [x, y] = position;
+  return [ORIGIN_X + x * SCALE, ORIGIN_Y - y * SCALE];
+}
+
+const NODE_ROLE_LABEL: Record<HeroNodeId, string> = {
+  amina: 'SENDER',
+  jonas: 'RELAY',
+  mei: 'RELAY',
+  tomas: 'RELAY',
+  sana: 'RELAY',
+  post: 'RECIPIENT',
+};
+
+export function StaticNetwork({ state, className = '' }: StaticNetworkProps) {
+  const broken = new Set(state.brokenLinks);
+  const routePairs = new Set<string>();
+  for (let index = 0; index < state.route.length - 1; index += 1) {
+    const from = state.route[index];
+    const to = state.route[index + 1];
+    if (from && to) routePairs.add(heroLinkId(from, to));
+  }
+
+  const packet = packetPosition(state);
+  const ack = ackPosition(state);
+
   return (
-    <div className={'pointer-events-none absolute inset-0 overflow-hidden ' + className} aria-hidden="true">
+    <div
+      className={'pointer-events-none absolute inset-0 overflow-hidden ' + className}
+      aria-hidden="true"
+    >
       <svg
-        viewBox="0 0 1440 900"
+        viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         preserveAspectRatio="xMidYMid slice"
         className="h-full w-full"
         role="presentation"
       >
         <defs>
-          <radialGradient id="signal-field" cx="50%" cy="45%" r="60%">
-            <stop offset="0%" stopColor="#5CE1DF" stopOpacity="0.105" />
-            <stop offset="48%" stopColor="#0B3C3B" stopOpacity="0.15" />
+          <radialGradient id="signal-field" cx="50%" cy="45%" r="62%">
+            <stop offset="0%" stopColor="#5CE1DF" stopOpacity="0.12" />
+            <stop offset="46%" stopColor="#0B3C3B" stopOpacity="0.16" />
             <stop offset="100%" stopColor="#040607" stopOpacity="0" />
           </radialGradient>
           <radialGradient id="node-halo-cyan" cx="50%" cy="50%" r="50%">
@@ -62,98 +96,120 @@ export function StaticNetwork({ className = '' }: StaticNetworkProps) {
           </filter>
         </defs>
 
-        <rect width="1440" height="900" fill="url(#signal-field)" />
-        <rect width="1440" height="900" fill="url(#signal-grid)" />
+        <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="url(#signal-field)" />
+        <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="url(#signal-grid)" />
 
         <g stroke="#8AA39F" strokeOpacity="0.13" strokeWidth="1">
-          <line x1="86" y1="620" x2="284" y2="386" />
-          <line x1="284" y1="386" x2="506" y2="536" />
-          <line x1="506" y1="536" x2="724" y2="302" />
-          <line x1="724" y1="302" x2="982" y2="430" />
-          <line x1="982" y1="430" x2="1228" y2="316" />
-          <line x1="284" y1="386" x2="506" y2="536" />
-          <line x1="506" y1="536" x2="724" y2="302" />
-          <line x1="724" y1="302" x2="982" y2="430" />
-          <line x1="982" y1="430" x2="1228" y2="316" />
-          <line x1="284" y1="386" x2="724" y2="302" />
-          <line x1="506" y1="536" x2="982" y2="430" />
-          <line x1="982" y1="430" x2="1124" y2="624" />
-          <line x1="506" y1="536" x2="1124" y2="624" />
-          <line x1="724" y1="302" x2="1228" y2="316" />
+          {HERO_LINKS.map((link) => {
+            const from = node(link.from);
+            const to = node(link.to);
+            if (!from || !to) return null;
+            const [x1, y1] = project(from.position);
+            const [x2, y2] = project(to.position);
+            return (
+              <line
+                key={link.id}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                opacity={broken.has(link.id) ? 0.18 : 1}
+                strokeDasharray={broken.has(link.id) ? '3 7' : undefined}
+              />
+            );
+          })}
         </g>
 
-        <g stroke="#5CE1DF" strokeOpacity="0.36" strokeWidth="1.2">
-          <line x1="284" y1="386" x2="506" y2="536" />
-          <line x1="506" y1="536" x2="724" y2="302" />
-          <line x1="724" y1="302" x2="982" y2="430" />
-          <line x1="982" y1="430" x2="1228" y2="316" />
+        <g stroke="#5CE1DF" strokeOpacity="0.4" strokeWidth="1.4">
+          {HERO_LINKS.map((link) => {
+            if (!routePairs.has(link.id) || broken.has(link.id)) return null;
+            const from = node(link.from);
+            const to = node(link.to);
+            if (!from || !to) return null;
+            const [x1, y1] = project(from.position);
+            const [x2, y2] = project(to.position);
+            return <line key={link.id} x1={x1} y1={y1} x2={x2} y2={y2} />;
+          })}
         </g>
 
-        <path
-          d="M86 620 C184 566 220 432 284 386 S432 472 506 536 S646 348 724 302 S902 380 982 430 S1130 346 1228 316"
-          fill="none"
-          stroke="url(#signal-route)"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeDasharray="8 10"
-          strokeOpacity="0.9"
-          className="animate-route-dash"
-        />
-        <path
-          d="M86 620 C184 566 220 432 284 386 S432 472 506 536 S646 348 724 302 S902 380 982 430 S1130 346 1228 316"
-          fill="none"
-          stroke="url(#signal-route)"
-          strokeWidth="12"
-          strokeLinecap="round"
-          strokeOpacity="0.08"
-          filter="url(#soft-glow)"
-        />
+        {broken.size > 0 ? (
+          <g stroke="#FF5C35" strokeOpacity="0.55" strokeWidth="1.2" strokeDasharray="4 6">
+            {HERO_LINKS.map((link) => {
+              if (!broken.has(link.id)) return null;
+              const from = node(link.from);
+              const to = node(link.to);
+              if (!from || !to) return null;
+              const [x1, y1] = project(from.position);
+              const [x2, y2] = project(to.position);
+              return <line key={link.id} x1={x1} y1={y1} x2={x2} y2={y2} />;
+            })}
+          </g>
+        ) : null}
 
         <g>
-          <circle cx="86" cy="620" r="92" fill="url(#node-halo-orange)" />
-          <circle cx="284" cy="386" r="64" fill="url(#node-halo-cyan)" />
-          <circle cx="506" cy="536" r="54" fill="url(#node-halo-cyan)" />
-          <circle cx="724" cy="302" r="58" fill="url(#node-halo-cyan)" />
-          <circle cx="982" cy="430" r="62" fill="url(#node-halo-cyan)" />
-          <circle cx="1228" cy="316" r="88" fill="url(#node-halo-jade)" />
+          {HERO_NODES.map((spec) => {
+            const [cx, cy] = project(spec.position);
+            const offline = state.offline.includes(spec.id);
+            const halo =
+              spec.role === 'sender'
+                ? 'url(#node-halo-orange)'
+                : spec.role === 'recipient'
+                  ? 'url(#node-halo-jade)'
+                  : 'url(#node-halo-cyan)';
+            const color =
+              spec.role === 'sender'
+                ? '#FF5C35'
+                : spec.role === 'recipient'
+                  ? '#62E6B5'
+                  : '#5CE1DF';
+            return (
+              <g key={spec.id} opacity={offline ? 0.3 : 1}>
+                <circle cx={cx} cy={cy} r={44 * spec.scale} fill={halo} />
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r="22"
+                  fill="none"
+                  stroke={color}
+                  strokeOpacity="0.24"
+                  className="animate-signal-pulse [transform-box:fill-box] [transform-origin:center]"
+                />
+                <circle cx={cx} cy={cy} r="13" fill="#07090A" stroke={color} strokeOpacity="0.75" />
+                <circle cx={cx} cy={cy} r="3.4" fill={color} />
+                <text
+                  x={cx}
+                  y={cy + 36}
+                  textAnchor="middle"
+                  fill="#7E8A83"
+                  fontSize="8.5"
+                  fontFamily="Instrument Sans, Inter, sans-serif"
+                  fontWeight="600"
+                  letterSpacing="2.2"
+                >
+                  {NODE_ROLE_LABEL[spec.id]}
+                </text>
+              </g>
+            );
+          })}
         </g>
 
-        <g>
-          {PRIMARY_NODES.map((node) => (
-            <g key={`${node.x}-${node.y}`}>
-              <circle
-                cx={node.x}
-                cy={node.y}
-                r="22"
-                fill="none"
-                stroke={node.color}
-                strokeOpacity="0.24"
-                className="animate-signal-pulse [transform-box:fill-box] [transform-origin:center]"
-              />
-              <circle
-                cx={node.x}
-                cy={node.y}
-                r="13"
-                fill="#07090A"
-                stroke={node.color}
-                strokeOpacity="0.75"
-              />
-              <circle cx={node.x} cy={node.y} r="3.4" fill={node.color} />
-              <text
-                x={node.x}
-                y={node.y + 36}
-                textAnchor="middle"
-                fill="#7E8A83"
-                fontSize="8.5"
-                fontFamily="Instrument Sans, Inter, sans-serif"
-                fontWeight="600"
-                letterSpacing="2.2"
-              >
-                {node.label}
-              </text>
-            </g>
-          ))}
-        </g>
+        {packet ? (
+          <g>
+            <circle cx={packet[0]} cy={packet[1]} r="16" fill="#FF5C35" opacity="0.22" />
+            <circle cx={packet[0]} cy={packet[1]} r="5" fill="#FFB090" />
+            <circle cx={packet[0]} cy={packet[1]} r="5" fill="none" stroke="#FFB090" strokeWidth="1">
+              <animate attributeName="r" values="5;18;5" dur="1.8s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.9;0;0.9" dur="1.8s" repeatCount="indefinite" />
+            </circle>
+          </g>
+        ) : null}
+
+        {ack ? (
+          <g>
+            <circle cx={ack[0]} cy={ack[1]} r="12" fill="#62E6B5" opacity="0.24" />
+            <circle cx={ack[0]} cy={ack[1]} r="4" fill="#9DF2D1" />
+          </g>
+        ) : null}
 
         <g fill="#5CE1DF">
           <circle cx="380" cy="244" r="1.6" opacity="0.5" />
@@ -169,18 +225,38 @@ export function StaticNetwork({ className = '' }: StaticNetworkProps) {
           <circle cx="130" cy="400" r="1.2" opacity="0.3" />
           <circle cx="934" cy="690" r="1.5" opacity="0.26" />
         </g>
-
-        <g opacity="0.75">
-          <rect x="700" y="648" width="206" height="58" rx="9" fill="#07090A" stroke="#253030" />
-          <circle cx="720" cy="668" r="3" fill="#5CE1DF" />
-          <text x="732" y="672" fill="#F4F1E8" fontSize="9.5" fontFamily="Instrument Sans, sans-serif" fontWeight="600" letterSpacing="0.6">
-            SOS · SIGNED
-          </text>
-          <text x="732" y="690" fill="#7E8A83" fontSize="8" fontFamily="Instrument Sans, sans-serif">
-            hop 2 of 4 · stored locally
-          </text>
-        </g>
       </svg>
     </div>
   );
+}
+
+function node(id: HeroNodeId) {
+  return HERO_NODES.find((spec) => spec.id === id);
+}
+
+function packetPosition(state: HeroState): [number, number] | null {
+  const journey = state.journey;
+  if (journey.length < 2 || state.packetProgress <= 0) return null;
+  const legs = journey.length - 1;
+  const clamped = Math.min(state.packetProgress, legs);
+  const index = Math.min(legs - 1, Math.floor(clamped));
+  const t = clamped - index;
+  const from = node(journey[index] ?? 'amina');
+  const to = node(journey[index + 1] ?? 'post');
+  if (!from || !to) return null;
+  const [x1, y1] = project(from.position);
+  const [x2, y2] = project(to.position);
+  return [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t - Math.sin(t * Math.PI) * 30];
+}
+
+function ackPosition(state: HeroState): [number, number] | null {
+  const journey = state.journey;
+  if (journey.length < 2 || state.ackProgress <= 0) return null;
+  const from = node(journey[journey.length - 1] ?? 'post');
+  const to = node(journey[0] ?? 'amina');
+  if (!from || !to) return null;
+  const [x1, y1] = project(from.position);
+  const [x2, y2] = project(to.position);
+  const t = 1 - state.ackProgress;
+  return [x1 + (x2 - x1) * t, y1 + (y2 - y1) * t - Math.sin(t * Math.PI) * 30];
 }

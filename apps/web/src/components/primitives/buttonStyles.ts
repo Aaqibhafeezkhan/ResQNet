@@ -3,10 +3,25 @@ export type ButtonSize = 'default' | 'large';
 
 const BASE =
   'group/button inline-flex items-center justify-center gap-2 rounded-full px-5 font-medium ' +
-  'transition-[background-color,border-color,color,transform,box-shadow] duration-300 ease-cinematic ' +
+  'relative overflow-hidden transition-[background-color,border-color,color,transform,box-shadow] ' +
+  'duration-300 ease-cinematic active:scale-[0.97] ' +
   'min-h-[46px] disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none ' +
   'focus-visible:ring-2 focus-visible:ring-network focus-visible:ring-offset-2 ' +
   'focus-visible:ring-offset-base-950';
+
+/*
+  A sheen that sweeps across a button when the pointer enters it.
+
+  It is a pseudo-element rather than an extra element so it does not affect
+  the accessible name or the layout, and it is suppressed for visitors who
+  asked for reduced motion by the global rule in index.css.
+*/
+const SHEEN =
+  'before:pointer-events-none before:absolute before:inset-y-0 before:-left-3/4 ' +
+  'before:w-1/2 before:skew-x-[-18deg] before:bg-white/20 before:opacity-0 ' +
+  'before:transition-[left,opacity] duration-[900ms] ease-cinematic ' +
+  'hover:before:left-[110%] hover:before:opacity-100 ' +
+  'focus-visible:before:left-[110%] focus-visible:opacity-100';
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
@@ -30,5 +45,6 @@ export function buttonClasses(
   size: ButtonSize = 'default',
   className = '',
 ): string {
-  return `${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${className}`;
+  const sheen = variant === 'ghost' ? '' : SHEEN;
+  return `${BASE} ${sheen} ${VARIANTS[variant]} ${SIZES[size]} ${className}`;
 }

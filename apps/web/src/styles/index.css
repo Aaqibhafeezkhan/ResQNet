@@ -170,6 +170,18 @@
   .kbd {
     @apply inline-flex min-h-[22px] items-center rounded border border-base-600 px-1.5 font-mono text-[10px] text-ink-secondary;
   }
+
+  /*
+    A tap target for the small text links in the footer and in prose.
+
+    A 13px link is about 20px tall, which is below the 24px minimum a thumb
+    can reliably hit. The rule is scoped to coarse pointers so a mouse user
+    sees the link exactly as it was designed, and it is scoped to these
+    classes so it never overrides the deliberate height of a real button.
+  */
+  .tap-target {
+    @apply inline-flex min-h-[24px] items-center;
+  }
 }
 
 @layer utilities {

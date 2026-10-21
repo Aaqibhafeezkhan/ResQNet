@@ -136,6 +136,30 @@ export function RelayStory({ activeStep, reduced }: RelayStoryProps) {
               />
             );
           })}
+          {/*
+            A travelling highlight on the active route. The dashed line says
+            "this is the path"; the moving highlight says "the message is
+            on it right now".
+          */}
+          {route && routePairs.size > 0 && !reduced
+            ? route.map((id, index) => {
+                const from = nodeById(id);
+                const next = route[index + 1];
+                if (!from || !next) return null;
+                const to = nodeById(next);
+                if (!to) return null;
+                return (
+                  <circle key={`flow-${id}`} r="1.6" fill="#FFB090">
+                    <animateMotion
+                      dur="2.2s"
+                      repeatCount="indefinite"
+                      begin={`${index * 0.5}s`}
+                      path={`M ${from.x} ${from.y} L ${to.x} ${to.y}`}
+                    />
+                  </circle>
+                );
+              })
+            : null}
         </svg>
 
         {DEMO_NODES.map((node) => {

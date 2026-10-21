@@ -136,7 +136,7 @@ export function AboutPage() {
               href={GITHUB_THREAT_MODEL}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-7 inline-flex items-center gap-1.5 text-xs font-medium text-pending transition-colors hover:text-ink-primary"
+              className="mt-7 inline-flex min-h-[28px] items-center gap-1.5 text-xs font-medium text-pending transition-colors hover:text-ink-primary"
             >
               Read the full threat model
               <ArrowUpRight size={12} aria-hidden="true" />

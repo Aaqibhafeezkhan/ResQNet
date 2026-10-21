@@ -7,6 +7,7 @@ import { FailureSection } from '@/components/public/landing/FailureSection';
 import { HeroSection } from '@/components/public/landing/HeroSection';
 import { MechanismSection } from '@/components/public/landing/MechanismSection';
 import { StorySection } from '@/components/public/landing/StorySection';
+import { SectionTransition } from '@/components/primitives/SectionTransition';
 import { usePageMeta } from '@/lib/seo';
 
 export function LandingPage() {
@@ -17,17 +18,39 @@ export function LandingPage() {
     path: '/',
   });
 
+  /*
+    The sections are chapters of one argument, not independent blocks, so
+    each one arrives with a small directional push. The direction alternates
+    with the layout: the two-column sections enter from the side their
+    content sits on, so the reader's eye is carried across the page.
+  */
   return (
     <>
       <HeroSection />
-      <StorySection />
-      <MechanismSection />
-      <DemoSection />
-      <FailureSection />
-      <AndroidSection />
-      <ContributeSection />
-      <ArchitectureSection />
-      <ClosingSection />
+      <SectionTransition from="bottom">
+        <StorySection />
+      </SectionTransition>
+      <SectionTransition from="left">
+        <MechanismSection />
+      </SectionTransition>
+      <SectionTransition from="right">
+        <DemoSection />
+      </SectionTransition>
+      <SectionTransition from="left">
+        <FailureSection />
+      </SectionTransition>
+      <SectionTransition from="right">
+        <AndroidSection />
+      </SectionTransition>
+      <SectionTransition from="bottom">
+        <ContributeSection />
+      </SectionTransition>
+      <SectionTransition from="right">
+        <ArchitectureSection />
+      </SectionTransition>
+      <SectionTransition from="bottom">
+        <ClosingSection />
+      </SectionTransition>
     </>
   );
 }

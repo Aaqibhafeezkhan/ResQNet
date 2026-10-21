@@ -98,6 +98,10 @@ export default {
           from: { opacity: '0', transform: 'translate3d(0, 18px, 0)' },
           to: { opacity: '1', transform: 'translate3d(0, 0, 0)' },
         },
+        'chapter-rise': {
+          from: { opacity: '0', transform: 'translate3d(0, 22px, 0)' },
+          to: { opacity: '1', transform: 'translate3d(0, 0, 0)' },
+        },
         'soft-float': {
           '0%, 100%': { transform: 'translate3d(0, 0, 0)' },
           '50%': { transform: 'translate3d(0, -6px, 0)' },
@@ -115,6 +119,7 @@ export default {
         'signal-pulse': 'signal-pulse 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'route-dash': 'route-dash 1.4s linear infinite',
         'rise-in': 'rise-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'chapter-rise': 'chapter-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both',
         'soft-float': 'soft-float 7s ease-in-out infinite',
         scan: 'scan 5.5s linear infinite',
         marquee: 'marquee 38s linear infinite',

@@ -1,6 +1,7 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
 import { Link, type LinkProps } from 'react-router-dom';
 
+import { Magnetic } from './Magnetic';
 import { buttonClasses, type ButtonSize, type ButtonVariant } from './buttonStyles';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -17,13 +18,15 @@ export function Button({
   ...rest
 }: ButtonProps) {
   return (
-    <button
-      type="button"
-      className={buttonClasses(variant, size, className)}
-      {...rest}
-    >
-      {children}
-    </button>
+    <Magnetic strength={4} className="rounded-full">
+      <button
+        type="button"
+        className={buttonClasses(variant, size, className)}
+        {...rest}
+      >
+        {children}
+      </button>
+    </Magnetic>
   );
 }
 
@@ -41,9 +44,11 @@ export function ButtonLink({
   ...rest
 }: ButtonLinkProps) {
   return (
-    <Link className={buttonClasses(variant, size, className)} {...rest}>
-      {children}
-    </Link>
+    <Magnetic strength={5} className="rounded-full">
+      <Link className={buttonClasses(variant, size, className)} {...rest}>
+        {children}
+      </Link>
+    </Magnetic>
   );
 }
 
@@ -61,8 +66,10 @@ export function ButtonAnchor({
   ...rest
 }: ButtonAnchorProps) {
   return (
-    <a className={buttonClasses(variant, size, className)} {...rest}>
-      {children}
-    </a>
+    <Magnetic strength={5} className="rounded-full">
+      <a className={buttonClasses(variant, size, className)} {...rest}>
+        {children}
+      </a>
+    </Magnetic>
   );
 }

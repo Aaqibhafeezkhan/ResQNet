@@ -281,9 +281,18 @@ function HeaderLink({
       {children}
       <span
         className={
-          'absolute inset-x-3 -bottom-0.5 h-px origin-left bg-network transition-transform duration-300 ease-cinematic ' +
-          (active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100')
+          'absolute inset-x-3 -bottom-0.5 h-px origin-left bg-network transition-transform duration-500 ease-cinematic ' +
+          (active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100 group-focus-visible:scale-x-100')
         }
+        aria-hidden="true"
+      />
+      {/*
+        A soft wash behind the label. It is the same treatment as the hover
+        on the hero's buttons, so navigation and actions feel like one
+        system rather than two.
+      */}
+      <span
+        className="absolute inset-0 -z-10 rounded-full bg-white/[0.045] opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100"
         aria-hidden="true"
       />
     </Link>

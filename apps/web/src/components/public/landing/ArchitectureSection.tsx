@@ -53,7 +53,7 @@ export function ArchitectureSection() {
             href={GITHUB_ARCHITECTURE}
             target="_blank"
             rel="noreferrer noopener"
-            className="group inline-flex shrink-0 items-center gap-2 text-[11px] font-medium uppercase tracking-[0.1em] text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
+            className="group tap-target inline-flex shrink-0 items-center gap-2 text-[11px] font-medium uppercase tracking-[0.1em] text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
           >
             Read the architecture
             <ArrowUpRight
