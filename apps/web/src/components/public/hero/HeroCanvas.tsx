@@ -171,7 +171,7 @@ export function HeroCanvas({ stageRef, reduced }: HeroCanvasProps) {
         information and the same interactions, so nothing in the scene is
         reachable only by seeing it.
       */}
-      <div className="absolute inset-0">
+      <div className="pointer-events-none absolute inset-0">
         <ul className="sr-only">
           {HERO_NODES.map((spec) => (
             <li key={spec.id}>
@@ -201,9 +201,8 @@ export function HeroCanvas({ stageRef, reduced }: HeroCanvasProps) {
       />
 
       <HeroInspector
-        nodeId={nodeUnderPointer ?? focusedNode ?? selectedNode}
+        nodeId={nodeUnderPointer ?? (hoveredLink ? null : focusedNode ?? selectedNode)}
         linkId={hoveredLink}
-        selected={selectedNode !== null}
       />
     </div>
   );
@@ -232,7 +231,7 @@ async function createScene(
     links: HERO_LINKS,
     derive: deriveHeroState,
     reduced: handlers.reduced,
-    compact: window.matchMedia('(max-width: 767px)').matches,
+    quality: runtime.resolveSceneQuality(),
     callbacks: {
       onHoverNode: handlers.onHoverNode,
       onHoverLink: handlers.onHoverLink,
@@ -251,11 +250,9 @@ async function createScene(
 function HeroInspector({
   nodeId,
   linkId,
-  selected,
 }: {
   nodeId: HeroNodeId | null;
   linkId: string | null;
-  selected: boolean;
 }) {
   const spec = useMemo(
     () => HERO_NODES.find((node) => node.id === nodeId) ?? null,
@@ -285,10 +282,10 @@ function HeroInspector({
   return (
     <div
       className={
-        'pointer-events-none absolute bottom-5 left-5 z-20 w-[min(21rem,calc(100%-2.5rem))] ' +
+        'absolute bottom-5 left-5 z-20 w-[min(21rem,calc(100%-2.5rem))] ' +
         'rounded-2xl border border-white/10 bg-base-950/85 p-4 backdrop-blur-md ' +
         'shadow-lift transition-[opacity,transform] duration-300 ease-cinematic ' +
-        (selected ? 'opacity-100' : 'opacity-100')
+        'animate-[chapter-rise_0.5s_cubic-bezier(0.16,1,0.3,1)_both]'
       }
       aria-live="polite"
     >

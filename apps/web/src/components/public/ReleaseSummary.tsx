@@ -103,7 +103,7 @@ export function ReleaseSummary({ compact = false }: ReleaseSummaryProps) {
             href={GITHUB_RELEASES}
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex items-center gap-1.5 transition-colors hover:text-ink-primary"
+            className="inline-flex min-h-[28px] items-center gap-1.5 transition-colors hover:text-ink-primary"
           >
             All releases
             <ArrowUpRight size={11} aria-hidden="true" />
@@ -112,7 +112,7 @@ export function ReleaseSummary({ compact = false }: ReleaseSummaryProps) {
             href={GITHUB_REPO}
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex items-center gap-1.5 transition-colors hover:text-ink-primary"
+            className="inline-flex min-h-[28px] items-center gap-1.5 transition-colors hover:text-ink-primary"
           >
             <GitBranch size={11} aria-hidden="true" />
             Build from source

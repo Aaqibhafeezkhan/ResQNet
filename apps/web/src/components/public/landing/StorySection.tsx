@@ -125,7 +125,7 @@ export function StorySection() {
               href={GITHUB_THREAT_MODEL}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-6 inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-pending transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
+              className="mt-6 inline-flex min-h-[28px] items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-pending transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
             >
               Read the threat model
               <ArrowUpRight size={12} aria-hidden="true" />

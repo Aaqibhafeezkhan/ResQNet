@@ -140,7 +140,7 @@ export function Footer() {
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   const external = href.startsWith('http');
   const className =
-    'group inline-flex items-center gap-1.5 text-[13px] text-ink-secondary transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network';
+    'group inline-flex min-h-[28px] items-center gap-1.5 text-[13px] text-ink-secondary transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network';
 
   if (external) {
     return (

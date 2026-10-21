@@ -72,11 +72,17 @@ export function Magnetic({ children, strength = 6, className = '' }: MagneticPro
   return (
     <span
       ref={ref}
-      className={'inline-flex will-change-transform ' + className}
+      className={'inline-flex items-center will-change-transform ' + className}
       onPointerMove={onPointerMove}
       onPointerLeave={reset}
       onBlur={reset}
-      style={{ transform: 'translate3d(0,0,0)' }}
+      /*
+        `min-height` on the wrapper keeps the button's own height, but the
+        global touch-target rule sets `min-height` on the inner button too,
+        which would make the two boxes different sizes. Matching them here
+        keeps the hit area and the visible button aligned.
+      */
+      style={{ transform: 'translate3d(0,0,0)', minHeight: 'inherit' }}
     >
       {children}
     </span>

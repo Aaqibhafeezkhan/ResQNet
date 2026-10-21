@@ -121,7 +121,7 @@ export function MechanismSection() {
           />
           <a
             href="#architecture"
-            className="group inline-flex shrink-0 items-center gap-2 text-[12px] font-medium uppercase tracking-[0.12em] text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
+            className="group tap-target inline-flex shrink-0 items-center gap-2 text-[12px] font-medium uppercase tracking-[0.12em] text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
           >
             See the architecture
             <ArrowRight

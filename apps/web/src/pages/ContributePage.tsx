@@ -141,7 +141,7 @@ export function ContributePage() {
               href={GITHUB_THREAT_MODEL}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary"
+              className="mt-5 inline-flex min-h-[28px] items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary"
             >
               Read the threat model
               <ArrowUpRight size={12} aria-hidden="true" />

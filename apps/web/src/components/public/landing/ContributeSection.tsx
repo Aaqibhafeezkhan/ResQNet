@@ -73,7 +73,7 @@ export function ContributeSection() {
               href={GITHUB_THREAT_MODEL}
               target="_blank"
               rel="noreferrer noopener"
-              className="group mt-7 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.1em] text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
+              className="group tap-target mt-7 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.1em] text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
             >
               Start with the threat model
               <ArrowUpRight

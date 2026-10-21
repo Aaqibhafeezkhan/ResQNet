@@ -155,7 +155,7 @@ export function DownloadPage() {
               href={GITHUB_DEVICE_TESTING}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
+              className="mt-6 inline-flex min-h-[28px] items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
             >
               Read the device testing procedure
               <ArrowUpRight size={12} aria-hidden="true" />
@@ -178,7 +178,7 @@ export function DownloadPage() {
               href={GITHUB_RELEASES}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary"
+              className="mt-5 inline-flex min-h-[28px] items-center gap-1.5 text-xs font-medium text-network transition-colors hover:text-ink-primary"
             >
               Browse release artifacts
               <ArrowUpRight size={12} aria-hidden="true" />
@@ -196,7 +196,7 @@ export function DownloadPage() {
               href={GITHUB_SECURITY}
               target="_blank"
               rel="noreferrer noopener"
-              className="mt-5 inline-flex items-center gap-1.5 text-xs font-medium text-pending transition-colors hover:text-ink-primary"
+              className="mt-5 inline-flex min-h-[28px] items-center gap-1.5 text-xs font-medium text-pending transition-colors hover:text-ink-primary"
             >
               Read the security policy
               <ArrowUpRight size={12} aria-hidden="true" />

@@ -56,8 +56,8 @@ export function HeroSection() {
         <ChapterOverlay />
       </div>
 
-      <div className="relative z-10 -mt-[100svh]">
-        <section className="relative flex min-h-svh flex-col">
+      <div className="pointer-events-none relative z-10 -mt-[100svh]">
+        <section className="pointer-events-none relative flex min-h-svh flex-col">
           <HeroCopy reduced={false} />
         </section>
         <ChapterSpacer />
@@ -252,7 +252,7 @@ function HeroCopy({ reduced }: { reduced: boolean }) {
     */
     <div className="container-page pointer-events-none relative flex min-h-svh flex-col pb-8 pt-28 sm:pt-32">
       <div
-        className="pointer-events-auto flex flex-wrap items-center justify-between gap-4"
+        className="pointer-events-none flex flex-wrap items-center justify-between gap-4"
         style={entrance(0.05, reduced)}
       >
         <span className="inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-base-950/40 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-ink-secondary backdrop-blur-sm">
@@ -268,7 +268,7 @@ function HeroCopy({ reduced }: { reduced: boolean }) {
       </div>
 
       <div className="mt-auto grid gap-10 pt-20 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)] lg:items-end lg:pb-2">
-        <div className="pointer-events-auto max-w-[54rem]">
+        <div className="pointer-events-none max-w-[54rem]">
           <h1 className="text-shadow-deep text-[clamp(2.9rem,7.6vw,7.6rem)] font-medium uppercase leading-[0.82] tracking-[-0.055em] text-ink-primary">
             <span className="block overflow-hidden">
               <span className="block" style={entrance(0.12, reduced)}>
@@ -303,7 +303,7 @@ function HeroCopy({ reduced }: { reduced: boolean }) {
           </p>
 
           <div
-            className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-3"
+            className="pointer-events-auto mt-8 flex flex-wrap items-center gap-x-3 gap-y-3"
             style={entrance(0.4, reduced)}
           >
             <ButtonLink
@@ -344,7 +344,7 @@ function HeroCopy({ reduced }: { reduced: boolean }) {
 
         <div className="hidden lg:block">
           <div
-            className="pointer-events-auto ml-auto max-w-[17rem] border-l border-white/10 pl-5"
+            className="ml-auto max-w-[17rem] border-l border-white/10 pl-5"
             style={entrance(0.5, reduced)}
           >
             <p className="text-[9px] uppercase tracking-[0.22em] text-ink-tertiary">
@@ -363,7 +363,7 @@ function HeroCopy({ reduced }: { reduced: boolean }) {
       </div>
 
       <div
-        className="pointer-events-auto mt-12 flex flex-col gap-5 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between"
+        className="pointer-events-none mt-12 flex flex-col gap-5 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between"
         style={entrance(0.55, reduced)}
       >
         <ul className="flex flex-wrap gap-x-5 gap-y-2">
@@ -382,7 +382,7 @@ function HeroCopy({ reduced }: { reduced: boolean }) {
         </ul>
         <a
           href="#connection-lost"
-          className="group inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.22em] text-ink-tertiary transition-colors hover:text-ink-primary"
+          className="pointer-events-auto group inline-flex min-h-[32px] items-center gap-2 text-[9px] uppercase tracking-[0.22em] text-ink-tertiary transition-colors hover:text-ink-primary"
         >
           Scroll to lose the signal
           <ArrowDown

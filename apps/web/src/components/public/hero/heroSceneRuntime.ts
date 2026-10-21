@@ -33,8 +33,56 @@ export interface HeroSceneOptions {
   links: readonly HeroLinkSpec[];
   derive: (progress: number) => HeroState;
   reduced: boolean;
-  compact: boolean;
+  quality: SceneQuality;
   callbacks: HeroSceneCallbacks;
+}
+
+/**
+ * The rendering budget for the scene.
+ *
+ * A phone in a pocket should not cost the same as a desktop. The tier is
+ * chosen from the viewport, the device's memory and how many CPU cores it
+ * has, and it decides the pixel ratio cap, the antialiasing, how many
+ * ambient particles are drawn and how often the scene renders.
+ */
+export interface SceneQuality {
+  compact: boolean;
+  maxPixelRatio: number;
+  antialias: boolean;
+  ambientCount: number;
+  ambientPacketCount: number;
+  /** Target frame interval in milliseconds. */
+  frameInterval: number;
+}
+
+export function resolveSceneQuality(): SceneQuality {
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
+  const cores = navigator.hardwareConcurrency ?? 4;
+  const compact = window.matchMedia('(max-width: 767px)').matches;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const weak = memory <= 4 || cores <= 4;
+
+  if (compact || coarse) {
+    return {
+      compact: true,
+      maxPixelRatio: 1.5,
+      antialias: false,
+      ambientCount: weak ? 140 : 240,
+      ambientPacketCount: 3,
+      // A phone renders at 30fps. The scene moves slowly enough that the
+      // difference is not visible, and the battery saving is.
+      frameInterval: 33,
+    };
+  }
+
+  return {
+    compact: false,
+    maxPixelRatio: weak ? 1.5 : 1.75,
+    antialias: !weak,
+    ambientCount: weak ? 320 : 620,
+    ambientPacketCount: 6,
+    frameInterval: 16,
+  };
 }
 
 export interface HeroSceneHandle {
@@ -57,6 +105,8 @@ interface NodeObject {
   label: InstanceType<Three['Sprite']> | null;
   baseColor: InstanceType<Three['Color']>;
   phase: number;
+  /** The position the device rests at, before the idle drift. */
+  home: InstanceType<Three['Vector3']>;
   drift: InstanceType<Three['Vector3']>;
 }
 
@@ -93,13 +143,14 @@ export function createHeroScene(
   host: HTMLDivElement,
   options: HeroSceneOptions,
 ): HeroSceneHandle | null {
-  const { reduced, compact, callbacks, derive, nodes, links } = options;
+  const { reduced, quality, callbacks, derive, nodes, links } = options;
+  const { compact } = quality;
 
   let renderer: InstanceType<Three['WebGLRenderer']>;
   try {
     renderer = new THREE.WebGLRenderer({
       alpha: true,
-      antialias: !compact,
+      antialias: quality.antialias,
       powerPreference: 'high-performance',
       failIfMajorPerformanceCaveat: false,
     });
@@ -118,7 +169,7 @@ export function createHeroScene(
     return null;
   }
 
-  const maxPixelRatio = compact ? 1.5 : 1.75;
+  const maxPixelRatio = quality.maxPixelRatio;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxPixelRatio));
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -135,7 +186,7 @@ export function createHeroScene(
   camera.position.set(0, 0, compact ? 17.5 : 14.4);
 
   const world = new THREE.Group();
-  world.scale.setScalar(compact ? 0.66 : 1);
+  world.scale.setScalar(1);
   world.position.y = compact ? 0.9 : 0;
   scene.add(world);
 
@@ -153,8 +204,30 @@ export function createHeroScene(
   const nodeObjects = new Map<HeroNodeId, NodeObject>();
   const nodePositions = new Map<HeroNodeId, InstanceType<Three['Vector3']>>();
 
+  /*
+    The mesh is authored as a wide horizontal band, which suits a landscape
+    screen and does not suit a portrait phone: fitting a wide band into a
+    narrow viewport pushes the camera so far back that the devices shrink to
+    dots. On a portrait screen the positions are remapped onto a tall
+    diagonal instead, so the mesh fills a phone screen the way it fills a
+    desktop.
+  */
+  const portrait = window.matchMedia('(max-aspect-ratio: 1/1)').matches;
+
+  /*
+    On a narrow screen the camera cannot pan as far without pushing a device
+    out of frame, so the pan is scaled down with the viewport.
+  */
+  const panScale = portrait ? 0.35 : 1;
+
+  const layoutPosition = (spec: HeroNodeSpec): InstanceType<Three['Vector3']> => {
+    if (!portrait) return new THREE.Vector3(...spec.position);
+    const [x, y, z] = spec.position;
+    return new THREE.Vector3(x * 0.42, -x * 0.62 + y * 0.3, z);
+  };
+
   for (const spec of nodes) {
-    const position = new THREE.Vector3(...spec.position);
+    const position = layoutPosition(spec);
     nodePositions.set(spec.id, position);
 
     const group = new THREE.Group();
@@ -272,6 +345,7 @@ export function createHeroScene(
       label,
       baseColor,
       phase: seeded() * Math.PI * 2,
+      home: position.clone(),
       drift: new THREE.Vector3(
         (seeded() - 0.5) * 0.9,
         (seeded() - 0.5) * 0.8,
@@ -279,6 +353,26 @@ export function createHeroScene(
       ),
     });
   }
+
+  // The bounding box of the mesh, used to frame the camera at any aspect.
+  const meshBounds = (() => {
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    for (const position of nodePositions.values()) {
+      minX = Math.min(minX, position.x);
+      maxX = Math.max(maxX, position.x);
+      minY = Math.min(minY, position.y);
+      maxY = Math.max(maxY, position.y);
+    }
+    return {
+      width: maxX - minX,
+      height: maxY - minY,
+      centerX: (maxX + minX) / 2,
+      centerY: (maxY + minY) / 2,
+    };
+  })();
 
   // ---------------------------------------------------------------- links ---
 
@@ -369,7 +463,7 @@ export function createHeroScene(
     })
     .filter((entry): entry is LinkObject => entry !== undefined);
 
-  const ambientPacketCount = compact ? 3 : 6;
+  const ambientPacketCount = quality.ambientPacketCount;
   for (let index = 0; index < ambientPacketCount; index += 1) {
     const route = ambientRoutes[index % Math.max(1, ambientRoutes.length)];
     if (!route) break;
@@ -400,7 +494,7 @@ export function createHeroScene(
 
   // ------------------------------------------------------------- ambient ---
 
-  const ambientCount = compact ? 240 : 620;
+  const ambientCount = quality.ambientCount;
   const ambientPositions = new Float32Array(ambientCount * 3);
   const ambientColors = new Float32Array(ambientCount * 3);
   const ambientSizes = new Float32Array(ambientCount);
@@ -502,10 +596,6 @@ export function createHeroScene(
 
   const raycaster = new THREE.Raycaster();
   const pointerNdc = new THREE.Vector2(0, 0);
-  const pickTargets: InstanceType<Three['Object3D']>[] = [];
-  for (const entry of nodeObjects.values()) {
-    pickTargets.push(entry.core);
-  }
 
   // -------------------------------------------------------------- runtime ---
 
@@ -514,6 +604,8 @@ export function createHeroScene(
   const cameraTarget = new THREE.Vector3();
   const cameraLook = new THREE.Vector3();
   const scratch = new THREE.Vector3();
+  const nodeScreen = new THREE.Vector3();
+  const focusPosition = new THREE.Vector3();
   const scratchScale = new THREE.Vector3();
   const scratchColor = new THREE.Color();
   const gray = new THREE.Color(0x2b3533);
@@ -522,6 +614,7 @@ export function createHeroScene(
   const hot = new THREE.Color(0xffffff);
 
   let state: HeroState = derive(0);
+  let fitDistance = 1;
   let activeNode: HeroNodeId | null = null;
   let activeLink: string | null = null;
   let hoveredNode: HeroNodeId | null = null;
@@ -530,6 +623,7 @@ export function createHeroScene(
   let pointerDirty = false;
   let elapsed = 0;
   let lastTime = 0;
+  let lastRender = 0;
   let running = false;
   let frameId = 0;
   let stageVisible = true;
@@ -544,6 +638,7 @@ export function createHeroScene(
     const ratio = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
     renderer.setPixelRatio(ratio);
     ambientUniforms.uPixelRatio.value = ratio;
+    fitDistance = computeFitDistance(camera.aspect, meshBounds);
   };
 
   const onPointerMove = (event: PointerEvent) => {
@@ -569,6 +664,7 @@ export function createHeroScene(
     if (rect.width === 0 || rect.height === 0) return;
     pointerNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     pointerNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    pointerInside = true;
     const hit = pick();
     if (hit.node) {
       callbacks.onSelectNode(hit.node);
@@ -577,15 +673,57 @@ export function createHeroScene(
     }
   };
 
+  /*
+    Touch has no hover.
+
+    On a touch device the pointer is only inside the canvas for the duration
+    of a tap, so the hover highlight would never be seen. A tap therefore
+    both selects the device and holds the highlight until the next tap
+    elsewhere.
+  */
+  const onPointerUp = (event: PointerEvent) => {
+    if (event.pointerType === 'mouse') return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    pointerNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointerNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    pointerInside = true;
+    const hit = pick();
+    if (hit.node) {
+      callbacks.onHoverNode(hit.node);
+    }
+  };
+
   const pick = (): { node: HeroNodeId | null; link: string | null } => {
     if (!pointerInside) return { node: null, link: null };
-    raycaster.setFromCamera(pointerNdc, camera);
-    const hits = raycaster.intersectObjects(pickTargets, false);
-    const first = hits[0];
-    if (first) {
-      const found = first.object.userData.nodeId as HeroNodeId | undefined;
-      if (found) return { node: found, link: null };
+
+    // The nodes drift in world space, and their glow sprites are deliberately
+    // transparent. Project each device's current centre into canvas pixels so
+    // hit testing follows the visible node instead of relying on a raycast
+    // against an alpha textured sprite. This also makes taps reliable on
+    // high density touch screens.
+    world.updateMatrixWorld(true);
+    camera.updateMatrixWorld(true);
+    const rect = canvas.getBoundingClientRect();
+    let closestNode: HeroNodeId | null = null;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    for (const entry of nodeObjects.values()) {
+      const projected = nodeScreen
+        .setFromMatrixPosition(entry.group.matrixWorld)
+        .project(camera);
+      if (Math.abs(projected.x) > 1.1 || Math.abs(projected.y) > 1.1) continue;
+      const dx = (projected.x - pointerNdc.x) * rect.width * 0.5;
+      const dy = (projected.y - pointerNdc.y) * rect.height * 0.5;
+      const distance = Math.hypot(dx, dy);
+      const hitRadius = Math.max(18, 26 * entry.spec.scale);
+      if (distance <= hitRadius && distance < closestDistance) {
+        closestNode = entry.spec.id;
+        closestDistance = distance;
+      }
     }
+    if (closestNode) return { node: closestNode, link: null };
+
+    raycaster.setFromCamera(pointerNdc, camera);
     // Otherwise the nearest link under the pointer.
     let bestId: string | null = null;
     let bestDistance = 0.42;
@@ -606,6 +744,14 @@ export function createHeroScene(
       lastTime = now;
       return;
     }
+    // On a constrained device the scene renders at a lower rate. The
+    // requestAnimationFrame callback still runs, but the expensive part —
+    // updating every material and re-rendering — does not.
+    if (quality.frameInterval > 16 && now - lastRender < quality.frameInterval) {
+      lastTime = now;
+      return;
+    }
+    lastRender = now;
     const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
     lastTime = now;
     elapsed += dt;
@@ -643,21 +789,38 @@ export function createHeroScene(
     // ---------------------------------------------------------- camera ---
     // The camera travels along the story rather than sitting still, and the
     // pointer adds a parallax offset on top of that.
-    const focusPosition =
-      nodePositions.get(state.focus)?.clone() ?? new THREE.Vector3(0, 0, 0);
+    if (chapter === 0) {
+      // The connected chapter needs to establish the whole topology before
+      // the camera starts following individual devices in later chapters.
+      focusPosition.set(meshBounds.centerX, meshBounds.centerY, 0);
+    } else {
+      focusPosition.copy(
+        nodePositions.get(state.focus) ?? new THREE.Vector3(0, 0, 0),
+      );
+    }
 
-    const zoomTargets = [14.4, 12.4, 13.6, 12.2, 12.8];
-    const zoom = zoomTargets[chapter] ?? 13.6;
-    const baseZ = compact ? zoom + 3.4 : zoom;
+    /*
+      The chapter zoom is a multiplier on the fitted distance rather than an
+      absolute distance, so the framing stays correct at every aspect ratio
+      while the camera still pushes in on the parts of the story it is
+      talking about.
+    */
+    const zoomTargets = [1, 0.87, 0.95, 0.85, 0.89];
+    const zoom = zoomTargets[chapter] ?? 1;
+    const baseZ = fitDistance * zoom;
 
     cameraTarget.set(
-      focusPosition.x * 0.34 + pointer.x * 0.9,
-      focusPosition.y * 0.3 + 0.35 - pointer.y * 0.55,
+      focusPosition.x * 0.34 * panScale + pointer.x * 0.9 * panScale,
+      focusPosition.y * 0.3 * panScale + 0.35 - pointer.y * 0.55 * panScale,
       baseZ,
     );
     camera.position.lerp(cameraTarget, smoothing);
 
-    cameraLook.set(focusPosition.x * 0.42, focusPosition.y * 0.34, focusPosition.z * 0.2);
+    cameraLook.set(
+      focusPosition.x * 0.42 * panScale,
+      focusPosition.y * 0.34 * panScale,
+      focusPosition.z * 0.2,
+    );
     camera.lookAt(cameraLook);
 
     world.rotation.y = pointer.x * 0.075 + Math.sin(elapsed * 0.12) * 0.035;
@@ -678,9 +841,9 @@ export function createHeroScene(
       const sway = Math.cos(elapsed * 0.47 + entry.phase * 1.3);
       const rise = Math.sin(elapsed * 0.81 + entry.phase * 0.7);
       entry.group.position.set(
-        entry.spec.position[0] + entry.drift.x * sway,
-        entry.spec.position[1] + entry.drift.y * bob,
-        entry.spec.position[2] + entry.drift.z * rise,
+        entry.home.x + entry.drift.x * sway,
+        entry.home.y + entry.drift.y * bob,
+        entry.home.z + entry.drift.z * rise,
       );
 
       const emphasis = isFocus ? 1 : isCarrier ? 0.7 : isRoute ? 0.4 : 0;
@@ -895,8 +1058,33 @@ export function createHeroScene(
   canvas.addEventListener('pointermove', onPointerMove, { passive: true });
   canvas.addEventListener('pointerleave', onPointerLeave, { passive: true });
   canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointerup', onPointerUp);
   window.addEventListener('resize', measure, { passive: true });
   document.addEventListener('visibilitychange', onVisibility);
+
+  /*
+    Stop rendering when nothing is happening.
+
+    A visitor who has scrolled past the hero, or who has left the tab open
+    on another screen, should not be paying for a mesh nobody is looking at.
+    Any interaction restarts the loop.
+  */
+  let idleTimer = 0;
+  const IDLE_MS = 12_000;
+  const wake = () => {
+    window.clearTimeout(idleTimer);
+    idleTimer = window.setTimeout(() => {
+      if (stageVisible && documentVisible) stop();
+    }, IDLE_MS);
+  };
+  const onWake = () => {
+    if (stageVisible && documentVisible) start();
+    wake();
+  };
+
+  canvas.addEventListener('pointermove', onWake, { passive: true });
+  canvas.addEventListener('pointerdown', onWake);
+  window.addEventListener('scroll', onWake, { passive: true });
 
   function onVisibility() {
     documentVisible = !document.hidden;
@@ -924,6 +1112,7 @@ export function createHeroScene(
     if (running) return;
     running = true;
     lastTime = performance.now();
+    lastRender = 0;
     frameId = window.requestAnimationFrame(renderFrame);
   }
 
@@ -934,6 +1123,7 @@ export function createHeroScene(
 
   measure();
   syncVisibility();
+  wake();
   // Paint the first frame with the correct state rather than the default one.
   applyState(1, 0.016);
 
@@ -949,11 +1139,16 @@ export function createHeroScene(
     },
     dispose() {
       stop();
+      window.clearTimeout(idleTimer);
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointermove', onWake);
+      canvas.removeEventListener('pointerdown', onWake);
+      window.removeEventListener('scroll', onWake);
       window.removeEventListener('resize', measure);
       document.removeEventListener('visibilitychange', onVisibility);
       for (const geometry of geometries) geometry.dispose();
@@ -967,6 +1162,31 @@ export function createHeroScene(
 }
 
 // --------------------------------------------------------------- helpers ---
+
+/**
+ * The distance the camera must sit at for the whole mesh to be in frame.
+ *
+ * The camera is placed so the mesh's bounding box fits inside the frustum on
+ * both axes. The scene is wider than it is tall in landscape and taller than
+ * it is wide in portrait, so this keeps every device on screen at any aspect
+ * ratio instead of letting a narrow viewport crop the sender or the field
+ * post out of the picture.
+ */
+function computeFitDistance(
+  aspect: number,
+  bounds: { width: number; height: number },
+): number {
+  const FOV = (42 * Math.PI) / 180;
+
+  const verticalDistance = bounds.height / 2 / Math.tan(FOV / 2);
+  const horizontalDistance =
+    bounds.width / 2 / Math.tan(Math.atan(Math.tan(FOV / 2) * aspect));
+
+  const needed = Math.max(verticalDistance, horizontalDistance);
+  // The camera distance is the distance itself; the chapter zoom is applied
+  // as a multiplier on top of it.
+  return needed * (aspect < 1 ? 1.38 : 1.24);
+}
 
 function isRouteLink(
   from: HeroNodeId,
