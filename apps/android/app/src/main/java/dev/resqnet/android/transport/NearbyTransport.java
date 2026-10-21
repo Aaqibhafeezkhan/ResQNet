@@ -591,6 +591,23 @@ public final class NearbyTransport implements MeshTransport {
         listener.onPeerStateChanged(verifiedDeviceId, true);
     }
 
+    /** Remove a blocked peer's directed route immediately, even if radio stays up. */
+    public void revokeBinding(String deviceId) {
+        String endpointId;
+        synchronized (lock) {
+            endpointId = bindings.demote(deviceId);
+            if (endpointId != null) {
+                proofRequests.remove(endpointId);
+            }
+        }
+        if (endpointId != null) {
+            connectionListener.onPeerDisconnected(deviceId);
+            connectionListener.onPeerConnected(endpointId);
+            listener.onPeerStateChanged(deviceId, false);
+            listener.onPeerStateChanged(endpointId, true);
+        }
+    }
+
     private void unbind(String endpointId) {
         String deviceId;
         synchronized (lock) {

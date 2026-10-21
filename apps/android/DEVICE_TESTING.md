@@ -305,8 +305,9 @@ On a third phone C, replay B's captured public identity announcement without
 B's private key. Confirm C never appears as B's stable id on A and directed
 messages continue to target B when B is present. Replay a captured response,
 delay a response beyond 15 seconds, and move a response to a different Nearby
-connection; each must leave the attacker endpoint provisional. Block B on A and
-confirm it cannot rebind even with B's valid private-key response. Capture the
+connection; each must leave the attacker endpoint provisional. Block B on A,
+confirm its existing stable route disappears immediately, then confirm it
+cannot rebind even with B's valid private-key response. Capture the
 full Diagnostics logs and Play services versions for each case. This procedure
 has not been executed; automated tests cannot establish real radio behavior.
 

@@ -91,6 +91,17 @@ public final class PeerBindings {
         return true;
     }
 
+    /** Removes a stable route while keeping its still-connected radio handle provisional. */
+    public synchronized String demote(String deviceId) {
+        String endpointId = endpointByDeviceId.remove(deviceId);
+        if (endpointId == null || !deviceId.equals(deviceIdByEndpoint.get(endpointId))) {
+            return null;
+        }
+        deviceIdByEndpoint.put(endpointId, endpointId);
+        endpointByDeviceId.put(endpointId, endpointId);
+        return endpointId;
+    }
+
     /**
      * Forgets an endpoint.
      *

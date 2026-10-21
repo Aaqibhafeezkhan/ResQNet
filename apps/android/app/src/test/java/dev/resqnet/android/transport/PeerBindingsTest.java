@@ -79,6 +79,18 @@ public class PeerBindingsTest {
     }
 
     @Test
+    public void blockingAConnectedPeerRemovesItsStableRouteImmediately() {
+        PeerBindings bindings = new PeerBindings();
+        bindings.bind("endpoint-A");
+        bindings.promote("endpoint-A", "rqn1_abc");
+
+        assertEquals("endpoint-A", bindings.demote("rqn1_abc"));
+        assertNull(bindings.endpointFor("rqn1_abc"));
+        assertEquals("endpoint-A", bindings.resolve("endpoint-A"));
+        assertTrue(bindings.connectedPeerIds().contains("endpoint-A"));
+    }
+
+    @Test
     public void promotingTwiceIsANoOp() {
         PeerBindings bindings = new PeerBindings();
         bindings.bind("endpoint-A");

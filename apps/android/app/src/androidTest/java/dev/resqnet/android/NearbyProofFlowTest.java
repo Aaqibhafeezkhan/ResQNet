@@ -292,8 +292,11 @@ public class NearbyProofFlowTest {
             TestSupport.eventually("failed challenge is retried", 22_000L,
                     () -> liveEndpoint[0].equals(transport.bindings().get(peer.deviceId())));
 
-            // A blocked key cannot regain the stable route even if it can sign.
-            assertTrue(engine.trustStore().block(peer.deviceId()));
+            // Blocking also removes an existing stable route before disconnect.
+            engine.blockPeer(peer.deviceId());
+            TestSupport.eventually("blocked peer loses its live stable route", 5_000L,
+                    () -> transport.bindings().get(peer.deviceId()) == null);
+            assertEquals(liveEndpoint[0], transport.bindings().get(liveEndpoint[0]));
             lifecycle.onDisconnected(liveEndpoint[0]);
             peerProof.disconnected("local");
             liveEndpoint[0] = "endpoint-4";

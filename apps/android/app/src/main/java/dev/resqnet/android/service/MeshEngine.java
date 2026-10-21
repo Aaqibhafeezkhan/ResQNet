@@ -414,6 +414,7 @@ public final class MeshEngine {
     public void blockPeer(String deviceId) {
         executor.execute(() -> {
             trustStore.block(deviceId);
+            transport.revokeBinding(deviceId);
             publish(new EngineStatus("peer-blocked", deviceId));
         });
     }

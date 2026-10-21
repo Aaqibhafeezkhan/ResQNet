@@ -215,6 +215,8 @@ challenge is retried after 15 seconds with a new nonce; a failed connection
 request is retried while discovery still reports that endpoint.
 A blocked identity cannot be promoted. A successful proof identifies a key
 holder; it does not change the user's UNVERIFIED or VERIFIED trust decision.
+Blocking an already connected identity immediately removes its stable directed
+route and leaves the radio handle provisional.
 Identity announcements and mesh envelopes still route while a link is
 provisional.
 
