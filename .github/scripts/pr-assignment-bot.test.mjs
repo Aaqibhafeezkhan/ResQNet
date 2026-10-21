@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { COMMENT_MARKER, LABELS, extractIssueNumbers, handleIssueEvent, handlePullEvent, revalidateIssue, validatePull } from './pr-assignment-bot.mjs';
 
-function fixture(overrides = {}) {
+function fixture(overrides = {}, apiOptions = {}) {
   const pull = {
     number: 90, state: 'open', draft: false, body: 'Closes #42',
     user: { login: 'alice', type: 'User' }, author_association: 'CONTRIBUTOR',
@@ -27,6 +27,7 @@ function fixture(overrides = {}) {
     searchPulls: async () => [{ number: pull.number }],
     pull: async () => pull,
     permission: async () => ({ permission: 'write' }),
+    exceptionAuthorized: async () => apiOptions.exceptionAuthorized ?? false,
   };
   return { pull, issues, comments, calls, api };
 }
@@ -76,8 +77,8 @@ test('no linked issue asks for a reference; maintainer exception label is accept
   const f = fixture({ body: 'A small docs cleanup.', labels: [] });
   assert.equal((await validatePull(f.pull, f.api, opts)).state, 'missing');
   assert.match(f.comments[0].body, /Closes #123/);
-  const exception = fixture({ body: 'A small docs cleanup.', labels: [{ name: LABELS.exception }] });
-  assert.equal((await validatePull(exception.pull, exception.api, { ...opts, exceptionApproved: true })).state, 'exception');
+  const exception = fixture({ body: 'A small docs cleanup.', labels: [{ name: LABELS.exception }] }, { exceptionAuthorized: true });
+  assert.equal((await validatePull(exception.pull, exception.api, opts)).state, 'exception');
   assert.equal(exception.comments.length, 0);
 });
 
@@ -160,6 +161,14 @@ test('existing marker comments are recognized only when authored by a bot', asyn
   assert.equal(f.comments.length, 2);
 });
 
+test('comments from unrelated bots cannot satisfy this bot marker', async () => {
+  const f = fixture();
+  f.comments.push({ id: 8, user: { login: 'other-helper[bot]', type: 'Bot' }, body: `${COMMENT_MARKER}\nnot ours` });
+  await validatePull(f.pull, f.api, opts);
+  assert.equal(f.comments.length, 2);
+  assert.equal(f.comments[1].user.login, 'github-actions[bot]');
+});
+
 test('only an authorized repository collaborator can approve the exception label', async () => {
   const f = fixture({ body: 'Docs only.' });
   f.api.permission = async () => ({ permission: 'read' });
@@ -172,7 +181,7 @@ test('only an authorized repository collaborator can approve the exception label
 });
 
 test('label event from authorized maintainer revalidates the PR exception', async () => {
-  const f = fixture({ body: 'Docs only.', author_association: 'CONTRIBUTOR', labels: [{ name: LABELS.exception }] });
+  const f = fixture({ body: 'Docs only.', author_association: 'CONTRIBUTOR', labels: [{ name: LABELS.exception }] }, { exceptionAuthorized: true });
   const result = await handleIssueEvent({
     action: 'labeled', issue: { number: f.pull.number, pull_request: {} },
     label: { name: LABELS.exception }, sender: { login: 'maintainer' },
@@ -181,19 +190,44 @@ test('label event from authorized maintainer revalidates the PR exception', asyn
 });
 
 test('PR events preserve maintainer-approved exceptions and ignore unauthorized label additions', async () => {
-  const f = fixture({ body: 'Docs only.', labels: [{ name: LABELS.exception }] });
+  const f = fixture({ body: 'Docs only.', labels: [{ name: LABELS.exception }] }, { exceptionAuthorized: true });
   const approved = await handlePullEvent({
     action: 'synchronize', pull_request: { number: f.pull.number },
   }, f.api, opts);
   assert.equal(approved.state, 'exception');
   assert.equal(f.comments.length, 0);
 
-  const unauthorized = fixture({ body: 'Docs only.', labels: [{ name: LABELS.exception }] });
-  unauthorized.api.permission = async () => ({ permission: 'read' });
+  const unauthorized = fixture({ body: 'Docs only.', labels: [{ name: LABELS.exception }] }, { exceptionAuthorized: false });
   const result = await handlePullEvent({
     action: 'labeled', pull_request: { number: unauthorized.pull.number },
     label: { name: LABELS.exception }, sender: { login: 'contributor' },
   }, unauthorized.api, opts);
   assert.equal(result.state, 'missing');
   assert.match(unauthorized.comments[0].body, /Closes #123/);
+});
+
+test('unauthorized exception label stays unauthorized after synchronize, edited, and reopened', async () => {
+  const f = fixture({ body: 'Docs only.', labels: [{ name: LABELS.exception }] }, { exceptionAuthorized: false });
+  for (const action of ['labeled', 'synchronize', 'edited', 'reopened']) {
+    const result = await handlePullEvent({
+      action, pull_request: { number: f.pull.number },
+      ...(action === 'labeled' ? { label: { name: LABELS.exception }, sender: { login: 'untrusted' } } : {}),
+    }, f.api, opts);
+    assert.equal(result.state, 'missing', action);
+  }
+  assert.equal(f.comments.length, 1);
+  assert.match(f.comments[0].body, /Closes #123/);
+});
+
+test('newly opened draft PR gets an advisory; later draft sync is skipped until ready', async () => {
+  const f = fixture({ draft: true });
+  const opened = await handlePullEvent({ action: 'opened', pull_request: { number: f.pull.number } }, f.api, opts);
+  assert.equal(opened.state, 'warning');
+  assert.equal(f.comments.length, 1);
+  const sync = await handlePullEvent({ action: 'synchronize', pull_request: { number: f.pull.number } }, f.api, opts);
+  assert.equal(sync.state, 'skipped');
+  f.pull.draft = false;
+  const ready = await handlePullEvent({ action: 'ready_for_review', pull_request: { number: f.pull.number } }, f.api, opts);
+  assert.equal(ready.state, 'warning');
+  assert.equal(f.comments.length, 1);
 });

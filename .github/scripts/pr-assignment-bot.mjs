@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 
 export const COMMENT_MARKER = '<!-- resqnet-pr-assignment-bot -->';
+const ACTIONS_BOT_LOGIN = 'github-actions[bot]';
 export const LABELS = Object.freeze({
   awaiting: 'awaiting-issue-assignment',
   ok: 'contribution-policy-ok',
@@ -11,6 +12,10 @@ const MAX_ISSUE_REFERENCES = 10;
 
 function isBot(user) {
   return user?.type === 'Bot' || /\[bot\]$/i.test(user?.login ?? '');
+}
+
+function isOwnComment(comment) {
+  return comment?.user?.login?.toLowerCase() === ACTIONS_BOT_LOGIN && comment.body?.includes(COMMENT_MARKER);
 }
 
 function stripCode(text) {
@@ -90,14 +95,15 @@ function safePull(pull, expectedRepo) {
 export async function validatePull(pull, api, options = {}) {
   const repository = options.repository ?? pull?.base?.repo?.full_name;
   if (!safePull(pull, repository)) throw new Error('Invalid pull request or repository identity');
-  if (pull.state !== 'open' || pull.draft) return { state: 'skipped' };
+  if (pull.state !== 'open' || (pull.draft && options.allowDraft !== true)) return { state: 'skipped' };
   if (isBot(pull.user)) return { state: 'skipped' };
 
   const numbers = extractIssueNumbers(pull.body ?? '');
   const labels = labelNames(pull.labels);
-  // Only repository collaborators with write access can apply repository labels.
-  // PR body text never grants an exception; the label persists across later events.
-  const exception = hasLabel(labels, LABELS.exception) && options.ignoreException !== true;
+  // A label name alone is not authorization. Verify the latest label event and
+  // its actor's repository permission on every run, including workflow reruns.
+  const exception = hasLabel(labels, LABELS.exception)
+    && await api.exceptionAuthorized(pull.number, LABELS.exception);
   const bypass = isMaintainer(pull) || options.trustedAutomation === true;
   const issues = [];
   for (const number of numbers) {
@@ -120,7 +126,7 @@ export async function validatePull(pull, api, options = {}) {
 
   const result = policyResult({ pull, issues, exception, bypass });
   const existing = await api.comments(pull.number);
-  const hasWarning = existing.some((comment) => isBot(comment.user) && comment.body?.includes(COMMENT_MARKER));
+  const hasWarning = existing.some(isOwnComment);
   const desiredBody = result.state === 'ok' && !hasWarning ? null : result.body;
   await reconcileComment(pull.number, desiredBody, api, existing);
   await reconcileLabels(pull.number, labels, result.labels, api);
@@ -147,17 +153,16 @@ export async function handleIssueEvent(event, api, options = {}) {
 
 export async function handlePullEvent(event, api, options = {}) {
   if (!event?.pull_request?.number) throw new Error('Invalid pull request event');
-  if (['labeled', 'unlabeled'].includes(event.action) && event.label?.name === LABELS.exception
-    && !await actorCanManageException(api, event.sender?.login)) {
-    const pull = await api.pull(event.pull_request.number);
-    return validatePull(pull, api, { ...options, ignoreException: true });
-  }
   const pull = await api.pull(event.pull_request.number);
-  return validatePull(pull, api, { ...options, trustedAutomation: isBot(pull.user) });
+  return validatePull(pull, api, {
+    ...options,
+    allowDraft: pull.draft === true && ['opened', 'reopened'].includes(event.action),
+    trustedAutomation: isBot(pull.user),
+  });
 }
 
 async function reconcileComment(number, desiredBody, api, comments) {
-  const own = comments.filter((comment) => isBot(comment.user) && comment.body?.includes(COMMENT_MARKER));
+  const own = comments.filter(isOwnComment);
   if (!desiredBody) {
     for (const comment of own) {
       if (!/resolved|verified/i.test(comment.body)) {
@@ -233,6 +238,28 @@ function githubApi(token, owner, repo) {
     }
     return results;
   }
+  async function actorPermission(login) {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/collaborators/${encodeURIComponent(login)}/permission`, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' } });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`GitHub API collaborator permission: HTTP ${response.status}`);
+    return response.json();
+  }
+  async function exceptionLabelActor(pullNumber, labelName) {
+    const events = [];
+    for (let page = 1; page <= 10; page++) {
+      const batch = await request(`/issues/${pullNumber}/events?per_page=100&page=${page}`);
+      events.push(...batch);
+      if (batch.length < 100) {
+        const latest = events
+          .filter((item) => ['labeled', 'unlabeled'].includes(item.event)
+            && item.label?.name?.toLowerCase() === labelName.toLowerCase())
+          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+        return latest?.event === 'labeled' ? latest.actor : null;
+      }
+    }
+    // A full bounded scan may have omitted a newer authorization or revocation.
+    return null;
+  }
   const pull = async (number) => {
     const pr = await request(`/pulls/${number}`);
     return { ...pr, base: { ...pr.base, repo: pr.base.repo } };
@@ -262,11 +289,13 @@ function githubApi(token, owner, repo) {
       if (!response.ok) throw new Error(`GitHub API search: HTTP ${response.status}`);
       return (await response.json()).items.map((item) => ({ number: item.number }));
     },
-    permission: async (login) => {
-      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/collaborators/${encodeURIComponent(login)}/permission`, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' } });
-      if (!response.ok) throw new Error(`GitHub API collaborator permission: HTTP ${response.status}`);
-      return response.json();
+    exceptionAuthorized: async (pullNumber, labelName) => {
+      const actor = await exceptionLabelActor(pullNumber, labelName);
+      if (!actor?.login || isBot(actor)) return false;
+      const permission = await actorPermission(actor.login);
+      return ['admin', 'maintain', 'write'].includes((permission?.permission ?? '').toLowerCase());
     },
+    permission: actorPermission,
   };
 }
 
