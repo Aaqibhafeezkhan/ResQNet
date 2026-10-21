@@ -12,36 +12,48 @@ interface PageHeroProps {
 
 export function PageHero({ eyebrow, title, body, aside, children }: PageHeroProps) {
   return (
-    <section className="relative overflow-hidden border-b border-base-600">
-      <div className="grid-field pointer-events-none absolute inset-0 opacity-40" aria-hidden="true" />
+    <section className="relative isolate overflow-hidden border-b border-white/[0.08] pb-16 pt-36 sm:pb-20 sm:pt-44 lg:pb-24 lg:pt-48">
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_80%_at_15%_0%,rgba(67,216,220,0.1),transparent_62%)]"
+        className="pointer-events-none absolute inset-0 opacity-[0.55]"
+        aria-hidden="true"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, rgba(244,241,232,0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(244,241,232,0.035) 1px, transparent 1px)',
+          backgroundSize: '88px 88px',
+          maskImage: 'linear-gradient(to bottom, black, transparent 82%)',
+        }}
+      />
+      <div
+        className="pointer-events-none absolute -top-40 left-[8%] h-[420px] w-[420px] rounded-full bg-network/[0.06] blur-[100px]"
         aria-hidden="true"
       />
-      <div className="container-page relative grid gap-12 pb-16 pt-16 sm:pb-20 sm:pt-24 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.5fr)] lg:items-end lg:gap-16 lg:pb-24">
+      <div className="container-page relative grid gap-12 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)] lg:items-end lg:gap-16">
         <div>
-          <Reveal as="div" className="flex items-center gap-3">
-            <span className="h-px w-8 bg-network" aria-hidden="true" />
+          <Reveal as="div" className="flex items-center gap-4">
+            <span className="tabular text-[9px] font-semibold tracking-[0.24em] text-network">
+              RSQ / {String(new Date().getFullYear()).slice(2)}
+            </span>
+            <span className="h-px w-10 bg-network/45" aria-hidden="true" />
             <span className="eyebrow">{eyebrow}</span>
           </Reveal>
-          <Reveal as="h1" delay={0.05}>
-            <span className="display-balance mt-5 block max-w-5xl text-[2.7rem] font-semibold leading-[0.98] tracking-tightest text-ink-primary sm:text-6xl lg:text-7xl">
+          <Reveal as="h1" delay={0.04}>
+            <span className="display-balance mt-6 block max-w-[15ch] text-[2.9rem] font-medium leading-[0.92] tracking-tightest text-ink-primary sm:text-[4.4rem] lg:text-[5.6rem]">
               {title}
             </span>
           </Reveal>
-          <Reveal as="p" delay={0.1}>
-            <span className="prose-measure mt-6 block text-base leading-relaxed text-ink-secondary sm:text-lg">
+          <Reveal as="p" delay={0.08}>
+            <span className="prose-measure mt-7 block text-[15px] leading-relaxed text-ink-secondary sm:text-lg">
               {body}
             </span>
           </Reveal>
           {children ? (
-            <Reveal as="div" delay={0.14} className="mt-8 flex flex-wrap gap-3">
+            <Reveal as="div" delay={0.12} className="mt-9 flex flex-wrap gap-3">
               {children}
             </Reveal>
           ) : null}
         </div>
         {aside ? (
-          <Reveal delay={0.18} className="lg:pb-1">
+          <Reveal delay={0.14} className="lg:pb-1">
             {aside}
           </Reveal>
         ) : null}

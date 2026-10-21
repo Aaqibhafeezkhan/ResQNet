@@ -15,31 +15,44 @@
     color-scheme: dark;
     --mesh-surface: theme('colors.base.850');
     --mesh-ink: theme('colors.ink.primary');
+    --mesh-hairline: rgba(244, 241, 232, 0.09);
   }
 
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
+    background: theme('colors.base.950');
   }
 
   body {
     @apply bg-base-950 text-ink-primary font-sans antialiased;
-    /* Reserve the scrollbar gutter so navigating between routes does not
-       shift the layout by a few pixels. */
     scrollbar-gutter: stable;
     text-rendering: optimizeLegibility;
+    overflow-x: clip;
+  }
+
+  /* The app is a single dark canvas. A faint field behind the content keeps
+     long scrolls from reading as a flat black rectangle without adding an
+     image or another network request. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 45% at 50% -10%, rgba(92, 225, 223, 0.07), transparent 70%),
+      radial-gradient(45% 40% at 90% 40%, rgba(255, 92, 53, 0.035), transparent 75%);
   }
 
   ::selection {
-    background: rgba(67, 216, 220, 0.28);
+    background: rgba(92, 225, 223, 0.26);
+    color: theme('colors.ink.primary');
   }
 
-  /* A single, visible focus treatment everywhere. The default outline is
-     removed only where this replaces it, never on an element that can take
-     focus. */
   :focus-visible {
     outline: 2px solid theme('colors.network.DEFAULT');
-    outline-offset: 2px;
+    outline-offset: 3px;
     border-radius: 4px;
   }
 
@@ -62,14 +75,6 @@
     background: theme('colors.base.500');
   }
 
-  /*
-    Reduced motion is honoured globally rather than per component. Animations
-    are disabled rather than shortened: a person who has asked the operating
-    system for less motion should not receive a faster version of the same
-    thing.
-
-    Transitions on colour and opacity are kept, because they carry state
-    change rather than decoration. */
   @media (prefers-reduced-motion: reduce) {
     html {
       scroll-behavior: auto;
@@ -88,64 +93,112 @@
 
 @layer components {
   .container-page {
-    @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
+    @apply mx-auto w-full max-w-8xl px-5 sm:px-8 lg:px-12;
   }
 
   .section-space {
-    @apply py-20 sm:py-28 lg:py-32;
+    @apply py-20 sm:py-28 lg:py-36;
   }
 
-  /* A restrained surface. Shadows on near-black read as mud; a hairline edge
-     reads as an edge. */
   .surface {
-    @apply rounded-2xl border border-base-600 bg-base-800;
+    @apply rounded-2xl border border-base-600 bg-base-850;
   }
 
   .surface-raised {
-    @apply rounded-2xl border border-base-600 bg-base-750 shadow-lift;
+    @apply rounded-2xl border border-base-600 bg-base-800 shadow-lift;
   }
 
-  /* Uppercase micro-label. Used for section headers and metric captions. */
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-widest text-ink-tertiary;
+    @apply text-[10px] font-semibold uppercase tracking-widest text-ink-tertiary;
   }
 
-  /* Body copy that is measured, not squeezed. */
   .prose-measure {
     @apply max-w-[62ch] text-ink-secondary leading-relaxed;
-  }
-
-  .grid-field {
-    background-image:
-      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-    background-size: 72px 72px;
-  }
-
-  .hairline {
-    @apply border-base-600;
   }
 
   .display-balance {
     text-wrap: balance;
   }
 
-  /* Numerals in a metric should not jitter as they change. */
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* A translucent, blurred bar used by the header. Kept deliberately weak:
+     the page should still read as a dark room, not as stacked glass cards. */
+  .chrome-blur {
+    background: color-mix(in srgb, theme('colors.base.950') 76%, transparent);
+    backdrop-filter: blur(18px) saturate(120%);
+  }
+
+  .hairline {
+    @apply border-base-600;
+  }
+
+  .grid-field {
+    background-image:
+      linear-gradient(to right, rgba(244, 241, 232, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(244, 241, 232, 0.035) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+
+  .film-grain {
+    position: relative;
+  }
+
+  .film-grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .scene-rule {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(244, 241, 232, 0.12) 15%,
+      rgba(244, 241, 232, 0.12) 85%,
+      transparent
+    );
+  }
+
+  .kbd {
+    @apply inline-flex min-h-[22px] items-center rounded border border-base-600 px-1.5 font-mono text-[10px] text-ink-secondary;
   }
 }
 
 @layer utilities {
-  /* GPU-friendly promotion for elements that animate transforms. Applied
-     narrowly: a blanket will-change on a page full of nodes costs memory and
-     defeats the reason it exists. */
   .gpu {
     transform: translateZ(0);
     backface-visibility: hidden;
   }
 
   .mask-fade-b {
-    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 58%, transparent 100%);
+  }
+
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, black 62%, transparent 100%);
+  }
+
+  .text-shadow-deep {
+    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.55);
+  }
+
+  .writing-vertical {
+    writing-mode: vertical-rl;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }

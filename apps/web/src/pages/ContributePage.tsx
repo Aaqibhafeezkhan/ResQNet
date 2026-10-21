@@ -1,6 +1,5 @@
 import { ArrowUpRight, Bug, FlaskConical, GitPullRequest, ShieldCheck } from 'lucide-react';
 
-import { SiteLayout } from '@/components/SiteLayout';
 import { PageHero } from '@/components/public/PageHero';
 import { SafetyNote } from '@/components/public/SafetyNote';
 import { Reveal } from '@/components/primitives/Reveal';
@@ -54,7 +53,7 @@ export function ContributePage() {
   });
 
   return (
-    <SiteLayout>
+    <>
       <PageHero
         eyebrow="Contribute"
         title={
@@ -183,6 +182,6 @@ export function ContributePage() {
           </div>
         </div>
       </section>
-    </SiteLayout>
+    </>
   );
 }

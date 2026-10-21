@@ -1,6 +1,5 @@
 import { ArrowUpRight, Check, CircleAlert, Download, PackageCheck, Smartphone } from 'lucide-react';
 
-import { SiteLayout } from '@/components/SiteLayout';
 import { PageHero } from '@/components/public/PageHero';
 import { ReleaseSummary } from '@/components/public/ReleaseSummary';
 import { SafetyNote } from '@/components/public/SafetyNote';
@@ -57,7 +56,7 @@ export function DownloadPage() {
   });
 
   return (
-    <SiteLayout>
+    <>
       <PageHero
         eyebrow="Android preview"
         title={
@@ -205,6 +204,6 @@ export function DownloadPage() {
           </div>
         </div>
       </section>
-    </SiteLayout>
+    </>
   );
 }

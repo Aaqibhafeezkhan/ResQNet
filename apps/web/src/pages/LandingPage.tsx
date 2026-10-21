@@ -7,7 +7,6 @@ import { FailureSection } from '@/components/public/landing/FailureSection';
 import { HeroSection } from '@/components/public/landing/HeroSection';
 import { MechanismSection } from '@/components/public/landing/MechanismSection';
 import { StorySection } from '@/components/public/landing/StorySection';
-import { SiteLayout } from '@/components/SiteLayout';
 import { usePageMeta } from '@/lib/seo';
 
 export function LandingPage() {
@@ -19,7 +18,7 @@ export function LandingPage() {
   });
 
   return (
-    <SiteLayout>
+    <>
       <HeroSection />
       <StorySection />
       <MechanismSection />
@@ -29,6 +28,6 @@ export function LandingPage() {
       <ContributeSection />
       <ArchitectureSection />
       <ClosingSection />
-    </SiteLayout>
+    </>
   );
 }

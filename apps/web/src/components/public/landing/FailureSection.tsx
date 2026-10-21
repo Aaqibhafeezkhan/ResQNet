@@ -32,43 +32,51 @@ const FAILURES = [
 
 export function FailureSection() {
   return (
-    <section className="section-space border-b border-base-600 bg-base-900">
-      <div className="container-page">
-        <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
-          <div>
+    <section className="relative overflow-hidden border-b border-white/[0.08] bg-base-900 py-24 sm:py-32 lg:py-40">
+      <span
+        className="pointer-events-none absolute -left-6 bottom-0 select-none text-[16rem] font-semibold leading-[0.7] tracking-[-0.08em] text-white/[0.018] sm:text-[24rem]"
+        aria-hidden="true"
+      >
+        05
+      </span>
+      <div className="container-page relative">
+        <div className="grid gap-16 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:gap-24">
+          <div className="lg:sticky lg:top-32 lg:self-start">
             <SectionIntro
               index="04"
               eyebrow="Resilience"
               title="Failure is a state, not a surprise."
               body="A network that breaks silently is worse than no network at all. ResQNet makes waiting, rerouting and delivery visible, separately."
             />
-            <Reveal delay={0.1} className="mt-8 rounded-xl border border-base-600 bg-base-850 p-5">
+            <Reveal delay={0.1} className="mt-10 border-l border-network/40 pl-5">
               <p className="eyebrow">The rule</p>
-              <p className="mt-3 font-display text-2xl leading-snug text-ink-primary">
+              <p className="mt-4 max-w-md font-display text-[2rem] leading-[1.06] text-ink-primary sm:text-[2.5rem]">
                 Never turn an unknown into a success.
               </p>
             </Reveal>
           </div>
 
-          <div className="divide-y divide-base-600 border-y border-base-600">
+          <div className="border-t border-white/[0.08]">
             {FAILURES.map((failure, index) => {
               const Icon = failure.icon;
               return (
                 <Reveal
                   key={failure.title}
-                  delay={index * 0.04}
-                  className="grid grid-cols-[42px_1fr] gap-4 py-6 sm:grid-cols-[54px_1fr_auto] sm:items-start sm:gap-6"
+                  delay={index * 0.03}
+                  className="group grid grid-cols-[40px_1fr] gap-4 border-b border-white/[0.08] py-7 sm:grid-cols-[56px_1fr_auto] sm:items-start sm:gap-6 sm:py-9"
                 >
-                  <span className="grid h-10 w-10 place-items-center rounded-full border border-base-600 bg-base-850 text-ink-secondary">
+                  <span className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.02] text-ink-secondary transition-colors group-hover:border-network/30 group-hover:text-network">
                     <Icon size={16} aria-hidden="true" />
                   </span>
                   <div>
-                    <h3 className="text-base font-semibold text-ink-primary">{failure.title}</h3>
-                    <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink-secondary">
+                    <h3 className="text-[17px] font-medium tracking-[-0.01em] text-ink-primary">
+                      {failure.title}
+                    </h3>
+                    <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-ink-secondary">
                       {failure.body}
                     </p>
                   </div>
-                  <span className="col-start-2 mt-1 w-fit rounded-full border border-base-600 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest text-ink-tertiary sm:col-start-3 sm:mt-0">
+                  <span className="col-start-2 mt-2 w-fit rounded-full border border-white/10 px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-ink-tertiary sm:col-start-3 sm:mt-1">
                     {failure.tag}
                   </span>
                 </Reveal>

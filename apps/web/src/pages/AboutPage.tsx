@@ -1,6 +1,5 @@
 import { ArrowUpRight, Github, ShieldAlert } from 'lucide-react';
 
-import { SiteLayout } from '@/components/SiteLayout';
 import { PageHero } from '@/components/public/PageHero';
 import { ButtonAnchor, ButtonLink } from '@/components/primitives/Button';
 import { Reveal } from '@/components/primitives/Reveal';
@@ -44,7 +43,7 @@ export function AboutPage() {
   });
 
   return (
-    <SiteLayout>
+    <>
       <PageHero
         eyebrow="About the project"
         title={
@@ -129,7 +128,7 @@ export function AboutPage() {
             <ul className="mt-8 space-y-3 text-[13px] leading-relaxed text-ink-secondary">
               <li>That simulation proves physical radio behaviour.</li>
               <li>That a relayed frame proves a person received it.</li>
-              <li>That signed payloads are confidential. They are not encrypted.</li>
+              <li>That public SOS broadcasts are confidential. They are not encrypted; directed messages use HPKE.</li>
               <li>That a two-phone demonstration proves multi-hop routing.</li>
               <li>That this software is ready to be relied on in an emergency.</li>
             </ul>
@@ -262,6 +261,6 @@ export function AboutPage() {
           </div>
         </div>
       </section>
-    </SiteLayout>
+    </>
   );
 }

@@ -41,10 +41,14 @@ export default defineConfig(({ mode }) => ({
     sourcemap: mode !== 'public',
     cssCodeSplit: true,
     reportCompressedSize: false,
+    // Three.js is a single lazy chunk loaded only when the WebGL hero mounts.
+    // It is intentionally larger than the default warning threshold.
+    chunkSizeWarningLimit: 720,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
+          if (id.includes('/three/') || id.includes('three/')) return 'three';
           if (id.includes('framer-motion') || id.includes('motion-dom')
             || id.includes('motion-utils')) return 'motion';
           if (id.includes('react-router')) return 'router';

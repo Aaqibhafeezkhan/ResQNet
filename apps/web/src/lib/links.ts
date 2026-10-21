@@ -6,6 +6,7 @@ export const GITHUB_CONTRIBUTING = `${GITHUB_REPO}/blob/main/CONTRIBUTING.md`;
 export const GITHUB_SECURITY = `${GITHUB_REPO}/blob/main/SECURITY.md`;
 export const GITHUB_DEVICE_TESTING = `${GITHUB_REPO}/blob/main/apps/android/DEVICE_TESTING.md`;
 export const GITHUB_THREAT_MODEL = `${GITHUB_REPO}/blob/main/docs/security/threat-model.md`;
+export const GITHUB_ARCHITECTURE = `${GITHUB_REPO}/blob/main/docs/architecture/README.md`;
 export const GITHUB_LICENSE = `${GITHUB_REPO}/blob/main/LICENSE`;
 export const GITHUB_PROFILE = 'https://github.com/Gautam-aman';
 export const RELEASES_API =
