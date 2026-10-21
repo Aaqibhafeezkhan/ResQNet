@@ -9,12 +9,14 @@ import java.util.concurrent.atomic.LongAdder;
 /**
  * Aggregated routing measurements.
  *
- * <p>Every number here is a measurement of something the engine actually did.
+ * <p>
+ * Every number here is a measurement of something the engine actually did.
  * There is deliberately no modelled or estimated metric: a dashboard that shows
  * simulated figures as if they were field results is worse than no dashboard at
  * all when the product is safety-critical.
  *
- * <p>Latency percentiles are computed from a bounded reservoir rather than a
+ * <p>
+ * Latency percentiles are computed from a bounded reservoir rather than a
  * full history so the router's memory use does not grow with uptime.
  */
 public final class RoutingMetrics {
@@ -135,7 +137,8 @@ public final class RoutingMetrics {
     /**
      * Messages that named a destination and so can be confirmed end to end.
      *
-     * <p>A broadcast is never acknowledged: {@code MeshRouter} returns empty
+     * <p>
+     * A broadcast is never acknowledged: {@code MeshRouter} returns empty
      * from {@code buildAcknowledgement} when there is no destination, because
      * there is nobody to acknowledge to. Mixing the two into one denominator
      * caps the reported delivery rate below 100% however well the mesh works.
@@ -212,7 +215,9 @@ public final class RoutingMetrics {
                 + otherDrops.sum();
     }
 
-    /** Median end-to-end delivery latency in milliseconds, or -1 without samples. */
+    /**
+     * Median end-to-end delivery latency in milliseconds, or -1 without samples.
+     */
     public long medianDeliveryLatencyMillis() {
         return latency.percentile(50);
     }
@@ -233,7 +238,8 @@ public final class RoutingMetrics {
     /**
      * Raw end-to-end delivery latency samples collected by this node.
      *
-     * <p>Exposed so the simulator and the benchmark harness can aggregate
+     * <p>
+     * Exposed so the simulator and the benchmark harness can aggregate
      * percentiles across the whole mesh instead of only within one node. The
      * reservoir is bounded, so this never grows with uptime.
      */
@@ -263,7 +269,8 @@ public final class RoutingMetrics {
     /**
      * Ratio of forwarding work to distinct useful messages accepted.
      *
-     * <p>This is the flooding amplification number. A healthy mesh should sit
+     * <p>
+     * This is the flooding amplification number. A healthy mesh should sit
      * near the average hop count of the topology. A value that grows without
      * bound signals a deduplication failure.
      */
@@ -281,7 +288,8 @@ public final class RoutingMetrics {
     /**
      * Folds another instance's counters into this one.
      *
-     * <p>Used by the simulator and the benchmark harness to aggregate a
+     * <p>
+     * Used by the simulator and the benchmark harness to aggregate a
      * mesh-wide view from per-node instances without inventing a second
      * accounting path.
      */
@@ -318,6 +326,7 @@ public final class RoutingMetrics {
     /** Resets every counter. Used between simulation runs. */
     public void reset() {
         originated.reset();
+        directedOriginated.reset();
         accepted.reset();
         delivered.reset();
         forwarded.reset();
