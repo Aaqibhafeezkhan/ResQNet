@@ -9,6 +9,13 @@ interface RevealProps {
   /** Travel distance in pixels. Lower is calmer. */
   distance?: number;
   as?: 'div' | 'section' | 'li' | 'article' | 'h1' | 'h2' | 'p' | 'span' | 'ul';
+  /**
+   * How the element arrives.
+   *
+   * `rise` is the default. `wipe` reveals the element behind a moving
+   * mask, which suits a rule or a divider rather than a block of text.
+   */
+  motion?: 'rise' | 'wipe';
 }
 
 /**
@@ -27,6 +34,7 @@ export function Reveal({
   className,
   distance = 14,
   as = 'div',
+  motion: kind = 'rise',
 }: RevealProps) {
   const reduced = useReducedMotion();
 
@@ -40,6 +48,20 @@ export function Reveal({
   // applied through a plain wrapper. Framer Motion's own generic handles the
   // result correctly at runtime.
   const Component = motion[as] as typeof motion.div;
+
+  if (kind === 'wipe') {
+    return (
+      <Component
+        className={className}
+        initial={{ opacity: 0, scaleX: 0.2, transformOrigin: 'left' }}
+        whileInView={{ opacity: 1, scaleX: 1 }}
+        viewport={{ once: true, margin: '-12% 0px -8% 0px' }}
+        transition={{ duration: 0.85, delay, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {children}
+      </Component>
+    );
+  }
 
   return (
     <Component

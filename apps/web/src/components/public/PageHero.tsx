@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Reveal } from '@/components/primitives/Reveal';
+import { TextReveal } from '@/components/primitives/TextReveal';
 
 interface PageHeroProps {
   eyebrow: string;
@@ -37,9 +38,17 @@ export function PageHero({ eyebrow, title, body, aside, children }: PageHeroProp
             <span className="eyebrow">{eyebrow}</span>
           </Reveal>
           <Reveal as="h1" delay={0.04}>
-            <span className="display-balance mt-6 block max-w-[15ch] text-[2.9rem] font-medium leading-[0.92] tracking-tightest text-ink-primary sm:text-[4.4rem] lg:text-[5.6rem]">
+            {/*
+              The heading resolves word by word rather than fading in as one
+              block. A whole-block fade reads as a loading state; a heading
+              that sets itself reads as a page opening.
+            */}
+            <TextReveal
+              as="span"
+              className="display-balance mt-6 block max-w-[15ch] text-[2.9rem] font-medium leading-[0.92] tracking-tightest text-ink-primary sm:text-[4.4rem] lg:text-[5.6rem]"
+            >
               {title}
-            </span>
+            </TextReveal>
           </Reveal>
           <Reveal as="p" delay={0.08}>
             <span className="prose-measure mt-7 block text-[15px] leading-relaxed text-ink-secondary sm:text-lg">

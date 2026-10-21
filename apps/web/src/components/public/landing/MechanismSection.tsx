@@ -155,15 +155,28 @@ export function MechanismSection() {
                       stepRefs.current[index] = element;
                     }}
                     className={
-                      'border-b border-white/[0.08] transition-colors duration-500 ' +
+                      'group relative border-b border-white/[0.08] transition-colors duration-500 ' +
                       (active ? 'bg-white/[0.025]' : '')
                     }
                   >
+                    {/*
+                      A marker that slides to the active step. It makes the
+                      current position in the sequence legible at a glance
+                      instead of leaving the reader to infer it from a
+                      background tint.
+                    */}
+                    <span
+                      className={
+                        'absolute left-0 top-0 h-full w-px origin-top bg-network transition-transform duration-700 ease-cinematic ' +
+                        (active ? 'scale-y-100' : 'scale-y-0')
+                      }
+                      aria-hidden="true"
+                    />
                     <button
                       type="button"
                       onClick={() => jumpToStep(index)}
                       aria-current={active ? 'step' : undefined}
-                      className="group grid w-full grid-cols-[38px_1fr_auto] gap-4 px-1 py-7 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network sm:grid-cols-[56px_1fr_auto] sm:gap-6 sm:px-3 sm:py-9"
+                      className="group grid w-full grid-cols-[38px_1fr_auto] gap-4 px-1 py-7 text-left transition-[transform] duration-500 ease-cinematic hover:translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network sm:grid-cols-[56px_1fr_auto] sm:gap-6 sm:px-3 sm:py-9"
                     >
                       <span
                         className={

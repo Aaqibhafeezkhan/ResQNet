@@ -37,9 +37,11 @@ export function PublicLayout() {
       <main id="main" ref={mainRef} tabIndex={-1} className="relative">
         <motion.div
           key={`${location.pathname}${location.hash}`}
-          initial={reduced ? false : { opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          initial={
+            reduced ? false : { opacity: 0, y: 22, scale: 0.995, filter: 'blur(3px)' }
+          }
+          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+          transition={{ duration: 0.62, ease: [0.16, 1, 0.3, 1] }}
         >
           {outlet}
         </motion.div>
@@ -89,10 +91,12 @@ function useScrollReset(): void {
 
 function ScrollProgress({ disabled }: { disabled: boolean }) {
   const barRef = useRef<HTMLDivElement | null>(null);
+  const glowRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (disabled) {
       if (barRef.current) barRef.current.style.transform = 'scaleX(0)';
+      if (glowRef.current) glowRef.current.style.opacity = '0';
       return undefined;
     }
     let frame = 0;
@@ -102,6 +106,15 @@ function ScrollProgress({ disabled }: { disabled: boolean }) {
       const max = doc.scrollHeight - window.innerHeight;
       const progress = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
       if (barRef.current) barRef.current.style.transform = `scaleX(${progress})`;
+      /*
+        A travelling head on the progress bar. The bar alone is a stripe;
+        the head makes it read as something moving along a path, which is the
+        whole point of a progress indicator.
+      */
+      if (glowRef.current) {
+        glowRef.current.style.opacity = progress > 0.001 ? '1' : '0';
+        glowRef.current.style.transform = `translate3d(${progress * 100}vw, 0, 0)`;
+      }
     };
     const onScroll = () => {
       if (frame) return;
@@ -122,6 +135,11 @@ function ScrollProgress({ disabled }: { disabled: boolean }) {
       ref={barRef}
       aria-hidden="true"
       className="fixed inset-x-0 top-0 z-[60] h-[2px] origin-left scale-x-0 bg-gradient-to-r from-network/80 via-network to-delivered"
-    />
+    >
+      <div
+        ref={glowRef}
+        className="absolute right-0 top-1/2 h-[7px] w-[7px] -translate-y-1/2 translate-x-1/2 rounded-full bg-delivered opacity-0 shadow-[0_0_12px_2px_rgba(98,230,181,0.7)]"
+      />
+    </div>
   );
 }

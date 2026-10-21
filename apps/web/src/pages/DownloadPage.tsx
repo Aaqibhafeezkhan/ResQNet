@@ -166,7 +166,7 @@ export function DownloadPage() {
 
       <section className="section-space">
         <div className="container-page grid gap-8 lg:grid-cols-[1fr_1fr]">
-          <div className="rounded-2xl border border-base-600 bg-base-850 p-6 sm:p-8">
+          <div className="rounded-2xl border border-base-600 bg-base-850 p-6 transition-[transform,border-color] duration-500 ease-cinematic hover:-translate-y-1 hover:border-network/35 sm:p-8">
             <Smartphone size={18} className="text-network" aria-hidden="true" />
             <h2 className="mt-5 text-lg font-semibold text-ink-primary">Prefer the simulator?</h2>
             <p className="mt-2 text-[13px] leading-relaxed text-ink-secondary">
@@ -185,7 +185,7 @@ export function DownloadPage() {
             </a>
           </div>
 
-          <div className="rounded-2xl border border-pending/25 bg-pending-soft p-6 sm:p-8">
+          <div className="rounded-2xl border border-pending/25 bg-pending-soft p-6 transition-[transform,border-color] duration-500 ease-cinematic hover:-translate-y-1 hover:border-pending/50 sm:p-8">
             <Download size={18} className="text-pending" aria-hidden="true" />
             <h2 className="mt-5 text-lg font-semibold text-ink-primary">Found a problem?</h2>
             <p className="mt-2 text-[13px] leading-relaxed text-ink-secondary">
