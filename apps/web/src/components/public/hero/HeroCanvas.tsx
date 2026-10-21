@@ -15,11 +15,12 @@ type Three = typeof import('three');
 interface HeroCanvasProps {
   stageRef: RefObject<HTMLDivElement | null>;
   reduced: boolean;
+  onChapterChange?: (state: HeroState) => void;
 }
 
 type SceneStatus = 'pending' | 'live' | 'fallback';
 
-export function HeroCanvas({ stageRef, reduced }: HeroCanvasProps) {
+export function HeroCanvas({ stageRef, reduced, onChapterChange }: HeroCanvasProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<import('./heroSceneRuntime').HeroSceneHandle | null>(null);
   const [status, setStatus] = useState<SceneStatus>('pending');
@@ -28,11 +29,6 @@ export function HeroCanvas({ stageRef, reduced }: HeroCanvasProps) {
   const [focusedNode, setFocusedNode] = useState<HeroNodeId | null>(null);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<HeroNodeId | null>(null);
-
-  // Keep the latest state in a ref so the scroll handler never closes over a
-  // stale value and never re-subscribes on every render.
-  const stateRef = useRef(state);
-  stateRef.current = state;
 
   useEffect(() => {
     if (reduced) {
@@ -116,8 +112,7 @@ export function HeroCanvas({ stageRef, reduced }: HeroCanvasProps) {
       if (next.chapterIndex !== lastChapter) {
         lastChapter = next.chapterIndex;
         setState(next);
-      } else {
-        stateRef.current = next;
+        onChapterChange?.(next);
       }
     };
 
@@ -134,7 +129,7 @@ export function HeroCanvas({ stageRef, reduced }: HeroCanvasProps) {
       window.removeEventListener('resize', onScroll);
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [stageRef, status]);
+  }, [onChapterChange, stageRef, status]);
 
   const onSelectNode = useCallback((id: HeroNodeId | null) => {
     setSelectedNode((current) => (id === null ? null : current === id ? null : id));

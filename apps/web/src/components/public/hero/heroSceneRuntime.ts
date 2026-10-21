@@ -628,6 +628,7 @@ export function createHeroScene(
   let frameId = 0;
   let stageVisible = true;
   let documentVisible = !document.hidden;
+  let scrollingUntil = 0;
 
   const measure = () => {
     const width = Math.max(1, host.clientWidth);
@@ -747,7 +748,10 @@ export function createHeroScene(
     // On a constrained device the scene renders at a lower rate. The
     // requestAnimationFrame callback still runs, but the expensive part —
     // updating every material and re-rendering — does not.
-    if (quality.frameInterval > 16 && now - lastRender < quality.frameInterval) {
+    const frameInterval = now < scrollingUntil
+      ? Math.max(quality.frameInterval, 33)
+      : quality.frameInterval;
+    if (now - lastRender < frameInterval) {
       lastTime = now;
       return;
     }
@@ -1081,10 +1085,14 @@ export function createHeroScene(
     if (stageVisible && documentVisible) start();
     wake();
   };
+  const onScroll = () => {
+    scrollingUntil = performance.now() + 160;
+    onWake();
+  };
 
   canvas.addEventListener('pointermove', onWake, { passive: true });
   canvas.addEventListener('pointerdown', onWake);
-  window.addEventListener('scroll', onWake, { passive: true });
+  window.addEventListener('scroll', onScroll, { passive: true });
 
   function onVisibility() {
     documentVisible = !document.hidden;
@@ -1148,7 +1156,7 @@ export function createHeroScene(
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointermove', onWake);
       canvas.removeEventListener('pointerdown', onWake);
-      window.removeEventListener('scroll', onWake);
+      window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', measure);
       document.removeEventListener('visibilitychange', onVisibility);
       for (const geometry of geometries) geometry.dispose();

@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUpRight, Github, RadioTower, ShieldCheck, WifiOff } from 'lucide-react';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useRef, useState, type CSSProperties } from 'react';
 
 import { HeroCanvas } from '@/components/public/hero/HeroCanvas';
 import {
@@ -27,6 +27,8 @@ const DEPENDENCIES = [
 export function HeroSection() {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const reduced = useReducedMotion();
+  const [chapterState, setChapterState] = useState<HeroState>(() => deriveHeroState(0));
+  const onChapterChange = useCallback((next: HeroState) => setChapterState(next), []);
 
   if (reduced) {
     return (
@@ -44,7 +46,11 @@ export function HeroSection() {
   return (
     <div id="network" ref={stageRef} className="relative isolate h-[420svh]">
       <div className="sticky top-0 h-svh overflow-hidden">
-        <HeroCanvas stageRef={stageRef} reduced={false} />
+        <HeroCanvas
+          stageRef={stageRef}
+          reduced={false}
+          onChapterChange={onChapterChange}
+        />
         <div
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(4,6,7,0.92)_0%,rgba(4,6,7,0.58)_32%,rgba(4,6,7,0.06)_66%,transparent_100%)]"
           aria-hidden="true"
@@ -53,7 +59,7 @@ export function HeroSection() {
           className="pointer-events-none absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-base-950 via-base-950/55 to-transparent"
           aria-hidden="true"
         />
-        <ChapterOverlay />
+        <ChapterOverlay state={chapterState} />
       </div>
 
       <div className="pointer-events-none relative z-10 -mt-[100svh]">
@@ -73,47 +79,7 @@ export function HeroSection() {
  * It sits on top of the canvas and follows the same progress value, so the
  * prose and the 3D scene always describe the same moment.
  */
-function ChapterOverlay() {
-  const [state, setState] = useState<HeroState>(() => deriveHeroState(0));
-
-  useEffect(() => {
-    const stage = document.getElementById('network');
-    if (!stage) return undefined;
-
-    let frame = 0;
-    let lastChapter = -1;
-
-    const measure = () => {
-      frame = 0;
-      const rect = stage.getBoundingClientRect();
-      const viewport = window.innerHeight;
-      const scrollable = Math.max(1, rect.height - viewport);
-      const progress = Math.min(
-        1,
-        Math.max(0, Math.min(scrollable, Math.max(0, -rect.top)) / scrollable),
-      );
-      const next = deriveHeroState(progress);
-      if (next.chapterIndex !== lastChapter) {
-        lastChapter = next.chapterIndex;
-        setState(next);
-      }
-    };
-
-    const onScroll = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(measure);
-    };
-
-    measure();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
-  }, []);
-
+function ChapterOverlay({ state }: { state: HeroState }) {
   const chapter = HERO_CHAPTERS[state.chapterIndex] ?? HERO_CHAPTERS[0];
   if (!chapter) return null;
 
