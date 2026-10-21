@@ -199,6 +199,36 @@ impossible.
 **Tests.** `SecurityTest.unsignedIdentityClaimGrantsNothing`,
 `SecurityTest.deviceIdIsBoundToItsKey`.
 
+### T12 — Nearby peer identity rebinding (A2, A3) · D1, D3
+*An attacker replays a known device's public identity announcement on a new
+Nearby endpoint to capture messages addressed to that device.*
+
+**Mitigation.** An announcement only records an unverified key. Each connected
+endpoint stays provisional until it answers a fresh 256-bit random challenge
+with a signature from the claimed identity's private key. The signed bytes
+include a protocol domain, challenger and claimant identities, and the nonce.
+The verifier accepts the answer only on the endpoint where it issued that
+challenge, within 15 seconds, once, while that connection remains active.
+Disconnect, stop, failed verification, and timeout discard pending proof.
+While the same provisional connection remains active, a failed or unanswered
+challenge is retried after 15 seconds with a new nonce; a failed connection
+request is retried while discovery still reports that endpoint.
+A blocked identity cannot be promoted. A successful proof identifies a key
+holder; it does not change the user's UNVERIFIED or VERIFIED trust decision.
+Blocking an already connected identity immediately removes its stable directed
+route and leaves the radio handle provisional.
+Identity announcements and mesh envelopes still route while a link is
+provisional.
+
+**Tests.** `LinkIdentityProofTest` covers possession, replay, wrong signatures,
+endpoint swaps, timeout and interruption. `IdentityRebindingTest` checks that
+an announcement alone cannot bind a known identity. `PeerBindingsTest` checks
+replacement and removal of stale endpoint mappings. `NearbyProofFlowTest`
+exercises announcement, signed proof, directed delivery, reconnect, retry,
+blocking and concurrent disconnect through the engine and transport on an
+emulator with an in-process byte pipe. These tests do not exercise physical
+radio delivery.
+
 ## 5. Residual risks
 
 Stated plainly, because a threat model that claims completeness is not a threat
@@ -212,6 +242,7 @@ model.
 | R4 — First-contact trust is unavailable | Devices that have never met cannot authenticate each other, so traffic between them is refused | Deliberate. Identification is an in-person act; this is the honest trade |
 | R5 — Classification errors | The offline classifier can be wrong | Confidence is reported, results are advisory, manual override is always available |
 | R6 — Background execution limits | Android can suspend or kill the app | Documented; store-and-forward recovers on relaunch |
+| R7 — Live relay of a proof exchange | An attacker with simultaneous access to the real key holder can forward a live challenge and answer; the protocol does not establish physical proximity or prevent radio relay attacks | Treat a proof as key possession at the end of the byte pipe, not as distance evidence; validate the link on real devices and retain human fingerprint verification |
 
 ## 6. Reporting
 

@@ -45,40 +45,61 @@ public final class PeerBindings {
      * Records a newly connected endpoint, provisionally mapped to itself.
      *
      * <p>Provisional because the radio handle is all that is known at this
-     * point. {@link #promote} replaces it once a signed identity claim has been
-     * verified.
+     * point. {@link #promote} replaces it once private-key possession on the
+     * current link has been verified.
      *
      * @return the identity the caller should treat as the peer, which is the
      *         endpoint id until the binding is promoted
      */
     public synchronized String bind(String endpointId) {
-        String existing = deviceIdByEndpoint.get(endpointId);
-        if (existing == null) {
-            deviceIdByEndpoint.put(endpointId, endpointId);
-            endpointByDeviceId.put(endpointId, endpointId);
+        String previous = deviceIdByEndpoint.put(endpointId, endpointId);
+        if (previous != null && endpointId.equals(endpointByDeviceId.get(previous))) {
+            endpointByDeviceId.remove(previous);
         }
-        return deviceIdByEndpoint.get(endpointId);
+        endpointByDeviceId.put(endpointId, endpointId);
+        return endpointId;
     }
 
     /**
-     * Replaces a provisional binding with a verified device identity.
+     * Replaces a provisional binding with a proved device identity.
      *
      * @return true when the mapping actually changed
      */
     public synchronized boolean promote(String endpointId, String verifiedDeviceId) {
         String current = deviceIdByEndpoint.get(endpointId);
-        if (current != null && current.equals(verifiedDeviceId)) {
+        if (current == null) {
             return false;
+        }
+        if (current.equals(verifiedDeviceId)) {
+            return false;
+        }
+        String oldEndpoint = endpointByDeviceId.get(verifiedDeviceId);
+        if (oldEndpoint != null && !oldEndpoint.equals(endpointId)) {
+            // A device has one current link. A replaced link becomes provisional
+            // rather than retaining the same stable identity in the peer set.
+            deviceIdByEndpoint.put(oldEndpoint, oldEndpoint);
+            endpointByDeviceId.put(oldEndpoint, oldEndpoint);
         }
         deviceIdByEndpoint.put(endpointId, verifiedDeviceId);
         // Drop the provisional reverse entry before adding the real one, so a
         // device that is later reached through a different endpoint does not
         // accumulate stale handles.
-        if (current != null) {
+        if (endpointId.equals(endpointByDeviceId.get(current))) {
             endpointByDeviceId.remove(current);
         }
         endpointByDeviceId.put(verifiedDeviceId, endpointId);
         return true;
+    }
+
+    /** Removes a stable route while keeping its still-connected radio handle provisional. */
+    public synchronized String demote(String deviceId) {
+        String endpointId = endpointByDeviceId.remove(deviceId);
+        if (endpointId == null || !deviceId.equals(deviceIdByEndpoint.get(endpointId))) {
+            return null;
+        }
+        deviceIdByEndpoint.put(endpointId, endpointId);
+        endpointByDeviceId.put(endpointId, endpointId);
+        return endpointId;
     }
 
     /**
@@ -128,6 +149,10 @@ public final class PeerBindings {
 
     public synchronized void markDiscovered(String endpointId) {
         discovered.add(endpointId);
+    }
+
+    public synchronized boolean isDiscovered(String endpointId) {
+        return discovered.contains(endpointId);
     }
 
     /** Marks a connection as requested, so it is not requested twice. */

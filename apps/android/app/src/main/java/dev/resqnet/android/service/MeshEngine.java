@@ -83,7 +83,7 @@ public final class MeshEngine {
                         database.appendDelivery(messageId, current, detail,
                                 System.currentTimeMillis(), identity.deviceId()));
         this.trustStore = new TrustStore(new SQLiteTrustPersistence(database), 256);
-        this.transport = new NearbyTransport(this.context, identity.deviceId(),
+        this.transport = new NearbyTransport(this.context, identity,
                 displayName, new NearbyTransport.Listener() {
             @Override
             public void onTransportError(String operation, String message) {
@@ -109,6 +109,8 @@ public final class MeshEngine {
                 }
             }
         });
+        transport.setBindingApproval(deviceId -> trustStore.entry(deviceId)
+                .map(entry -> entry.trust() != TrustStore.Trust.BLOCKED).orElse(false));
 
         RouterConfig config = RouterConfig.builder()
                 // Six hops reaches a school-sized site. Beyond that, a message
@@ -206,31 +208,16 @@ public final class MeshEngine {
                     return;
                 }
 
-                // Known and unchanged: this is a reconnect, and Nearby issues a
-                // fresh endpoint id every time a link is re-established.
-                //
-                // The provisional binding made when the peer came back is
-                // therefore under an endpoint id that no longer says who it is,
-                // while the stale mapping still points at the old one. Re-pointing
-                // it here is what keeps directed messages reaching a live radio
-                // handle instead of one that died with the previous link. The call
-                // used to be skipped on the strength of "we already know this
-                // peer", which is exactly the condition a reconnect creates, so
-                // every reconnection silently unaddressed the peer again.
-                //
-                // Safe to run for a peer we already hold: the device id is derived
-                // from the key, so a claimant presenting a foreign key computes a
-                // different id, lands in the unknown-peer branch below, and can
-                // never capture this mapping. Nothing here is user-visible because
-                // there is nothing new to verify.
+                // The public key is only a claim. The transport promotes this
+                // endpoint after a fresh proof signed by the matching private key.
                 if (fromPeerDeviceId != null) {
-                    transport.promoteBinding(fromPeerDeviceId, deviceId);
+                    transport.requestBindingProof(fromPeerDeviceId, deviceId, publicKey);
                 }
                 return;
             }
             TrustStore.Entry entry = router.acceptPeerKey(deviceId, publicKey);
 
-            // Promote the transport's provisional binding.
+            // Ask the transport to prove the provisional binding.
             //
             // Until this happens the transport knows the peer only by its
             // Nearby endpoint id, which is a per-session radio handle. The
@@ -239,11 +226,10 @@ public final class MeshEngine {
             // comparison never matches and every directed message floods
             // instead of going to the one peer that could deliver it.
             //
-            // This is the only place that mapping can be learned from, because
-            // the claim carries the key and the key is what the device id is
-            // derived from.
+            // This records the key as UNVERIFIED. It does not authorize an
+            // endpoint until the matching private key answers the challenge.
             if (fromPeerDeviceId != null) {
-                transport.promoteBinding(fromPeerDeviceId, deviceId);
+                transport.requestBindingProof(fromPeerDeviceId, deviceId, publicKey);
             }
 
             publish(new EngineStatus("peer-seen", DeviceIdentity.shortDeviceId(deviceId)
@@ -428,6 +414,7 @@ public final class MeshEngine {
     public void blockPeer(String deviceId) {
         executor.execute(() -> {
             trustStore.block(deviceId);
+            transport.revokeBinding(deviceId);
             publish(new EngineStatus("peer-blocked", deviceId));
         });
     }
