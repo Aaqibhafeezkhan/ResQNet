@@ -6,7 +6,7 @@ import {
   ShieldAlert,
   UserCheck,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { StatusChip } from '@/components/primitives/StatusChip';
 import { deliveryStateLabel, relativeTime, severityLabel } from '@/lib/format';
@@ -74,6 +74,15 @@ export function IncidentDetailPanel({
     setAssignPending(false);
   }
 
+  // The incident shown now. A request started for an earlier one can finish
+  // after the switch; it must not clear this incident's draft or show its error
+  // here. Updated in a layout effect, so a response arriving right after the
+  // switch already sees the new reference.
+  const shownRef = useRef(reference);
+  useLayoutEffect(() => {
+    shownRef.current = reference;
+  }, [reference]);
+
   if (loading && !detail) {
     return (
       <div className="surface flex h-full flex-col gap-4 p-6" aria-busy="true">
@@ -99,26 +108,30 @@ export function IncidentDetailPanel({
 
   const assign = async (accountId: number | null) => {
     if (!onAssign) return;
+    const forReference = incident.reference;
     setAssignPending(true);
     setFailure(null);
     try {
-      await onAssign(incident.reference, accountId);
+      await onAssign(forReference, accountId);
     } catch (cause) {
+      if (shownRef.current !== forReference) return;
       setFailure(cause instanceof ApiError
         ? cause.message
         : 'The assignment could not be saved.');
     } finally {
-      setAssignPending(false);
+      if (shownRef.current === forReference) setAssignPending(false);
     }
   };
 
   const change = async (status: IncidentStatus) => {
+    const forReference = incident.reference;
     setPending(status);
     setFailure(null);
     try {
-      await onStatusChange(incident.reference, status, note.trim() || undefined);
-      setNote('');
+      await onStatusChange(forReference, status, note.trim() || undefined);
+      if (shownRef.current === forReference) setNote('');
     } catch (cause) {
+      if (shownRef.current !== forReference) return;
       // Previously the promise was voided with no catch, so a rejected status
       // change became an unhandled rejection: the button returned to idle and
       // the responder was told nothing. The most likely failure is another
@@ -130,7 +143,7 @@ export function IncidentDetailPanel({
           : 'The status change could not be saved.',
       );
     } finally {
-      setPending(null);
+      if (shownRef.current === forReference) setPending(null);
     }
   };
 
