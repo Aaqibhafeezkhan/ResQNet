@@ -60,6 +60,20 @@ export function IncidentDetailPanel({
   const [assignPending, setAssignPending] = useState(false);
   const [note, setNote] = useState('');
 
+  // The panel stays mounted while the selected incident changes, so the draft
+  // and the transient state of the previous incident are cleared here.
+  // Otherwise a note typed for one incident was recorded in the next one's
+  // audit trail with its status change (#37).
+  const reference = detail?.incident.reference;
+  const [shownReference, setShownReference] = useState(reference);
+  if (reference !== shownReference) {
+    setShownReference(reference);
+    setNote('');
+    setFailure(null);
+    setPending(null);
+    setAssignPending(false);
+  }
+
   if (loading && !detail) {
     return (
       <div className="surface flex h-full flex-col gap-4 p-6" aria-busy="true">
