@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { COMMENT_MARKER, LABELS, extractIssueNumbers, handleIssueEvent, handlePullEvent, revalidateIssue, validatePull } from './pr-assignment-bot.mjs';
+import { COMMENT_MARKER, RESOLUTION_MARKER, LABELS, extractIssueNumbers, handleIssueEvent, handlePullEvent, revalidateIssue, validatePull } from './pr-assignment-bot.mjs';
 
 function fixture(overrides = {}, apiOptions = {}) {
   const pull = {
@@ -167,6 +167,51 @@ test('comments from unrelated bots cannot satisfy this bot marker', async () => 
   await validatePull(f.pull, f.api, opts);
   assert.equal(f.comments.length, 2);
   assert.equal(f.comments[1].user.login, 'github-actions[bot]');
+});
+
+test('resolution state uses an explicit marker, not the word verified in warning text', async () => {
+  const f = fixture({ author_association: 'MEMBER' });
+  f.comments.push({
+    id: 7,
+    user: { login: 'github-actions[bot]', type: 'Bot' },
+    body: `${COMMENT_MARKER}\nIssue #42 could not be verified in this repository.`,
+  });
+  await validatePull(f.pull, f.api, opts);
+  assert.ok(f.comments[0].body.includes(RESOLUTION_MARKER));
+  assert.match(f.comments[0].body, /reminder is no longer needed/);
+  const updateCount = f.calls.filter(([method]) => method === 'update').length;
+  await validatePull(f.pull, f.api, opts);
+  assert.equal(f.calls.filter(([method]) => method === 'update').length, updateCount);
+});
+
+test('assignment and unassignment events update an existing draft PR advisory', async () => {
+  const f = fixture({ draft: true });
+  await validatePull(f.pull, f.api, { ...opts, allowDraft: true });
+  assert.match(f.comments[0].body, /not assigned to you/);
+
+  f.issues.get(42).assignees = [{ login: 'alice' }];
+  const assigned = await handleIssueEvent({
+    action: 'assigned', issue: { number: 42 },
+  }, f.api, opts);
+  assert.equal(assigned[0].state, 'ok');
+  assert.ok(f.comments[0].body.includes(RESOLUTION_MARKER));
+
+  f.issues.get(42).assignees = [];
+  const unassigned = await handleIssueEvent({
+    action: 'unassigned', issue: { number: 42 },
+  }, f.api, opts);
+  assert.equal(unassigned[0].state, 'warning');
+  assert.match(f.comments[0].body, /not assigned to you/);
+  assert.equal(f.comments.length, 1);
+});
+
+test('assignment events do not create reminders on drafts without an existing advisory', async () => {
+  const f = fixture({ draft: true });
+  const outcome = await handleIssueEvent({
+    action: 'assigned', issue: { number: 42 },
+  }, f.api, opts);
+  assert.equal(outcome[0].state, 'skipped');
+  assert.equal(f.comments.length, 0);
 });
 
 test('only an authorized repository collaborator can approve the exception label', async () => {

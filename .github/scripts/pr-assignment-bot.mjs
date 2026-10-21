@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 
 export const COMMENT_MARKER = '<!-- resqnet-pr-assignment-bot -->';
+export const RESOLUTION_MARKER = '<!-- resqnet-pr-assignment-bot:resolved -->';
 const ACTIONS_BOT_LOGIN = 'github-actions[bot]';
 export const LABELS = Object.freeze({
   awaiting: 'awaiting-issue-assignment',
@@ -66,7 +67,7 @@ function policyResult({ pull, issues, exception, bypass }) {
   if (!missing.length) {
     return {
       state: 'ok', issues,
-      body: `${COMMENT_MARKER}\n✅ Assignment verified! Thanks @${pull.user.login}; you’re assigned to ${issues.map((item) => `issue #${item.number}`).join(', ')}. The assignment reminder is resolved. Your PR can continue through normal review.\n\n— ResQNet Contributor Bot`,
+      body: `${COMMENT_MARKER}\n${RESOLUTION_MARKER}\n✅ Assignment verified! Thanks @${pull.user.login}; you’re assigned to ${issues.map((item) => `issue #${item.number}`).join(', ')}. The assignment reminder is resolved. Your PR can continue through normal review.\n\n— ResQNet Contributor Bot`,
       labels: [LABELS.ok],
     };
   }
@@ -165,8 +166,8 @@ async function reconcileComment(number, desiredBody, api, comments) {
   const own = comments.filter(isOwnComment);
   if (!desiredBody) {
     for (const comment of own) {
-      if (!/resolved|verified/i.test(comment.body)) {
-        await api.updateComment(number, comment.id, `${COMMENT_MARKER}\n✅ This assignment reminder is no longer needed. The PR is covered by a maintainer-approved policy exception or bypass.\n\n— ResQNet Contributor Bot`);
+      if (!comment.body.includes(RESOLUTION_MARKER)) {
+        await api.updateComment(number, comment.id, `${COMMENT_MARKER}\n${RESOLUTION_MARKER}\n✅ This assignment reminder is no longer needed. The PR is covered by a maintainer-approved policy exception or bypass.\n\n— ResQNet Contributor Bot`);
       }
     }
     return;
@@ -202,7 +203,16 @@ export async function revalidateIssue(issueNumber, api, options = {}) {
   for (const candidate of prs.slice(0, 100)) {
     const pull = await api.pull(candidate.number);
     if (pull?.state === 'open' && extractIssueNumbers(pull.body ?? '').includes(issueNumber)) {
-      outcomes.push(await validatePull(pull, api, options));
+      let allowDraft = false;
+      if (pull.draft) {
+        const comments = await api.comments(pull.number);
+        allowDraft = comments.some(isOwnComment);
+        if (!allowDraft) {
+          outcomes.push({ state: 'skipped' });
+          continue;
+        }
+      }
+      outcomes.push(await validatePull(pull, api, { ...options, allowDraft }));
     }
   }
   return outcomes;
