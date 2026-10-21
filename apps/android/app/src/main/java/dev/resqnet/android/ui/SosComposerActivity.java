@@ -24,9 +24,13 @@ import dev.resqnet.android.model.EmergencyPayload;
 import dev.resqnet.android.service.MeshEngine;
 import dev.resqnet.android.service.MeshService;
 import dev.resqnet.android.service.SettingsKeys;
+import dev.resqnet.mesh.crypto.TrustStore;
 import dev.resqnet.mesh.triage.EmergencyCategory;
 import dev.resqnet.mesh.triage.KeywordTriageClassifier;
 import dev.resqnet.mesh.triage.TriageResult;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Composes an emergency message.
@@ -37,8 +41,9 @@ import dev.resqnet.mesh.triage.TriageResult;
  * changes what is actually transmitted. Someone who knows their own situation
  * is a better source of truth than a keyword model.
  *
- * <p>A confirmation step precedes transmission, because an SOS is broadcast to
- * everyone in range and cannot be recalled. One tap to dismiss, not two.
+ * <p>A confirmation step precedes transmission because a message cannot be
+ * recalled. The dialog says plainly whether the next send is a public broadcast
+ * or an end-to-end encrypted message to one verified device.
  */
 public final class SosComposerActivity extends AppCompatActivity {
 
@@ -51,6 +56,8 @@ public final class SosComposerActivity extends AppCompatActivity {
     private RadioButton directScope;
     private TextView directTarget;
     private MaterialSwitch attachLocation;
+    private String selectedTargetDeviceId;
+    private String selectedTargetLabel;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -85,7 +92,13 @@ public final class SosComposerActivity extends AppCompatActivity {
             }
         });
 
-        directScope.setOnClickListener(v -> updateTargetVisibility());
+        directScope.setOnClickListener(v -> {
+            if (directScope.isChecked() && selectedTargetDeviceId == null) {
+                chooseTarget();
+            }
+            updateTargetVisibility();
+        });
+        directTarget.setOnClickListener(v -> chooseTarget());
 
         findViewById(R.id.sendButton).setOnClickListener(v -> confirmThenSend());
         onBodyChanged("");
@@ -104,22 +117,71 @@ public final class SosComposerActivity extends AppCompatActivity {
     }
 
     private void updateTargetVisibility() {
-        directTarget.setVisibility(directScope.isChecked() ? View.VISIBLE : View.GONE);
-        if (directScope.isChecked()) {
-            int peers = engine.transport().connectedPeerIds().size();
-            directTarget.setText(peers == 0
-                    ? getString(R.string.nearby_empty)
-                    : peers + " device(s) in range");
+        boolean direct = directScope.isChecked();
+        directTarget.setVisibility(direct ? View.VISIBLE : View.GONE);
+        if (!direct) {
+            return;
         }
+        if (selectedTargetDeviceId == null) {
+            directTarget.setText(R.string.sos_choose_target);
+        } else {
+            directTarget.setText(getString(R.string.sos_encrypted_to, selectedTargetLabel));
+        }
+    }
+
+    /** Offers only peers whose identity the user verified and whose HPKE key is known. */
+    private void chooseTarget() {
+        List<TrustStore.Entry> peers = encryptablePeers();
+        if (peers.isEmpty()) {
+            selectedTargetDeviceId = null;
+            selectedTargetLabel = null;
+            updateTargetVisibility();
+            Snackbar.make(findViewById(R.id.sendButton),
+                    R.string.sos_no_verified_peers, Snackbar.LENGTH_LONG).show();
+            return;
+        }
+        List<String> labels = new ArrayList<>();
+        for (TrustStore.Entry peer : peers) {
+            labels.add(peer.label() + "  ·  " + peer.keyFingerprint().substring(0, 4)
+                    + "-" + peer.keyFingerprint().substring(4, 8));
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.sos_choose_target_title)
+                .setItems(labels.toArray(new String[0]), (dialog, which) -> {
+                    TrustStore.Entry peer = peers.get(which);
+                    selectedTargetDeviceId = peer.deviceId();
+                    selectedTargetLabel = peer.label();
+                    updateTargetVisibility();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    private List<TrustStore.Entry> encryptablePeers() {
+        List<TrustStore.Entry> peers = new ArrayList<>();
+        for (TrustStore.Entry entry : engine.trustStore().entries()) {
+            if (entry.trust() == TrustStore.Trust.VERIFIED
+                    && engine.trustStore().canEncryptTo(entry.deviceId())) {
+                peers.add(entry);
+            }
+        }
+        return peers;
     }
 
     private void confirmThenSend() {
         String text = body.getText().toString().strip();
         boolean broadcast = !directScope.isChecked();
+        if (!broadcast && selectedTargetDeviceId == null) {
+            chooseTarget();
+            return;
+        }
 
+        String message = broadcast
+                ? getString(R.string.sos_confirm_body)
+                : getString(R.string.sos_confirm_direct_body, selectedTargetLabel);
         new AlertDialog.Builder(this)
                 .setTitle(R.string.sos_confirm_title)
-                .setMessage(broadcast ? getString(R.string.sos_confirm_body) : text)
+                .setMessage(message)
                 .setPositiveButton(R.string.sos_confirm_yes, (dialog, which) -> send(text))
                 .setNegativeButton(R.string.sos_confirm_no, null)
                 .show();
@@ -139,13 +201,18 @@ public final class SosComposerActivity extends AppCompatActivity {
             withLocation = EmergencyPayload.inRange(latitude, longitude);
         }
 
-        String destination = directScope.isChecked() ? firstPeerDeviceId() : null;
+        String destination = directScope.isChecked() ? selectedTargetDeviceId : null;
+        if (destination != null && !engine.trustStore().canEncryptTo(destination)) {
+            Snackbar.make(findViewById(R.id.sendButton),
+                    R.string.sos_encryption_unavailable, Snackbar.LENGTH_LONG).show();
+            return;
+        }
         try {
             engine.sendSos(text, destination, withLocation, latitude, longitude);
             boolean peers = !engine.transport().connectedPeerIds().isEmpty();
-            Snackbar.make(findViewById(R.id.sendButton),
-                    peers ? R.string.sos_sent : R.string.sos_sent_no_peers,
-                    Snackbar.LENGTH_LONG).show();
+            int sent = destination != null ? R.string.sos_sent_encrypted
+                    : (peers ? R.string.sos_sent : R.string.sos_sent_no_peers);
+            Snackbar.make(findViewById(R.id.sendButton), sent, Snackbar.LENGTH_LONG).show();
             finish();
         } catch (Exception e) {
             Snackbar.make(findViewById(R.id.sendButton), String.valueOf(e.getMessage()),
@@ -156,16 +223,5 @@ public final class SosComposerActivity extends AppCompatActivity {
     private boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED;
-    }
-
-    /**
-     * Picks a target for a directed message.
-     *
-     * <p>Directed sends go to one verified peer. Sending to an arbitrary unknown
-     * device is not offered: until a human has compared codes, this device does
-     * not know who it would be telling.
-     */
-    private String firstPeerDeviceId() {
-        return engine.transport().connectedPeerIds().stream().findFirst().orElse(null);
     }
 }

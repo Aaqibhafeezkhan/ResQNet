@@ -33,16 +33,27 @@
     <!-- SOS composer -->
     <string name="sos_title">Emergency message</string>
     <string name="sos_hint">What is happening?</string>
-    <string name="sos_broadcast">Everyone in range</string>
-    <string name="sos_direct">One device</string>
+    <string name="sos_broadcast">Everyone in range · public</string>
+    <string name="sos_direct">One verified device · encrypted</string>
     <string name="sos_attach_location">Attach my location to this message</string>
     <string name="sos_send">Send</string>
     <string name="sos_confirm_title">Send this emergency message?</string>
-    <string name="sos_confirm_body">It will go to every phone in range and be relayed onwards by
-        anyone who can. Anyone nearby will see it as an SOS.</string>
+    <string name="sos_confirm_body">This is a public broadcast. It will go to every phone in range
+        and be relayed onwards by anyone who can. It is NOT end-to-end encrypted: anyone nearby,
+        and any relay, can read it.</string>
+    <string name="sos_confirm_direct_body">This message will be end-to-end encrypted for %1$s only.
+        Relays can carry it but cannot read it.</string>
     <string name="sos_confirm_yes">Send now</string>
     <string name="sos_confirm_no">Go back</string>
     <string name="sos_sent">Message sent to the mesh</string>
+    <string name="sos_sent_encrypted">Encrypted message queued for the verified device</string>
+    <string name="sos_choose_target">Tap to choose a verified device</string>
+    <string name="sos_choose_target_title">Send encrypted to</string>
+    <string name="sos_encrypted_to">End-to-end encrypted to %1$s</string>
+    <string name="sos_no_verified_peers">No verified peer with an encryption key yet. Verify a device
+        on the Nearby screen first.</string>
+    <string name="sos_encryption_unavailable">This device no longer has a usable encryption key.
+        Nothing was sent; verify the peer again.</string>
     <string name="sos_sent_no_peers">No devices in range yet — the message is saved and goes out the
         moment someone appears</string>
     <string name="sos_character_count">%1$d / %2$d</string>
@@ -62,6 +73,11 @@
     <string name="detail_hops">Travelled %d hop(s)</string>
     <string name="detail_location">Location shared: %s</string>
     <string name="detail_no_location">No location was shared with this message.</string>
+    <string name="detail_public_broadcast">Public broadcast — not end-to-end encrypted</string>
+    <string name="detail_unencrypted">Directed message — not end-to-end encrypted (legacy)</string>
+    <string name="detail_protected_sent">End-to-end encrypted from this device</string>
+    <string name="detail_protected_received">End-to-end encrypted to this device</string>
+    <string name="detail_protected_unreadable">End-to-end encrypted — cannot be read on this device</string>
     <string name="detail_retry">Retry now</string>
 
     <!-- History -->

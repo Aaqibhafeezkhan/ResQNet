@@ -19,7 +19,6 @@ import dev.resqnet.android.data.ResQNetDatabase;
 import dev.resqnet.android.model.EmergencyPayload;
 import dev.resqnet.android.service.MeshEngine;
 import dev.resqnet.android.service.MeshService;
-import dev.resqnet.mesh.protocol.EnvelopeCodec;
 import dev.resqnet.mesh.routing.StoredMessage;
 
 import java.util.ArrayList;
@@ -72,15 +71,30 @@ public final class MessageDetailActivity extends AppCompatActivity {
         state.setText(getString(R.string.detail_state,
                 HomeActivity.stateLabel(this, stored.state())));
 
-        EmergencyPayload.Decoded decoded = decode(stored);
-        ((TextView) findViewById(R.id.detailBody)).setText(decoded.body());
+        MeshEngine.BodyView body = engine.readBody(stored);
+        EmergencyPayload.Decoded decoded = body.decoded();
+        ((TextView) findViewById(R.id.detailBody)).setText(body.body());
+
+        TextView protection = findViewById(R.id.detailProtection);
+        if (!body.encrypted()) {
+            protection.setText(stored.destinationDeviceId() == null
+                    ? R.string.detail_public_broadcast
+                    : R.string.detail_unencrypted);
+        } else if (!body.readable()) {
+            protection.setText(R.string.detail_protected_unreadable);
+        } else if (stored.originDeviceId() != null
+                && stored.originDeviceId().equals(engine.deviceId())) {
+            protection.setText(R.string.detail_protected_sent);
+        } else {
+            protection.setText(R.string.detail_protected_received);
+        }
 
         TextView route = findViewById(R.id.detailRoute);
         String origin = stored.originDeviceId() == null ? "?" : stored.originDeviceId();
         route.setText(origin + "\n" + stored.lastDetail());
 
         TextView location = findViewById(R.id.detailLocation);
-        if (decoded.hasLocation()) {
+        if (body.readable() && decoded.hasLocation()) {
             location.setVisibility(View.VISIBLE);
             location.setText(getString(R.string.detail_location, decoded.locationSummary()));
         } else {
@@ -89,7 +103,8 @@ public final class MessageDetailActivity extends AppCompatActivity {
         }
 
         TextView triage = findViewById(R.id.detailTriage);
-        Optional<ResQNetDatabase.TriageRecord> hint = engine.database().loadTriage(messageId);
+        Optional<ResQNetDatabase.TriageRecord> hint = stored.type().cleartextContent()
+                ? engine.database().loadTriage(messageId) : Optional.empty();
         triage.setVisibility(hint.isPresent() ? View.VISIBLE : View.GONE);
         hint.ifPresent(record1 -> triage.setText(String.format(java.util.Locale.getDefault(),
                 "Advisory triage: %s (%.0f%% confidence, suggestion only)",
@@ -100,15 +115,6 @@ public final class MessageDetailActivity extends AppCompatActivity {
         RecyclerView history = findViewById(R.id.detailHistory);
         history.setLayoutManager(new LinearLayoutManager(this));
         history.setAdapter(new AuditAdapter(engine.database().deliveryHistory(messageId)));
-    }
-
-    private EmergencyPayload.Decoded decode(StoredMessage stored) {
-        try {
-            return EmergencyPayload.decode(
-                    EnvelopeCodec.decode(stored.envelope()).payload());
-        } catch (Exception e) {
-            return new EmergencyPayload.Decoded("(could not decode)", false, 0, 0);
-        }
     }
 
     /** Renders the append-only transition log. */

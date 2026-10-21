@@ -117,17 +117,11 @@ public final class TestSupport {
     /**
      * Decodes the body exactly the way the inbox does.
      *
-     * <p>Same two calls, in the same order, as
-     * {@code MessageListActivity.decodeBody}: an assertion written against raw
-     * bytes would pass while the screen was showing the fallback string instead.
+     * <p>Calls the engine's render path rather than the payload codec directly,
+     * so a test cannot pass while the screen shows an encrypted placeholder.
      */
     static String decodeBody(StoredMessage message) {
-        try {
-            var envelope = dev.resqnet.mesh.protocol.EnvelopeCodec.decode(message.envelope());
-            return dev.resqnet.android.model.EmergencyPayload.decode(envelope.payload()).body();
-        } catch (Exception e) {
-            return "(this message could not be decoded)";
-        }
+        return engine().readBody(message).body();
     }
 
     /** Asserts a boolean condition eventually becomes true, without a bare sleep. */
