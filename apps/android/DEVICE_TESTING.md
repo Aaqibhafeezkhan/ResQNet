@@ -42,6 +42,7 @@ Outcome:           not started / partial / complete
 | Endpoint to identity binding and promotion | `PeerBindingsTest` | Verified |
 | Fresh link proof, replay, endpoint swap, timeout and disconnect handling | `LinkIdentityProofTest` on the JVM | Verified in logic tests only |
 | Public claim cannot create a stable endpoint binding | `IdentityRebindingTest` on an API 34 emulator; failed against the prior code and passed after the fix | Verified in emulator only |
+| Positive proof, directed delivery, reconnect and transient failure recovery | `NearbyProofFlowTest` on an API 34 emulator with an in-process byte pipe | Verified in emulator only |
 | API 26 compatibility of mesh-core | app compiles mesh-core from source | Verified |
 | APK assembles, debug and release | `:app:assembleDebug assembleRelease` | Verified |
 

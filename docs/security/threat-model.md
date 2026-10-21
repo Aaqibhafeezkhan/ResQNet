@@ -210,6 +210,9 @@ include a protocol domain, challenger and claimant identities, and the nonce.
 The verifier accepts the answer only on the endpoint where it issued that
 challenge, within 15 seconds, once, while that connection remains active.
 Disconnect, stop, failed verification, and timeout discard pending proof.
+While the same provisional connection remains active, a failed or unanswered
+challenge is retried after 15 seconds with a new nonce; a failed connection
+request is retried while discovery still reports that endpoint.
 A blocked identity cannot be promoted. A successful proof identifies a key
 holder; it does not change the user's UNVERIFIED or VERIFIED trust decision.
 Identity announcements and mesh envelopes still route while a link is
@@ -218,8 +221,11 @@ provisional.
 **Tests.** `LinkIdentityProofTest` covers possession, replay, wrong signatures,
 endpoint swaps, timeout and interruption. `IdentityRebindingTest` checks that
 an announcement alone cannot bind a known identity. `PeerBindingsTest` checks
-replacement and removal of stale endpoint mappings. These are logic and
-Android adapter tests, not evidence about physical radio delivery.
+replacement and removal of stale endpoint mappings. `NearbyProofFlowTest`
+exercises announcement, signed proof, directed delivery, reconnect, retry,
+blocking and concurrent disconnect through the engine and transport on an
+emulator with an in-process byte pipe. These tests do not exercise physical
+radio delivery.
 
 ## 5. Residual risks
 
