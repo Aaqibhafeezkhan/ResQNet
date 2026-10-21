@@ -25,6 +25,7 @@ export function HeroCanvas({ stageRef, reduced }: HeroCanvasProps) {
   const [status, setStatus] = useState<SceneStatus>('pending');
   const [state, setState] = useState<HeroState>(() => deriveHeroState(0));
   const [hoveredNode, setHoveredNode] = useState<HeroNodeId | null>(null);
+  const [focusedNode, setFocusedNode] = useState<HeroNodeId | null>(null);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<HeroNodeId | null>(null);
 
@@ -176,8 +177,14 @@ export function HeroCanvas({ stageRef, reduced }: HeroCanvasProps) {
             <li key={spec.id}>
               <button
                 type="button"
-                onFocus={() => sceneRef.current?.setActiveNode(spec.id)}
-                onBlur={() => sceneRef.current?.setActiveNode(null)}
+                onFocus={() => {
+                  setFocusedNode(spec.id);
+                  sceneRef.current?.setActiveNode(spec.id);
+                }}
+                onBlur={() => {
+                  setFocusedNode(null);
+                  sceneRef.current?.setActiveNode(null);
+                }}
                 onClick={() => onSelectNode(spec.id)}
                 aria-pressed={selectedNode === spec.id}
               >
@@ -194,7 +201,7 @@ export function HeroCanvas({ stageRef, reduced }: HeroCanvasProps) {
       />
 
       <HeroInspector
-        nodeId={nodeUnderPointer ?? selectedNode}
+        nodeId={nodeUnderPointer ?? focusedNode ?? selectedNode}
         linkId={hoveredLink}
         selected={selectedNode !== null}
       />
