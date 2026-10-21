@@ -25,5 +25,9 @@ public enum RejectReason {
     /** Local resource bound reached (queue, cache, store). */
     RESOURCE_EXHAUSTED,
     /** Origin identity is on the local block list. */
-    ORIGIN_BLOCKED
+    ORIGIN_BLOCKED,
+    /** A protected send has no verified recipient key to encrypt to. */
+    ENCRYPTION_UNAVAILABLE,
+    /** Authenticated decryption failed; content must not be displayed. */
+    DECRYPTION_FAILED
 }

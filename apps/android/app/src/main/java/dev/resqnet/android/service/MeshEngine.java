@@ -6,9 +6,14 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.time.Instant;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -18,8 +23,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import dev.resqnet.android.data.ResQNetDatabase;
 import dev.resqnet.android.model.EmergencyPayload;
 import dev.resqnet.android.data.SqliteMessageStore;
+import dev.resqnet.android.identity.KeystoreEncryptionIdentity;
 import dev.resqnet.android.identity.KeystoreIdentity;
 import dev.resqnet.android.transport.NearbyTransport;
+import dev.resqnet.mesh.crypto.EncryptionIdentity;
+import dev.resqnet.mesh.crypto.EncryptionKeyBinding;
 import dev.resqnet.mesh.crypto.SigningIdentity;
 import dev.resqnet.mesh.crypto.DeviceIdentity;
 import dev.resqnet.mesh.crypto.TrustStore;
@@ -27,6 +35,7 @@ import dev.resqnet.mesh.protocol.EnvelopeCodec;
 import dev.resqnet.mesh.protocol.MessageEnvelope;
 import dev.resqnet.mesh.protocol.MessageType;
 import dev.resqnet.mesh.protocol.Priority;
+import dev.resqnet.mesh.protocol.ProtectedPayload;
 import dev.resqnet.mesh.routing.DuplicateCache;
 import dev.resqnet.mesh.routing.IdentityAnnouncement;
 import dev.resqnet.mesh.routing.MeshEvent;
@@ -34,6 +43,7 @@ import dev.resqnet.mesh.routing.MeshEventListener;
 import dev.resqnet.mesh.routing.MeshRouter;
 import dev.resqnet.mesh.routing.RouterConfig;
 import dev.resqnet.mesh.routing.RoutingMetrics;
+import dev.resqnet.mesh.routing.StoredMessage;
 import dev.resqnet.mesh.triage.KeywordTriageClassifier;
 
 /**
@@ -63,6 +73,7 @@ public final class MeshEngine {
 
     private final Context context;
     private final SigningIdentity identity;
+    private final EncryptionIdentity encryptionIdentity;
     private final TrustStore trustStore;
     private final ResQNetDatabase database;
     private final SqliteMessageStore store;
@@ -77,6 +88,7 @@ public final class MeshEngine {
             throws GeneralSecurityException, java.io.IOException {
         this.context = context.getApplicationContext();
         this.identity = KeystoreIdentity.loadOrCreate(displayName);
+        this.encryptionIdentity = KeystoreEncryptionIdentity.loadOrCreate(this.context);
         this.database = ResQNetDatabase.get(this.context);
         this.store = new SqliteMessageStore(database, 512,
                 (messageId, previous, current, detail) ->
@@ -128,6 +140,7 @@ public final class MeshEngine {
                 new KeywordTriageClassifier(),
                 new DuplicateCache(2048, 6 * 60 * 60 * 1000L, 8 * 1024 * 1024),
                 dev.resqnet.mesh.routing.RetryPolicy.defaultMobile());
+        this.router.setEncryptionIdentity(encryptionIdentity);
 
         this.executor = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "resqnet-mesh");
@@ -190,9 +203,30 @@ public final class MeshEngine {
             dev.resqnet.mesh.routing.IdentityAnnouncement announcement,
             String fromPeerDeviceId) {
         try {
-            PublicKey publicKey = dev.resqnet.mesh.crypto.DeviceIdentity
-                    .decodePublicKey(announcement.publicKeyBase64());
-            String deviceId = dev.resqnet.mesh.crypto.DeviceIdentity.deviceId(publicKey);
+            PublicKey publicKey = DeviceIdentity.decodePublicKey(
+                    announcement.publicKeyBase64());
+            String deviceId = DeviceIdentity.deviceId(publicKey);
+
+            // The HPKE key is accepted only when the announcement's signing key
+            // signed the binding. Without this check anyone in radio range
+            // could append their own encryption key to a captured claim and
+            // receive messages meant for the named device.
+            byte[] encryptionKey = null;
+            if (announcement.hasEncryptionKey()) {
+                encryptionKey = Base64.getDecoder()
+                        .decode(announcement.encryptionPublicKeyBase64());
+                byte[] proof = Base64.getDecoder()
+                        .decode(announcement.encryptionKeyProofBase64());
+                if (encryptionKey.length != EncryptionIdentity.PUBLIC_KEY_BYTES
+                        || !EncryptionKeyBinding.verify(publicKey, encryptionKey, proof)) {
+                    Log.w(TAG, "Refused an unproven encryption key for "
+                            + DeviceIdentity.shortDeviceId(deviceId));
+                    publish(new EngineStatus("peer-rejected",
+                            "an identity claim carried an invalid encryption-key proof"));
+                    return;
+                }
+            }
+
             Optional<TrustStore.Entry> known = trustStore.entry(deviceId);
             if (known.isPresent()) {
                 TrustStore.Entry existing = known.get();
@@ -213,9 +247,9 @@ public final class MeshEngine {
                 if (fromPeerDeviceId != null) {
                     transport.requestBindingProof(fromPeerDeviceId, deviceId, publicKey);
                 }
+                rememberEncryptionKey(deviceId, encryptionKey);
                 return;
             }
-            TrustStore.Entry entry = router.acceptPeerKey(deviceId, publicKey);
 
             // Ask the transport to prove the provisional binding.
             //
@@ -228,6 +262,9 @@ public final class MeshEngine {
             //
             // This records the key as UNVERIFIED. It does not authorize an
             // endpoint until the matching private key answers the challenge.
+            TrustStore.Entry entry = router.acceptPeerKey(announcement.label(), publicKey);
+            rememberEncryptionKey(deviceId, encryptionKey);
+
             if (fromPeerDeviceId != null) {
                 transport.requestBindingProof(fromPeerDeviceId, deviceId, publicKey);
             }
@@ -240,6 +277,22 @@ public final class MeshEngine {
             // A malformed or unusable claim must never take the router down.
             Log.w(TAG, "Rejected identity claim", e);
             publish(new EngineStatus("peer-rejected", "an identity claim could not be read"));
+        }
+    }
+
+    /** Records a proof-bound HPKE key, refusing any change once one is on file. */
+    private void rememberEncryptionKey(String deviceId, byte[] encryptionKey) {
+        if (encryptionKey == null) {
+            return;
+        }
+        try {
+            trustStore.rememberEncryptionKey(deviceId, encryptionKey,
+                    Instant.ofEpochMilli(System.currentTimeMillis()));
+        } catch (GeneralSecurityException e) {
+            Log.w(TAG, "Refused an encryption key change for "
+                    + DeviceIdentity.shortDeviceId(deviceId), e);
+            publish(new EngineStatus("peer-rejected",
+                    "a peer announced a different encryption key; refusing rotation"));
         }
     }
 
@@ -326,12 +379,19 @@ public final class MeshEngine {
                         double latitude, double longitude) throws Exception {
         executor.execute(() -> {
             try {
-                MessageEnvelope envelope = router.originate(destinationDeviceId,
-                        MessageType.SOS, Priority.SOS,
-                        EmergencyPayload.encode(body, attachLocation, latitude, longitude),
-                        0L);
-                publish(new EngineStatus("sent", envelope.messageId()));
-            } catch (GeneralSecurityException | dev.resqnet.mesh.protocol.ProtocolException e) {
+                byte[] payload = EmergencyPayload.encode(body, attachLocation,
+                        latitude, longitude);
+                MessageEnvelope envelope = destinationDeviceId == null
+                        ? router.originate(null, MessageType.SOS, Priority.SOS, payload, 0L)
+                        : router.originateProtected(destinationDeviceId, MessageType.SOS,
+                                Priority.SOS, payload, 0L);
+                if (destinationDeviceId != null) {
+                    database.saveLocalBody(envelope.messageId(), payload);
+                }
+                publish(new EngineStatus(destinationDeviceId == null
+                        ? "sent-public" : "sent-encrypted", envelope.messageId()));
+            } catch (GeneralSecurityException
+                    | dev.resqnet.mesh.protocol.ProtocolException e) {
                 Log.e(TAG, "Could not send SOS", e);
                 publish(new EngineStatus("send-failed", String.valueOf(e.getMessage())));
             }
@@ -342,9 +402,17 @@ public final class MeshEngine {
     public void sendText(String body, String destinationDeviceId) throws Exception {
         executor.execute(() -> {
             try {
-                router.originate(destinationDeviceId, MessageType.TEXT, Priority.NORMAL,
-                        EmergencyPayload.encode(body, false, 0, 0), 0L);
-            } catch (GeneralSecurityException | dev.resqnet.mesh.protocol.ProtocolException e) {
+                byte[] payload = EmergencyPayload.encode(body, false, 0, 0);
+                MessageEnvelope envelope = destinationDeviceId == null
+                        ? router.originate(null, MessageType.TEXT, Priority.NORMAL,
+                                payload, 0L)
+                        : router.originateProtected(destinationDeviceId, MessageType.TEXT,
+                                Priority.NORMAL, payload, 0L);
+                if (destinationDeviceId != null) {
+                    database.saveLocalBody(envelope.messageId(), payload);
+                }
+            } catch (GeneralSecurityException
+                    | dev.resqnet.mesh.protocol.ProtocolException e) {
                 Log.e(TAG, "Could not send text", e);
             }
         });
@@ -449,6 +517,11 @@ public final class MeshEngine {
         return identity;
     }
 
+    /** Long-term HPKE identity used for directed messages. */
+    public EncryptionIdentity encryptionIdentity() {
+        return encryptionIdentity;
+    }
+
     public String deviceId() {
         return identity.deviceId();
     }
@@ -457,6 +530,105 @@ public final class MeshEngine {
     public String shortCode() {
         return IdentityAnnouncement.shortCode(identity.keyFingerprint());
     }
+
+    // ----------------------------------------------------------------- reading
+
+    /**
+     * Decrypts or reads one stored message for display.
+     *
+     * <p>Never returns raw ciphertext. Incoming protected messages are decrypted
+     * in memory only; their database row contains the envelope and no plaintext.
+     * Relay copies addressed to another device are explicitly marked unreadable
+     * rather than being fed to the user as opaque bytes.
+     */
+    public BodyView readBody(StoredMessage record) {
+        if (record == null) {
+            return BodyView.unreadable("No message");
+        }
+        MessageEnvelope envelope;
+        try {
+            envelope = EnvelopeCodec.decode(record.envelope());
+        } catch (Exception e) {
+            return BodyView.unreadable("(this message could not be decoded)");
+        }
+
+        if (!envelope.type().protectedContent()) {
+            return BodyView.cleartext(EmergencyPayload.decode(envelope.payload()));
+        }
+
+        String key = record.messageId();
+        BodyView cached = bodyCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
+        // The sender's own copy is addressed to the peer, not to this device.
+        // It still has to be readable from the locally retained body.
+        if (deviceId().equals(envelope.originDeviceId())) {
+            byte[] local = database.loadLocalBody(key);
+            if (local != null) {
+                BodyView view = BodyView.encrypted(EmergencyPayload.decode(local));
+                bodyCache.put(key, view);
+                return view;
+            }
+            return BodyView.unreadable("Encrypted message sent from this device");
+        }
+
+        if (!envelope.addressedTo(deviceId())) {
+            return BodyView.unreadable("Encrypted for another device — relay only");
+        }
+
+        try {
+            ProtectedPayload payload = ProtectedPayload.decode(envelope.payload());
+            if (!MessageDigest.isEqual(payload.keyId(),
+                    EncryptionIdentity.keyIdBytes(encryptionIdentity.publicKeyBytes()))) {
+                return BodyView.unreadable("Encrypted for a different encryption key");
+            }
+            MessageEnvelope header = envelope.toBuilder().payload(new byte[0]).build();
+            byte[] plaintext = encryptionIdentity.decrypt(payload.ciphertext(),
+                    ProtectedPayload.associatedData(header, payload.keyId()));
+            BodyView view = BodyView.encrypted(EmergencyPayload.decode(plaintext));
+            bodyCache.put(key, view);
+            return view;
+        } catch (Exception e) {
+            // Authentication failed, or the container is malformed. The user
+            // gets a refusal, never ciphertext, and the failure does not take
+            // the rest of the inbox down.
+            Log.w(TAG, "Could not decrypt protected message " + key, e);
+            return BodyView.unreadable("(this encrypted message could not be authenticated)");
+        }
+    }
+
+    /** One renderable message body. */
+    public record BodyView(EmergencyPayload.Decoded decoded, boolean encrypted,
+                           boolean readable, String note) {
+
+        static BodyView cleartext(EmergencyPayload.Decoded decoded) {
+            return new BodyView(decoded, false, true, "");
+        }
+
+        static BodyView encrypted(EmergencyPayload.Decoded decoded) {
+            return new BodyView(decoded, true, true, "");
+        }
+
+        static BodyView unreadable(String note) {
+            return new BodyView(new EmergencyPayload.Decoded("", false, 0, 0),
+                    true, false, note);
+        }
+
+        /** Body for display; a refusal note replaces unreadable ciphertext. */
+        public String body() {
+            return readable ? decoded.body() : note;
+        }
+    }
+
+    private final Map<String, BodyView> bodyCache =
+            Collections.synchronizedMap(new LinkedHashMap<>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, BodyView> eldest) {
+                    return size() > 256;
+                }
+            });
 
     // ------------------------------------------------------------ diagnostics
 
@@ -605,9 +777,11 @@ public final class MeshEngine {
                             listener.onMessageDelivered(envelope, envelope.hopCount());
                         }
                     });
-            database.saveTriage(envelope.messageId(),
-                    TriageHintCache.get(envelope.messageId()),
-                    TriageHintCache.confidence(envelope.messageId()));
+            if (envelope.type().cleartextContent()) {
+                database.saveTriage(envelope.messageId(),
+                        TriageHintCache.get(envelope.messageId()),
+                        TriageHintCache.confidence(envelope.messageId()));
+            }
         }
         if (event instanceof dev.resqnet.mesh.routing.MeshEvent.TriageSuggestion suggestion) {
             TriageHintCache.put(suggestion.messageId(), suggestion.result());
@@ -662,6 +836,21 @@ public final class MeshEngine {
         @Override
         public void remove(String deviceId) {
             database.deletePeer(deviceId);
+        }
+
+        @Override
+        public void saveEncryptionKey(TrustStore.EncryptionKey key) {
+            database.saveEncryptionKey(key);
+        }
+
+        @Override
+        public java.util.Collection<TrustStore.EncryptionKey> loadEncryptionKeys() {
+            return database.loadEncryptionKeys();
+        }
+
+        @Override
+        public void removeEncryptionKey(String deviceId) {
+            database.deleteEncryptionKey(deviceId);
         }
     }
 

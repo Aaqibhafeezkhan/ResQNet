@@ -92,6 +92,10 @@ than as delivered.
   and the queue survives the process dying.
 - **Cryptographic identity.** Identity is a key, not an account. Every envelope
   is signed; there is no trust-on-first-use.
+- **End-to-end encrypted directed messages.** SOS and text addressed to one
+  verified peer are encrypted with HPKE (X25519 + HKDF-SHA256 + AES-256-GCM) and
+  authenticated in a form relays can carry but not read. Public SOS broadcasts
+  remain deliberately unencrypted.
 - **Offline triage.** A keyword classifier runs on the handset with no network,
   so a category and severity exist before anything is transmitted.
 - **Explicit delivery states.** `SENT_TO_PEER` and `ACKNOWLEDGED` are never
@@ -117,7 +121,7 @@ sequenceDiagram
     Note over C: Verify origin signature
     C-->>B: Application-level ACK
     B-->>A: Forward ACK to sender
-    Note over A,C: Peer transfer alone does not prove final delivery
+    Note over A,C: Directed messages are HPKE ciphertext; public SOS stays clear
 
 ```
 
@@ -505,6 +509,8 @@ python3 scripts/compare_reports.py /tmp/a.json /tmp/b.json
 ## 14. Security and privacy
 
 Threat model in [docs/security/threat-model.md](docs/security/threat-model.md).
+E2EE overhead measurements are in
+[docs/benchmarks/e2ee.md](docs/benchmarks/e2ee.md).
 
 - **No trust on first use.** Identity is a key. A device you have never met is
   `UNVERIFIED`, not trusted. Keys are exchanged explicitly, out of band, and the
@@ -516,6 +522,16 @@ Threat model in [docs/security/threat-model.md](docs/security/threat-model.md).
   never open, assign or close an incident.
 - **People and devices use different credentials.** A device cannot obtain a
   responder session, and a responder token cannot push device data.
+- **Directed message bodies are end-to-end encrypted.** SOS or text addressed
+  to one verified peer uses HPKE with a recipient key bound to that peer's
+  signing identity by an ECDSA proof. Relays carry `SOS_PROTECTED` /
+  `TEXT_PROTECTED` ciphertext and route on the signed header without decrypting.
+- **Public SOS is explicitly not encrypted.** A broadcast is visible to every
+  device in range and every relay. The composer labels it public and offers the
+  encrypted directed path separately; it never silently downgrades.
+- **No encryption-key substitution.** An HPKE key is accepted only with a proof
+  signed by the announced signing key. A changed key for an existing identity is
+  refused; v1 has no automatic rotation.
 - **Message bodies never leave the mesh.** Synchronisation sends delivery
   metadata only.
 - **The audit trail does not overstate authority.** A gateway-synchronised
@@ -526,9 +542,11 @@ most important: the shared gateway token is a bearer secret, so it is revocable
 by rotation but not attributable, and every device holding it shares one
 identity.
 
-> **Payloads are signed but not encrypted.** Envelope signatures guarantee
-> authenticity and integrity; they do not provide confidentiality. Any device in
-> radio range that receives a frame can read its contents.
+> **Directed payloads are encrypted; public broadcasts are not.** Envelope
+> signatures guarantee authenticity and integrity. A message addressed to one
+> verified peer is also confidential from relays and eavesdroppers. A public SOS
+> broadcast is visible to anyone in range. Envelope metadata (origin,
+> destination, type, timestamps and size) remains visible on both paths.
 
 ---
 
@@ -567,7 +585,15 @@ Stated plainly so they are not discovered by a reviewer.
 
 **Protocol and product**
 
-- **No payload encryption.** See [Security and privacy](#14-security-and-privacy).
+- **Public SOS has no payload confidentiality.** Directed messages are E2EE, but
+  a broadcast is readable by anyone in range. See
+  [Security and privacy](#14-security-and-privacy).
+- **No HPKE key rotation.** A peer that reinstalls and generates a new encryption
+  key is refused until its identity is re-established. There is no user-visible
+  rotation protocol in v1.
+- **Outgoing directed plaintext is stored locally.** Sent bodies are kept in
+  app-private SQLite so the sender can read their history; this is not full
+  local-storage encryption. Incoming ciphertext is decrypted in memory only.
 - **The peer-identity rebinding path is not proven by a challenge-response.**
   Rebinding a known identity to a new radio endpoint relies on the claimant
   presenting a public key already on file. A public key is public, so a device
@@ -591,10 +617,13 @@ Ordered by what would most increase confidence, not by what would look best.
    devices and record the result. This is the single largest gap.
 2. **Challenge-response identity binding.** Close the rebinding limitation
    described above with a link-bound nonce the claimant must sign.
-3. **Payload encryption.** Add confidentiality on top of the existing
-   authenticity.
-4. **Command-centre controls** for incident assignment and manual creation.
-5. **Concurrent-load testing** of the gateway against PostgreSQL.
+3. **HPKE key rotation.** Add a user-visible, proof-bound rotation protocol so a
+   reinstalled peer can be encrypted to without re-establishing identity from
+   scratch.
+4. **Local-storage hardening.** Encrypt or expire the sender's retained
+   plaintext, and evaluate a Keystore-sealed body cache for sent history.
+5. **Command-centre controls** for incident assignment and manual creation.
+6. **Concurrent-load testing** of the gateway against PostgreSQL.
 
 ---
 

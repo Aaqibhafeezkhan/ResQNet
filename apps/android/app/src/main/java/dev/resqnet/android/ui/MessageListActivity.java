@@ -15,11 +15,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import dev.resqnet.android.R;
-import dev.resqnet.android.model.EmergencyPayload;
 import dev.resqnet.android.service.MeshEngine;
 import dev.resqnet.android.service.MeshService;
 import dev.resqnet.mesh.protocol.DeliveryState;
-import dev.resqnet.mesh.protocol.EnvelopeCodec;
+import dev.resqnet.mesh.protocol.MessageType;
 import dev.resqnet.mesh.routing.StoredMessage;
 
 import java.text.SimpleDateFormat;
@@ -164,7 +163,7 @@ abstract class MessageListActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             StoredMessage record = items.get(position);
-            holder.body.setText(decodeBody(record));
+            holder.body.setText(engine.readBody(record).body());
             holder.peer.setText(peerLabel(record));
             holder.state.setText(HomeActivity.stateLabel(activity, record.state()));
             styleStateChip(holder.state, record.state());
@@ -178,15 +177,6 @@ abstract class MessageListActivity extends AppCompatActivity {
             return items.size();
         }
 
-        private String decodeBody(StoredMessage record) {
-            try {
-                var envelope = EnvelopeCodec.decode(record.envelope());
-                return EmergencyPayload.decode(envelope.payload()).body();
-            } catch (Exception e) {
-                return "(this message could not be decoded)";
-            }
-        }
-
         private String peerLabel(StoredMessage record) {
             String origin = record.originDeviceId();
             if (origin != null && origin.equals(engine.deviceId())) {
@@ -197,8 +187,16 @@ abstract class MessageListActivity extends AppCompatActivity {
         }
 
         private String metaLabel(StoredMessage record) {
-            return TIME_FORMAT.format(new Date(record.createdAt()))
+            String label = TIME_FORMAT.format(new Date(record.createdAt()))
                     + " · " + record.priority().name();
+            if (record.type().protectedContent()) {
+                return label + " · E2EE";
+            }
+            if (record.type() == MessageType.SOS || record.type() == MessageType.TEXT) {
+                return label + (record.destinationDeviceId() == null
+                        ? " · public" : " · unencrypted");
+            }
+            return label;
         }
 
         private void styleStateChip(TextView chip, DeliveryState state) {

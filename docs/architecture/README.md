@@ -41,7 +41,7 @@ graph TB
         ADAPTER["NearbyTransport<br/>Google Nearby Connections"]
         ROUTER["MeshRouter<br/>controlled flooding"]
         STORE["MessageStore<br/>SQLite"]
-        KEYS["Android Keystore<br/>EC P-256 identity"]
+        KEYS["Android Keystore<br/>P-256 signing + sealed HPKE"]
         TRIAGE["KeywordTriageClassifier<br/>offline advisory"]
         UI --> SVC
         SVC --> ROUTER
@@ -270,6 +270,14 @@ use, because in an emergency mesh a single spoofed SOS could divert scarce
 responders. Devices you have never met can still tell you a flood is coming —
 they just cannot impersonate the responder you already verified.
 
+Directed messages add a separate X25519 HPKE key. The signing identity proves
+that key in each announcement with a domain-separated ECDSA signature, and a
+changed HPKE key is refused. A message addressed to one verified device carries
+`SOS_PROTECTED` or `TEXT_PROTECTED` and an HPKE/AES-GCM payload bound to the
+signed header; relays never decrypt it. Public SOS broadcasts remain cleartext
+by design. The sender's own directed plaintext is retained in app-private SQLite
+for sent history, while incoming ciphertext is decrypted in memory only.
+
 Full analysis in `docs/security/threat-model.md`.
 
 ## 9. Bounding the damage
@@ -320,7 +328,7 @@ reporting surface that becomes useful the moment some device has connectivity.
 
 | Not included | Why |
 | --- | --- |
-| End-to-end payload encryption | Signatures authenticate; they do not conceal. Claiming encryption we have not independently validated would be worse than not claiming it. |
+| End-to-end encryption of public broadcasts | A broadcast has no single recipient to encrypt to, and people who have not exchanged keys must still receive it. Directed messages are encrypted; public SOS is labelled as public. |
 | Automatic responder dispatch | Advisory classification only. Nothing here decides that a person should be sent anywhere. |
 | Continuous background guarantees | Android does not permit them, and pretending otherwise is a safety problem. |
 | Location by default | Location is user-controlled, per message, and never broadcast implicitly. |

@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -108,6 +109,82 @@ public final class TrustStore {
                 trust == null ? Trust.UNVERIFIED : trust, firstSeen, lastSeen);
     }
 
+    /**
+     * One peer's proof-bound HPKE key.
+     *
+     * <p>Kept beside the signing identity rather than inside it because the
+     * proof is what links the two, and because a peer may legitimately have
+     * announced no encryption key yet. The key id is recomputed on every
+     * construction, so a corrupted row cannot smuggle a different identifier
+     * past the router.
+     */
+    public static final class EncryptionKey {
+        private final String deviceId;
+        private final byte[] publicKey;
+        private final byte[] keyIdBytes;
+        private final String keyId;
+        private final Instant firstSeen;
+        private final Instant lastSeen;
+
+        private EncryptionKey(String deviceId, byte[] publicKey, Instant firstSeen,
+                              Instant lastSeen) {
+            this.deviceId = Objects.requireNonNull(deviceId, "deviceId");
+            if (publicKey == null
+                    || publicKey.length != EncryptionIdentity.PUBLIC_KEY_BYTES) {
+                throw new IllegalArgumentException("HPKE public key must be "
+                        + EncryptionIdentity.PUBLIC_KEY_BYTES + " bytes");
+            }
+            this.publicKey = publicKey.clone();
+            this.keyIdBytes = EncryptionIdentity.keyIdBytes(publicKey);
+            this.keyId = DeviceIdentity.toHex(this.keyIdBytes);
+            this.firstSeen = Objects.requireNonNull(firstSeen, "firstSeen");
+            this.lastSeen = Objects.requireNonNull(lastSeen, "lastSeen");
+        }
+
+        public String deviceId() {
+            return deviceId;
+        }
+
+        public byte[] publicKey() {
+            return publicKey.clone();
+        }
+
+        public String keyId() {
+            return keyId;
+        }
+
+        /** Raw SHA-256 key identifier carried inside a protected payload. */
+        public byte[] keyIdBytes() {
+            return keyIdBytes.clone();
+        }
+
+        public Instant firstSeen() {
+            return firstSeen;
+        }
+
+        public Instant lastSeen() {
+            return lastSeen;
+        }
+
+        @Override
+        public String toString() {
+            return "EncryptionKey{" + DeviceIdentity.shortDeviceId(deviceId)
+                    + " key=" + keyId.substring(0, 12) + "}";
+        }
+    }
+
+    /**
+     * Rebuilds a persisted encryption key.
+     *
+     * <p>The key id is recomputed from the bytes; the caller does not get to
+     * supply it. The trust store only loads a key when the corresponding
+     * signing identity is known and not blocked.
+     */
+    public static EncryptionKey encryptionKeyOf(String deviceId, byte[] publicKey,
+                                                Instant firstSeen, Instant lastSeen) {
+        return new EncryptionKey(deviceId, publicKey, firstSeen, lastSeen);
+    }
+
     /** Persistence hook. The Android app writes entries to SQLite. */
     public interface Persistence {
         void save(Entry entry);
@@ -115,9 +192,23 @@ public final class TrustStore {
         Collection<Entry> loadAll();
 
         void remove(String deviceId);
+
+        /** Persists one proof-bound encryption key. */
+        default void saveEncryptionKey(EncryptionKey key) {
+        }
+
+        /** Loads every previously persisted encryption key. */
+        default Collection<EncryptionKey> loadEncryptionKeys() {
+            return List.of();
+        }
+
+        /** Removes the encryption key associated with a peer. */
+        default void removeEncryptionKey(String deviceId) {
+        }
     }
 
     private final Map<String, Entry> entries = new LinkedHashMap<>();
+    private final Map<String, EncryptionKey> encryptionKeys = new LinkedHashMap<>();
     private final Persistence persistence;
     private final int maxEntries;
 
@@ -132,6 +223,12 @@ public final class TrustStore {
         if (persistence != null) {
             for (Entry e : persistence.loadAll()) {
                 entries.put(e.deviceId(), e);
+            }
+            for (EncryptionKey key : persistence.loadEncryptionKeys()) {
+                Entry peer = entries.get(key.deviceId());
+                if (peer != null && peer.trust() != Trust.BLOCKED) {
+                    encryptionKeys.put(key.deviceId(), key);
+                }
             }
         }
     }
@@ -203,10 +300,86 @@ public final class TrustStore {
     /** Removes a peer entirely, e.g. after a factory reset of the contact list. */
     public synchronized boolean forget(String deviceId) {
         boolean removed = entries.remove(deviceId) != null;
+        encryptionKeys.remove(deviceId);
         if (removed && persistence != null) {
             persistence.remove(deviceId);
+            persistence.removeEncryptionKey(deviceId);
         }
         return removed;
+    }
+
+    /**
+     * Records a proof-bound HPKE key for a known peer.
+     *
+     * <p>Key replacement is a hard error even when the peer is merely
+     * unverified. A changed encryption key on a known signing identity is
+     * indistinguishable from an attacker who captured the announcement and
+     * substituted their own HPKE key; until key rotation has a user-visible
+     * protocol, refusing is the only safe answer.
+     *
+     * @throws GeneralSecurityException when the peer is unknown/blocked or
+     *     already has a different encryption key
+     */
+    public synchronized EncryptionKey rememberEncryptionKey(String deviceId,
+                                                            byte[] publicKey,
+                                                            Instant now)
+            throws GeneralSecurityException {
+        Entry peer = entries.get(deviceId);
+        if (peer == null) {
+            throw new GeneralSecurityException(
+                    "Cannot record an encryption key for an unknown device");
+        }
+        if (peer.trust() == Trust.BLOCKED) {
+            throw new GeneralSecurityException("Cannot record a key for a blocked device");
+        }
+        if (publicKey == null
+                || publicKey.length != EncryptionIdentity.PUBLIC_KEY_BYTES) {
+            throw new GeneralSecurityException("HPKE public key has the wrong length");
+        }
+        Objects.requireNonNull(now, "now");
+        String newKeyId = EncryptionIdentity.keyId(publicKey);
+        EncryptionKey existing = encryptionKeys.get(deviceId);
+        if (existing != null) {
+            if (!existing.keyId().equals(newKeyId)) {
+                throw new GeneralSecurityException(
+                        "Device " + DeviceIdentity.shortDeviceId(deviceId)
+                                + " presented a different encryption key; refusing rotation");
+            }
+            EncryptionKey refreshed = new EncryptionKey(deviceId, publicKey,
+                    existing.firstSeen(), now);
+            encryptionKeys.put(deviceId, refreshed);
+            if (persistence != null) {
+                persistence.saveEncryptionKey(refreshed);
+            }
+            return refreshed;
+        }
+        EncryptionKey key = new EncryptionKey(deviceId, publicKey, now, now);
+        encryptionKeys.put(deviceId, key);
+        if (persistence != null) {
+            persistence.saveEncryptionKey(key);
+        }
+        return key;
+    }
+
+    /**
+     * Resolves a peer's encryption key.
+     *
+     * <p>Returns empty for unknown and blocked peers, matching
+     * {@link #resolve(String)}: neither is a valid encryption target.
+     */
+    public synchronized Optional<EncryptionKey> encryptionKey(String deviceId) {
+        Entry peer = entries.get(deviceId);
+        if (peer == null || peer.trust() == Trust.BLOCKED) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(encryptionKeys.get(deviceId));
+    }
+
+    /** True when the peer is verified and has a proof-bound encryption key. */
+    public synchronized boolean canEncryptTo(String deviceId) {
+        Entry peer = entries.get(deviceId);
+        return peer != null && peer.trust() == Trust.VERIFIED
+                && encryptionKeys.containsKey(deviceId);
     }
 
     /**

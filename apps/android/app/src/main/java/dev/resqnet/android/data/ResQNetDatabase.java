@@ -38,7 +38,9 @@ import dev.resqnet.mesh.protocol.DeliveryState;
 public final class ResQNetDatabase extends SQLiteOpenHelper {
 
     /** Schema version. Bumping this requires a migration, never a destructive drop. */
-    public static final int SCHEMA_VERSION = 1;
+    public static final int SCHEMA_VERSION = 2;
+
+    public static final String TABLE_PEER_ENCRYPTION_KEYS = "peer_encryption_keys";
 
     public static final String TABLE_MESSAGES = "messages";
     public static final String TABLE_PEERS = "peers";
@@ -115,7 +117,8 @@ public final class ResQNetDatabase extends SQLiteOpenHelper {
                 + "last_detail TEXT NOT NULL DEFAULT '',"
                 + "triage_category TEXT,"
                 + "triage_confidence REAL,"
-                + "read INTEGER NOT NULL DEFAULT 0)");
+                + "read INTEGER NOT NULL DEFAULT 0,"
+                + "local_body BLOB)");
 
         db.execSQL("CREATE INDEX idx_messages_state ON " + TABLE_MESSAGES + " (state)");
         db.execSQL("CREATE INDEX idx_messages_expires ON " + TABLE_MESSAGES + " (expires_at)");
@@ -131,6 +134,14 @@ public final class ResQNetDatabase extends SQLiteOpenHelper {
                 + "first_seen INTEGER NOT NULL,"
                 + "last_seen INTEGER NOT NULL,"
                 + "endpoint_hint TEXT)");
+
+        db.execSQL("CREATE TABLE " + TABLE_PEER_ENCRYPTION_KEYS + " ("
+                + "device_id TEXT PRIMARY KEY NOT NULL,"
+                + "public_key BLOB NOT NULL,"
+                + "first_seen INTEGER NOT NULL,"
+                + "last_seen INTEGER NOT NULL,"
+                + "FOREIGN KEY (device_id) REFERENCES " + TABLE_PEERS
+                + " (device_id) ON DELETE CASCADE)");
 
         db.execSQL("CREATE TABLE " + TABLE_DELIVERIES + " ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -149,11 +160,23 @@ public final class ResQNetDatabase extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Version 1 is the first release. Future migrations are added here as
-        // explicit ALTER statements; a destructive drop is never acceptable
-        // because it would discard a queue of unsent emergency messages.
-        throw new IllegalStateException(
-                "No migration defined from schema " + oldVersion + " to " + newVersion);
+        // Migrations are explicit ALTER/CREATE statements. A destructive drop is
+        // never acceptable here: it would discard a queue of unsent emergency
+        // messages and the trust decisions a user made in person.
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE " + TABLE_MESSAGES + " ADD COLUMN local_body BLOB");
+            db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_PEER_ENCRYPTION_KEYS + " ("
+                    + "device_id TEXT PRIMARY KEY NOT NULL,"
+                    + "public_key BLOB NOT NULL,"
+                    + "first_seen INTEGER NOT NULL,"
+                    + "last_seen INTEGER NOT NULL,"
+                    + "FOREIGN KEY (device_id) REFERENCES " + TABLE_PEERS
+                    + " (device_id) ON DELETE CASCADE)");
+        }
+        if (newVersion > SCHEMA_VERSION) {
+            throw new IllegalStateException(
+                    "No migration defined from schema " + oldVersion + " to " + newVersion);
+        }
     }
 
     // ------------------------------------------------------------------ peers
@@ -174,8 +197,17 @@ public final class ResQNetDatabase extends SQLiteOpenHelper {
         values.put("short_code", shortCode(entry.keyFingerprint()));
         values.put("first_seen", entry.firstSeen().toEpochMilli());
         values.put("last_seen", entry.lastSeen().toEpochMilli());
-        getWritableDatabase().insertWithOnConflict(TABLE_PEERS, null, values,
-                SQLiteDatabase.CONFLICT_REPLACE);
+        SQLiteDatabase db = getWritableDatabase();
+        // INSERT OR REPLACE deletes the existing row first, and the encryption
+        // key table cascades from that delete: verifying a peer would silently
+        // discard the HPKE key it had just announced. Insert-if-absent and
+        // update otherwise keeps the row identity stable.
+        long inserted = db.insertWithOnConflict(TABLE_PEERS, null, values,
+                SQLiteDatabase.CONFLICT_IGNORE);
+        if (inserted == -1L) {
+            db.update(TABLE_PEERS, values, "device_id = ?",
+                    new String[] { entry.deviceId() });
+        }
     }
 
     /** Loads every known peer as a trust store entry. */
@@ -205,7 +237,58 @@ public final class ResQNetDatabase extends SQLiteOpenHelper {
     }
 
     public void deletePeer(String deviceId) {
-        getWritableDatabase().delete(TABLE_PEERS, "device_id = ?", new String[] { deviceId });
+        SQLiteDatabase db = getWritableDatabase();
+        // The encryption table has a cascading foreign key, but deleting it
+        // explicitly keeps the invariant true even if a future schema change
+        // drops that constraint.
+        db.delete(TABLE_PEER_ENCRYPTION_KEYS, "device_id = ?", new String[] { deviceId });
+        db.delete(TABLE_PEERS, "device_id = ?", new String[] { deviceId });
+    }
+
+    // ---------------------------------------------------- peer encryption keys
+
+    /** Persists the proof-bound HPKE key announced by a known peer. */
+    public void saveEncryptionKey(TrustStore.EncryptionKey key) {
+        ContentValues values = new ContentValues();
+        values.put("device_id", key.deviceId());
+        values.put("public_key", key.publicKey());
+        values.put("first_seen", key.firstSeen().toEpochMilli());
+        values.put("last_seen", key.lastSeen().toEpochMilli());
+        getWritableDatabase().insertWithOnConflict(TABLE_PEER_ENCRYPTION_KEYS, null, values,
+                SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    /** Loads every proof-bound peer encryption key. */
+    public List<TrustStore.EncryptionKey> loadEncryptionKeys() {
+        List<TrustStore.EncryptionKey> keys = new ArrayList<>();
+        try (Cursor cursor = getReadableDatabase().query(TABLE_PEER_ENCRYPTION_KEYS, null,
+                null, null, null, null, "last_seen DESC")) {
+            while (cursor.moveToNext()) {
+                try {
+                    byte[] publicKey = cursor.getBlob(
+                            cursor.getColumnIndexOrThrow("public_key"));
+                    if (publicKey == null || publicKey.length != 32) {
+                        continue;
+                    }
+                    keys.add(TrustStore.encryptionKeyOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow("device_id")),
+                            publicKey,
+                            Instant.ofEpochMilli(cursor.getLong(
+                                    cursor.getColumnIndexOrThrow("first_seen"))),
+                            Instant.ofEpochMilli(cursor.getLong(
+                                    cursor.getColumnIndexOrThrow("last_seen")))));
+                } catch (IllegalArgumentException e) {
+                    android.util.Log.w("ResQNetDatabase",
+                            "Ignored an unreadable peer encryption key", e);
+                }
+            }
+        }
+        return keys;
+    }
+
+    public void deleteEncryptionKey(String deviceId) {
+        getWritableDatabase().delete(TABLE_PEER_ENCRYPTION_KEYS, "device_id = ?",
+                new String[] { deviceId });
     }
 
     /** Number of verified peers, shown on the nearby devices screen. */
@@ -306,6 +389,34 @@ public final class ResQNetDatabase extends SQLiteOpenHelper {
     }
 
     // ----------------------------------------------------------------- triage
+
+    /**
+     * Stores the sender's plaintext for a locally composed protected message.
+     *
+     * <p>This is a local convenience, not a confidentiality layer. An incoming
+     * protected message is stored only as ciphertext and decrypted in memory
+     * when the user opens it. An outgoing message has to keep its own text
+     * somewhere because the sender cannot decrypt their own HPKE ciphertext;
+     * the value is therefore plaintext in app-private SQLite. See the threat
+     * model for the explicit boundary.
+     */
+    public void saveLocalBody(String messageId, byte[] encodedPayload) {
+        ContentValues values = new ContentValues();
+        values.put("local_body", encodedPayload);
+        getWritableDatabase().update(TABLE_MESSAGES, values, "message_id = ?",
+                new String[] { messageId });
+    }
+
+    /** Reads the sender's locally retained plaintext, if any. */
+    @Nullable
+    public byte[] loadLocalBody(String messageId) {
+        try (Cursor cursor = getReadableDatabase().query(TABLE_MESSAGES,
+                new String[] { "local_body" }, "message_id = ?",
+                new String[] { messageId }, null, null, null)) {
+            return cursor.moveToFirst() && !cursor.isNull(0)
+                    ? cursor.getBlob(0) : null;
+        }
+    }
 
     /** Records the advisory classification shown alongside a message. */
     public void saveTriage(String messageId, String category, double confidence) {

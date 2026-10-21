@@ -73,8 +73,10 @@ Out of scope:
 - Vulnerabilities in third-party dependencies that are already publicly known
   and have no ResQNet-specific impact. Report those upstream.
 - Social engineering of responders, and physical attacks on devices.
-- The documented absence of payload confidentiality. ResQNet does not claim to
-  encrypt message contents; see the
+- The documented limits of payload confidentiality: public SOS broadcasts are
+  readable by anyone in range, envelope metadata is visible to relays, and the
+  sender's own directed plaintext is retained locally for sent history. Directed
+  messages themselves are end-to-end encrypted; see the
   [threat model](docs/security/threat-model.md).
 
 ## Known limitations
@@ -82,7 +84,12 @@ Out of scope:
 These are documented design limitations, not secrets. Do not report them as new
 vulnerabilities, but do report a concrete way to make one worse than described:
 
-- **No payload encryption.** Anyone in radio range can read message contents.
+- **Public broadcast encryption.** Directed messages are E2EE, but a public SOS
+  is readable by anyone in range and should be treated as public.
+- **No HPKE key rotation.** A reinstalled peer with a new encryption key is
+  refused until its identity is re-established.
+- **Local sent-history plaintext.** Outgoing directed bodies are kept in
+  app-private SQLite; this is not full local-storage encryption.
 - **Identity binding depends on the user.** A device identity becomes trusted
   only after a human compares safety numbers. The trust model and its residual
   risks are described in [docs/security/threat-model.md](docs/security/threat-model.md).

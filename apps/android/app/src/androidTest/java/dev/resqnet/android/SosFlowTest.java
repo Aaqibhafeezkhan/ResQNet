@@ -166,6 +166,37 @@ public class SosFlowTest {
                 codeBefore, TestSupport.engine().shortCode());
     }
 
+    /** A directed send with no verified peer must fail closed, never go public. */
+    @Test
+    public void directSendWithoutAVerifiedPeerSendsNothing() {
+        String body = TestSupport.uniqueBody("no-verified-peer");
+
+        ActivityScenario<SosComposerActivity> scenario =
+                ActivityScenario.launch(SosComposerActivity.class);
+        // The radio is partly clipped on smaller emulator widths; invoking it on
+        // the activity still exercises the same listener the user's tap reaches.
+        scenario.onActivity(activity ->
+                activity.findViewById(R.id.scopeDirect).performClick());
+        onView(withId(R.id.messageBody))
+                .perform(replaceText(body), closeSoftKeyboard());
+        onView(withId(R.id.sendButton)).perform(click());
+
+        // There is deliberately no dialog to confirm: the composer refuses to
+        // invent a destination and must not fall back to the public broadcast.
+        eventually("the refusal snackbar", 5_000L, () -> {
+            try {
+                onView(withText(R.string.sos_no_verified_peers)).check(matches(isDisplayed()));
+                return true;
+            } catch (RuntimeException e) {
+                return false;
+            }
+        });
+        assertEquals("no message may be queued when encryption is unavailable",
+                0, TestSupport.engine().store().recent(200).stream()
+                        .filter(message -> body.equals(TestSupport.decodeBody(message)))
+                        .count());
+    }
+
     /** Home must still reach the inbox after a message exists. */
     @Test
     public void homeStillNavigatesToAnInboxThatContainsTheMessage() {

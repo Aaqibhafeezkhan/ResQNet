@@ -74,6 +74,7 @@ public final class SettingsActivity extends AppCompatActivity {
     private void resetIdentity() {
         try {
             KeystoreIdentity.destroy();
+            dev.resqnet.android.identity.KeystoreEncryptionIdentity.destroy(this);
         } catch (GeneralSecurityException | java.io.IOException e) {
             Toast.makeText(this, String.valueOf(e.getMessage()), Toast.LENGTH_LONG).show();
             return;

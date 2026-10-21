@@ -26,7 +26,14 @@ import dev.resqnet.mesh.protocol.RejectReason;
  *   label               int16 length + UTF-8
  *   publicKeyBase64     int16 length + ASCII
  *   shortCode           int16 length + ASCII  (8 chars of the fingerprint)
+ *   encryptionPublicKeyBase64  int16 length + ASCII  (optional, appended)
+ *   encryptionKeyProofBase64   int16 length + ASCII  (optional, appended)
  * </pre>
+ *
+ * <p>The encryption fields are appended as a pair so an older client that
+ * ignores everything after {@code shortCode} still reads the signing key
+ * correctly. The proof is signed by that signing key, binding the HPKE key to
+ * the identity without making the claim itself signed.
  */
 public final class IdentityAnnouncement {
 
@@ -42,25 +49,59 @@ public final class IdentityAnnouncement {
     private final String label;
     private final String publicKeyBase64;
     private final String shortCode;
+    private final String encryptionPublicKeyBase64;
+    private final String encryptionKeyProofBase64;
 
-    private IdentityAnnouncement(String label, String publicKeyBase64, String shortCode) {
+    private IdentityAnnouncement(String label, String publicKeyBase64, String shortCode,
+                                 String encryptionPublicKeyBase64,
+                                 String encryptionKeyProofBase64) {
         this.label = label;
         this.publicKeyBase64 = publicKeyBase64;
         this.shortCode = shortCode;
+        this.encryptionPublicKeyBase64 = encryptionPublicKeyBase64 == null
+                ? "" : encryptionPublicKeyBase64;
+        this.encryptionKeyProofBase64 = encryptionKeyProofBase64 == null
+                ? "" : encryptionKeyProofBase64;
     }
 
-    /** Builds an announcement for a locally held identity. */
+    /** Builds an announcement for a locally held identity without encryption. */
     public static IdentityAnnouncement of(dev.resqnet.mesh.crypto.SigningIdentity identity) {
         String fingerprint = identity.keyFingerprint();
         return new IdentityAnnouncement(identity.displayName(),
-                identity.publicKeyBase64(), shortCode(fingerprint));
+                identity.publicKeyBase64(), shortCode(fingerprint), "", "");
+    }
+
+    /**
+     * Builds an announcement that binds {@code encryption} to the signing
+     * identity with a proof only that identity can produce.
+     */
+    public static IdentityAnnouncement of(dev.resqnet.mesh.crypto.SigningIdentity identity,
+                                          dev.resqnet.mesh.crypto.EncryptionIdentity encryption)
+            throws java.security.GeneralSecurityException {
+        Objects.requireNonNull(encryption, "encryption");
+        byte[] proof = dev.resqnet.mesh.crypto.EncryptionKeyBinding.prove(identity,
+                encryption.publicKeyBytes());
+        return new IdentityAnnouncement(identity.displayName(),
+                identity.publicKeyBase64(), shortCode(identity.keyFingerprint()),
+                java.util.Base64.getEncoder().encodeToString(encryption.publicKeyBytes()),
+                java.util.Base64.getEncoder().encodeToString(proof));
     }
 
     /** Builds an announcement from raw parts, for the decode path and tests. */
     public static IdentityAnnouncement of(String label, String publicKeyBase64,
                                           String fullFingerprint) {
         return new IdentityAnnouncement(Objects.requireNonNullElse(label, "unknown"),
-                Objects.requireNonNull(publicKeyBase64), shortCode(fullFingerprint));
+                Objects.requireNonNull(publicKeyBase64), shortCode(fullFingerprint), "", "");
+    }
+
+    /** Builds an announcement with an encryption-key binding, for tests. */
+    public static IdentityAnnouncement of(String label, String publicKeyBase64,
+                                          String fullFingerprint,
+                                          String encryptionPublicKeyBase64,
+                                          String encryptionKeyProofBase64) {
+        return new IdentityAnnouncement(Objects.requireNonNullElse(label, "unknown"),
+                Objects.requireNonNull(publicKeyBase64), shortCode(fullFingerprint),
+                encryptionPublicKeyBase64, encryptionKeyProofBase64);
     }
 
     /** First eight characters of the fingerprint, grouped for legibility. */
@@ -84,18 +125,40 @@ public final class IdentityAnnouncement {
         return shortCode;
     }
 
+    /** Base64 raw X25519 public key, or empty when this claim carries none. */
+    public String encryptionPublicKeyBase64() {
+        return encryptionPublicKeyBase64;
+    }
+
+    /** Base64 signing-key proof over the HPKE key, or empty when absent. */
+    public String encryptionKeyProofBase64() {
+        return encryptionKeyProofBase64;
+    }
+
+    /** True when the claim carries an encryption key and its proof. */
+    public boolean hasEncryptionKey() {
+        return !encryptionPublicKeyBase64.isEmpty() && !encryptionKeyProofBase64.isEmpty();
+    }
+
     public byte[] encode() {
         byte[] labelBytes = label.getBytes(StandardCharsets.UTF_8);
         byte[] keyBytes = publicKeyBase64.getBytes(StandardCharsets.US_ASCII);
         byte[] codeBytes = shortCode.getBytes(StandardCharsets.US_ASCII);
+        byte[] encBytes = encryptionPublicKeyBase64.getBytes(StandardCharsets.US_ASCII);
+        byte[] proofBytes = encryptionKeyProofBase64.getBytes(StandardCharsets.US_ASCII);
+        int tail = hasEncryptionKey() ? 2 + encBytes.length + 2 + proofBytes.length : 0;
         byte[] out = new byte[4 + 2 + labelBytes.length + 2 + keyBytes.length
-                + 2 + codeBytes.length];
+                + 2 + codeBytes.length + tail];
         int p = 0;
         System.arraycopy(MAGIC, 0, out, p, MAGIC.length);
         p += MAGIC.length;
         p = putShort(out, p, labelBytes, labelBytes);
         p = putShort(out, p, keyBytes, keyBytes);
-        putShort(out, p, codeBytes, codeBytes);
+        p = putShort(out, p, codeBytes, codeBytes);
+        if (hasEncryptionKey()) {
+            p = putShort(out, p, encBytes, encBytes);
+            putShort(out, p, proofBytes, proofBytes);
+        }
         return out;
     }
 
@@ -121,10 +184,29 @@ public final class IdentityAnnouncement {
         byte[] key = readShort(data, p, "publicKey");
         p += 2 + key.length;
         byte[] code = readShort(data, p, "shortCode");
+        p += 2 + code.length;
+        String encryptionKey = "";
+        String encryptionProof = "";
+        if (p < data.length) {
+            byte[] enc = readShort(data, p, "encryptionPublicKey");
+            p += 2 + enc.length;
+            byte[] proof = readShort(data, p, "encryptionKeyProof");
+            p += 2 + proof.length;
+            if (p != data.length) {
+                throw new IllegalArgumentException("Identity payload has trailing bytes");
+            }
+            encryptionKey = new String(enc, StandardCharsets.US_ASCII);
+            encryptionProof = new String(proof, StandardCharsets.US_ASCII);
+            if (encryptionKey.isEmpty() || encryptionProof.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Encryption key fields must both be present");
+            }
+        }
         return new IdentityAnnouncement(
                 new String(label, StandardCharsets.UTF_8),
                 new String(key, StandardCharsets.US_ASCII),
-                new String(code, StandardCharsets.US_ASCII));
+                new String(code, StandardCharsets.US_ASCII),
+                encryptionKey, encryptionProof);
     }
 
     /** True when the payload at least looks like an identity announcement. */

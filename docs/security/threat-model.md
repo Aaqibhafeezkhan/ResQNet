@@ -19,17 +19,68 @@ Ordered by how much damage their compromise would cause.
 | A2 | Authenticity of a device identity | Without it, any phone can claim to be a verified responder |
 | A3 | Availability of the mesh | A dead battery during a flood is a death |
 | A4 | Integrity of responder actions | An audit trail that can be rewritten is worthless |
-| A5 | Confidentiality of location | Being located can endanger people, especially survivors |
+| A5 | Confidentiality of directed messages and location | Being located, or having a private update read, can endanger people, especially survivors |
 | A6 | Availability of the coordination backend | Affects situational awareness, not the emergency network |
 
-Note what is **not** an asset: the content of ordinary messages. ResQNet does not
-claim confidentiality and does not pretend to provide it.
+Directed SOS and text messages are end-to-end encrypted between the sender and
+the verified recipient (measured overhead:
+[docs/benchmarks/e2ee.md](../benchmarks/e2ee.md)). Public SOS broadcasts remain deliberately unencrypted:
+they are addressed to everyone in range and must stay usable by people who have
+not exchanged keys. The two paths are distinct message types, and the client
+never silently falls back from an encrypted send to a public one.
 
 ## 2. Adversaries
 
 ### D1 — Opportunistic eavesdropper within radio range
-Has a phone, no special access, can see broadcast frames. May capture and replay
-bytes.
+Has a phone, no special access, can see every frame the mesh carries. Can read
+public broadcasts and all envelope metadata (origin, destination, timestamps,
+type, size), but not the plaintext of a correctly encrypted directed message. May
+capture and replay bytes.
+
+### D2 — Malicious participant
+Has joined the mesh legitimately, has been given a key, and then abuses the
+protocol: floods, replays, or forwards selectively to make a victim believe a
+message was delivered when it was not.
+
+### D3 — Impersonator
+Wants to send messages as a verified responder or as a specific pers# Threat Model
+
+ResQNet is safety-adjacent software. A design flaw here does not merely leak
+data; it can misdirect a rescue. This document states what the system defends
+against, what it deliberately does not, and where the residual risk sits.
+
+Scope: the mesh protocol and routing engine (`packages/mesh-core`), the Android
+transport adapter, and the coordination gateway.
+
+---
+
+## 1. Assets
+
+Ordered by how much damage their compromise would cause.
+
+| # | Asset | Why it matters |
+| --- | --- | --- |
+| A1 | Integrity of an SOS | A forged or altered rescue request sends scarce responders to the wrong place |
+| A2 | Authenticity of a device identity | Without it, any phone can claim to be a verified responder |
+| A3 | Availability of the mesh | A dead battery during a flood is a death |
+| A4 | Integrity of responder actions | An audit trail that can be rewritten is worthless |
+| A5 | Confidentiality of directed messages and location | Being located, or having a private update read, can endanger people, especially survivors |
+| A6 | Availability of the coordination backend | Affects situational awareness, not the emergency network |
+
+Directed SOS and text messages are end-to-end encrypted between the sender and
+the verified recipient (measured overhead:
+[docs/benchmarks/e2ee.md](../benchmarks/e2ee.md)). Public SOS broadcasts remain deliberately unencrypted:
+they are addressed to everyone in range and must stay usable by people who have
+not exchanged keys. The two paths are distinct message types, and the client
+never silently falls back from an encrypted send to a public one.
+
+## 2. Adversaries
+
+### D1 — Opportunistic eavesdropper within radio range
+Has a phone, no special access, can see every frame the mesh carries. Can read
+public broadcasts and all envelope metadata (origin, destination, timestamps,
+type, size), but not the plaintext of a correctly encrypted directed message. May
+capture and replay bytes.
 
 ### D2 — Malicious participant
 Has joined the mesh legitimately, has been given a key, and then abuses the
@@ -59,8 +110,9 @@ graph TB
     subgraph device["This device"]
         V["Validation pipeline<br/>decryptless verification"]
         T["TrustStore<br/>user-confirmed keys"]
-        S["MessageStore<br/>durable queue"]
-        K["Keystore<br/>private key"]
+        E["HPKE<br/>directed content"]
+        S["MessageStore<br/>ciphertext queue"]
+        K["Keystore<br/>signing key + sealed HPKE keyset"]
     end
     subgraph peer["Semi-trusted peers"]
         P1["Unverified key holder"]
@@ -74,7 +126,9 @@ graph TB
     R -->|"every frame crosses here"| V
     V --> T
     V --> S
-    K -->|"never leaves"| V
+    K -->|"signing key never leaves"| V
+    E -->|"decrypts only for this device"| V
+    V -->|"local plaintext cache"| E
     P1 -.->|"cannot sign as anyone"| V
     P2 -.->|"authenticated, not authorised"| V
     GW -->|"role decided server-side"| ADM
@@ -163,22 +217,33 @@ destination's key and the signature must verify. A message is only ever shown as
 `AcknowledgementTest.relayDoesNotClaimDelivery`.
 
 ### T8 — Stolen device keys (A2) · D4
-*A lost handset yields a usable identity.*
+*A lost handset yields a usable identity or decryption capability.*
 
-**Mitigation.** Keys live in the Android Keystore where the hardware permits,
-bound to the device and non-exportable on many devices. Beyond that: users can
-revoke a peer on any device, and a revoked key is refused everywhere the trust
-store is loaded. Key theft from a physical device is **not** fully mitigated —
-see Residual risks.
+**Mitigation.** The signing key lives in the Android Keystore where the hardware
+permits, bound to the device and non-exportable on many devices. The X25519 HPKE
+private keyset cannot be held in the platform Keystore, so it is sealed with an
+AES-256-GCM Keystore wrapping key before it is written to app-private
+preferences; an unseal failure is fatal and never regenerates silently. While
+the app is running the unwrapped HPKE keys exist in process memory. Users can
+revoke a peer, and a revoked key is refused everywhere the trust store is
+loaded. Key theft from a physical device is **not** fully mitigated — see
+Residual risks.
 
-### T9 — Location exposure (A5) · D1, D5
+### T9 — Location and directed-content exposure (A5) · D1, D5
 *Precise location of a survivor leaks to the network or an unknown peer.*
 
-**Mitigation.** Location is never transmitted implicitly. It is user-controlled,
-per message, coarse by default, and omitted entirely unless the sender attaches
-it. The protocol has no location field; location rides inside an encrypted-by-
-transport payload the sender chose to send. The system makes no claim of
-end-to-end confidentiality for that payload.
+**Mitigation, directed messages.** Location is never transmitted implicitly. It
+is user-controlled, per message, coarse by default, and omitted entirely unless
+the sender attaches it. For a directed message the payload — body and optional
+location — is encrypted with HPKE to the verified recipient's X25519 key and
+authenticated with AES-256-GCM. Relays carry an opaque `SOS_PROTECTED` or
+`TEXT_PROTECTED` payload and cannot decrypt it. The envelope header remains
+visible, so relays learn who is talking to whom, when, and roughly how much.
+
+**Risk accepted, public broadcasts.** `SOS` and `TEXT` without a destination are
+the public path. They are not encrypted, and no UI string claims otherwise. A
+user who needs privacy must select a verified device; if no verified peer with
+an encryption key exists, the composer refuses rather than falling back.
 
 ### T10 — Backend compromise (A6, A4) · D6
 *An insider rewrites responder audit records.*
@@ -192,9 +257,9 @@ record; only an administrative export is possible.
 
 **Mitigation.** Announcements carry no authority. They produce a prompt in the
 owner's UI, showing an eight-character code. Only a human comparison populates
-the trust store. Because the device id is a hash of the key, an announcement for
-a known id necessarily carries that exact key, so substitution is structurally
-impossible.
+the trust store. Because the device id is a hash of the signing key, an
+announcement for a known id necessarily carries that exact signing key, so
+signing-key substitution is structurally impossible.
 
 **Tests.** `SecurityTest.unsignedIdentityClaimGrantsNothing`,
 `SecurityTest.deviceIdIsBoundToItsKey`.
@@ -229,6 +294,47 @@ blocking and concurrent disconnect through the engine and transport on an
 emulator with an in-process byte pipe. These tests do not exercise physical
 radio delivery.
 
+### T13 — HPKE key substitution (A5) · D1, D3
+*An attacker captures an identity announcement and appends their own encryption
+key, hoping the sender will encrypt to the attacker.*
+
+**Mitigation.** The HPKE key travels with an ECDSA proof made by the announced
+signing key over a domain-separated, length-prefixed encoding of both public
+keys (`ResQNet-EncryptionKeyBinding-v1`). The client verifies that proof before
+storing the key. A changed HPKE key for an identity that already has one is a
+hard refusal, not a silent rotation. Protected sends require the recipient to be
+`VERIFIED`, so an unverified announcement cannot be an encryption target.
+
+**Tests.** `EncryptionKeyBindingTest`, `TrustStoreEncryptionKeyTest`,
+`MeshE2eeTest.refusesUnverifiedRecipient`,
+`TrustStoreEncryptionKeyTest.refusesKeyRotation`.
+
+### T14 — Ciphertext tampering or envelope rebinding (A1, A5) · D2
+*A relay rewrites the destination or type, or flips ciphertext bytes, to change
+where or how a message is interpreted.*
+
+**Mitigation.** The HPKE associated data covers the canonical signed header with
+an empty payload, the protected-payload version and suite, the recipient key id,
+and explicit lengths. The envelope signature still covers the final header and
+ciphertext. A relay can decrement the hop counters — as it must — but any
+content-affecting edit fails either the signature or the AEAD tag. The client
+never displays unauthenticated ciphertext.
+
+**Tests.** `ProtectedPayloadTest.associatedDataBindsHeader`,
+`MeshE2eeTest.editedHeaderFailsAuthentication`.
+
+### T15 — Local plaintext at rest (A5) · D4
+*Someone with the database file reads a message the sender wrote.*
+
+**Mitigation and explicit boundary.** Incoming directed messages are stored as
+ciphertext and decrypted in memory for display. The HPKE private keyset is
+sealed with a Keystore AES-GCM key. However, the sender's own outgoing directed
+plaintext is retained in an app-private SQLite `local_body` column, unencrypted,
+so the sender can read their sent history. This is not full local-storage
+encryption. An attacker with app-private storage access, a rooted device, or an
+unlocked handset can read those sent bodies. The boundary is documented rather
+than hidden.
+
 ## 5. Residual risks
 
 Stated plainly, because a threat model that claims completeness is not a threat
@@ -237,7 +343,11 @@ model.
 | Risk | Why it remains | Mitigation in practice |
 | --- | --- | --- |
 | R1 — Physical key extraction | A rooted device or an unlocked bootloader can defeat the Keystore | Revocation; short message lifetimes limit the window |
-| R2 — No payload confidentiality | Signatures authenticate, they do not encrypt | Documented explicitly; payload encryption is a roadmap item, not a claim |
+| R2 — Public traffic is readable | Broadcast SOS/text is intentionally unencrypted and can be read by anyone in range | The UI labels it public and keeps encrypted directed sends separate; there is no silent downgrade |
+| R2a — Metadata is visible | Relays must route on origin, destination, type, timestamps and size | Accepted; the mesh does not claim traffic-analysis resistance |
+| R2b — Sent plaintext is stored locally | The sender's own directed bodies are kept in app-private SQLite so sent history remains readable | Documented explicitly; not full local-storage encryption. Incoming ciphertext is decrypted in memory only |
+| R2c — No HPKE key rotation | A changed HPKE key is refused, so a reinstalled peer cannot be encrypted to until its identity is re-established | Deliberate v1 trade-off; rotation needs a user-visible protocol |
+| R2d — HPKE key in process memory | Android Keystore cannot perform X25519 HPKE | The keyset is sealed at rest; runtime extraction requires code execution inside the app |
 | R3 — Global eclipse attack | A radio-level attacker could jam discovery | Requires spectrum access beyond the threat scope of a single app |
 | R4 — First-contact trust is unavailable | Devices that have never met cannot authenticate each other, so traffic between them is refused | Deliberate. Identification is an in-person act; this is the honest trade |
 | R5 — Classification errors | The offline classifier can be wrong | Confidence is reported, results are advisory, manual override is always available |
@@ -256,3 +366,5 @@ See `SECURITY.md` at the repository root.
   certification is claimed or implied.
 - **Not an anonymity system.** Traffic analysis defeats any claim in that
   direction, and none is made.
+- **Not full local-storage encryption.** Outgoing directed bodies are retained
+  in plaintext inside app-private SQLite for the sender's own history.

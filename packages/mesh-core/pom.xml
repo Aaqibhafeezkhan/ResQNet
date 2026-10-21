@@ -25,6 +25,15 @@
   </description>
 
   <dependencies>
+    <!--
+      HPKE only: Tink supplies the vetted X25519 HKDF-SHA256 AES-256-GCM
+      implementation and keyset parsing. ResQNet never implements a primitive or
+      samples a nonce itself.
+    -->
+    <dependency>
+      <groupId>com.google.crypto.tink</groupId>
+      <artifactId>tink</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

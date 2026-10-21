@@ -11,8 +11,15 @@ public final class ProtocolVersion {
     /** Wire protocol family. Breaking changes bump this number. */
     public static final int MAJOR = 1;
 
-    /** Additive, backwards compatible revision within {@link #MAJOR}. */
-    public static final int MINOR = 0;
+    /**
+     * Additive, backwards compatible revision within {@link #MAJOR}.
+     *
+     * <p>1 adds optional HPKE keys to identity announcements and the
+     * {@code SOS_PROTECTED}/{@code TEXT_PROTECTED} wire types. Mixed-version
+     * meshes still route the original message types; an older client rejects
+     * the encrypted types rather than downgrading them to plaintext.
+     */
+    public static final int MINOR = 1;
 
     /** Current version stamped onto freshly created envelopes. */
     public static final int CURRENT = (MAJOR << 16) | MINOR;

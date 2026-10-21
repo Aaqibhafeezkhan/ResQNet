@@ -135,6 +135,11 @@ dependencies {
     // lives in mesh-core.
     implementation 'com.google.android.gms:play-services-nearby:19.5.1'
 
+    // HPKE for directed messages. tink-android keeps the implementation
+    // Android-compatible and ships its own protobuf-lite classes; mesh-core's
+    // Maven build uses the pure-Java artifact with the same API.
+    implementation 'com.google.crypto.tink:tink-android:1.24.0'
+
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 
     testImplementation 'junit:junit:4.13.2'
