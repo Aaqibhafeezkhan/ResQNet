@@ -2,7 +2,6 @@ package dev.resqnet.android;
 
 import static dev.resqnet.android.TestSupport.engine;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -25,21 +24,11 @@ import dev.resqnet.mesh.routing.MeshTransport;
 import dev.resqnet.mesh.routing.RouterConfig;
 
 /**
- * Reconnection under a rotated Nearby endpoint id.
+ * A public identity announcement cannot rebind a Nearby endpoint.
  *
  * <p>Nearby Connections hands out a fresh endpoint id every time a link is
- * re-established. The device behind it has not changed, only the radio handle,
- * so the engine must re-point its binding on every claim, not only on the
- * first one.
- *
- * <p>What went wrong: {@code MeshEngine.handleIdentityAnnouncement} returned
- * early as soon as it already held the device's key, which is true from the
- * first meeting onwards. The call that would have rebound the new endpoint
- * therefore never ran. Nothing appeared wrong: the peer stayed listed, the
- * trust store still had the key, and the diagnostics screen still showed it.
- * The only thing missing was the mapping from the device id to a live radio
- * handle, so every directed message addressed to that peer went to an endpoint
- * that no longer existed.
+ * re-established. An announcement can be relayed or replayed by anyone, so a
+ * fresh link must prove possession of its claimed identity's private key.
  */
 @RunWith(AndroidJUnit4.class)
 public class IdentityRebindingTest {
@@ -99,15 +88,15 @@ public class IdentityRebindingTest {
     }
 
     @Test
-    public void rebindsAKnownPeerWhenItReturnsUnderANewEndpointId() throws Exception {
+    public void publicClaimAloneCannotRebindAKnownPeer() throws Exception {
         PeerPhone phone = new PeerPhone();
         String deviceId = phone.identity.deviceId();
         byte[] claim = phone.announcement();
 
         assertTrue("the first claim must be accepted",
                 engine().router().receive("endpoint-1", claim).productive());
-        assertEquals("the first claim must map the device to its live endpoint",
-                "endpoint-1", engine().transport().bindings().get(deviceId));
+        assertEquals("a public claim cannot create a stable binding",
+                null, engine().transport().bindings().get(deviceId));
 
         // The link dropped and Nearby reconnected the same phone under a new
         // endpoint id. The peer re-announces, exactly as it does in production.
@@ -115,10 +104,8 @@ public class IdentityRebindingTest {
                 engine().router().receive("endpoint-2", claim).productive());
 
         Map<String, String> bindings = engine().transport().bindings();
-        assertNotNull("the device must still be bound after a reconnect",
-                bindings.get(deviceId));
-        assertEquals("the binding must follow the peer to its new endpoint",
-                "endpoint-2", bindings.get(deviceId));
+        assertEquals("a replayed claim cannot capture the destination",
+                null, bindings.get(deviceId));
     }
 
     @Test
@@ -134,7 +121,7 @@ public class IdentityRebindingTest {
         engine().router().receive("endpoint-2", claim);
 
         assertEquals("a blocked peer must not be handed back a live radio handle",
-                "endpoint-1", engine().transport().bindings().get(deviceId));
+                null, engine().transport().bindings().get(deviceId));
     }
 
     @Test
@@ -149,8 +136,8 @@ public class IdentityRebindingTest {
 
         Map<String, String> bindings = engine().transport().bindings();
         assertEquals("an unrelated peer must not move someone else's binding",
-                "endpoint-1", bindings.get(deviceId));
-        assertEquals("the unrelated peer must still be bound to its own endpoint",
-                "endpoint-9", bindings.get(stranger.identity.deviceId()));
+                null, bindings.get(deviceId));
+        assertEquals("another public claim cannot create a binding",
+                null, bindings.get(stranger.identity.deviceId()));
     }
 }

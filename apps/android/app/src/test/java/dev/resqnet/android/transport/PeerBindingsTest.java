@@ -64,6 +64,33 @@ public class PeerBindingsTest {
     }
 
     @Test
+    public void aProvenReplacementDemotesTheOldEndpoint() {
+        PeerBindings bindings = new PeerBindings();
+        bindings.bind("old");
+        bindings.promote("old", "rqn1_abc");
+        bindings.bind("new");
+        bindings.promote("new", "rqn1_abc");
+
+        assertEquals("new", bindings.endpointFor("rqn1_abc"));
+        assertEquals("old", bindings.resolve("old"));
+        assertEquals("rqn1_abc", bindings.resolve("new"));
+        bindings.unbind("old");
+        assertEquals("new", bindings.endpointFor("rqn1_abc"));
+    }
+
+    @Test
+    public void blockingAConnectedPeerRemovesItsStableRouteImmediately() {
+        PeerBindings bindings = new PeerBindings();
+        bindings.bind("endpoint-A");
+        bindings.promote("endpoint-A", "rqn1_abc");
+
+        assertEquals("endpoint-A", bindings.demote("rqn1_abc"));
+        assertNull(bindings.endpointFor("rqn1_abc"));
+        assertEquals("endpoint-A", bindings.resolve("endpoint-A"));
+        assertTrue(bindings.connectedPeerIds().contains("endpoint-A"));
+    }
+
+    @Test
     public void promotingTwiceIsANoOp() {
         PeerBindings bindings = new PeerBindings();
         bindings.bind("endpoint-A");
@@ -75,14 +102,13 @@ public class PeerBindingsTest {
     }
 
     @Test
-    public void rebindingAnExistingEndpointKeepsThePromotedIdentity() {
+    public void aNewConnectionUsingTheSameHandleRequiresFreshProof() {
         PeerBindings bindings = new PeerBindings();
         bindings.bind("endpoint-A");
         bindings.promote("endpoint-A", "rqn1_abc");
 
-        // A reconnect of the same radio handle must not reset it to the
-        // handle, or a verified peer silently becomes unknown again.
-        assertEquals("rqn1_abc", bindings.bind("endpoint-A"));
+        assertEquals("endpoint-A", bindings.bind("endpoint-A"));
+        assertNull(bindings.endpointFor("rqn1_abc"));
     }
 
     /**
@@ -99,6 +125,7 @@ public class PeerBindingsTest {
         PeerBindings bindings = new PeerBindings();
         bindings.bind("endpoint-A");
         bindings.promote("endpoint-A", "rqn1_abc");
+        bindings.bind("endpoint-B");
 
         assertTrue("the reconnect must be recognised as a change",
                 bindings.promote("endpoint-B", "rqn1_abc"));
@@ -108,10 +135,10 @@ public class PeerBindingsTest {
         assertEquals("endpoint-B", bindings.endpointFor("rqn1_abc"));
         assertEquals("the new handle must resolve back to the device",
                 "rqn1_abc", bindings.resolve("endpoint-B"));
-        assertFalse("the dead handle must not linger as a peer of its own",
-                bindings.connectedPeerIds().contains("endpoint-A"));
-        assertEquals("one device must not be advertised twice after a reconnect",
-                1, bindings.connectedPeerIds().size());
+        assertEquals("a still-connected old handle must lose the stable identity",
+                "endpoint-A", bindings.resolve("endpoint-A"));
+        assertEquals("old and new links remain distinct until a disconnect arrives",
+                2, bindings.connectedPeerIds().size());
     }
 
     @Test

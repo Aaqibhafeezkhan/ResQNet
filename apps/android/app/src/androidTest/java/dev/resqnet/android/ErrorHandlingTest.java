@@ -156,6 +156,14 @@ public class ErrorHandlingTest {
                 new android.content.Intent(TestSupport.app(), SosComposerActivity.class);
         intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
         TestSupport.app().startActivity(intent);
+        eventually("the composer to attach", 10_000L, () -> {
+            try {
+                onView(withId(R.id.messageBody)).check(matches(isDisplayed()));
+                return true;
+            } catch (RuntimeException e) {
+                return false;
+            }
+        });
 
         onView(withId(R.id.messageBody)).perform(replaceText(""), closeSoftKeyboard());
         onView(withId(R.id.sendButton)).perform(click());

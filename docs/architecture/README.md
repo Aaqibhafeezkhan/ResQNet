@@ -41,7 +41,7 @@ graph TB
         ADAPTER["NearbyTransport<br/>Google Nearby Connections"]
         ROUTER["MeshRouter<br/>controlled flooding"]
         STORE["MessageStore<br/>SQLite"]
-        KEYS["Android Keystore<br/>EC P-256 identity"]
+        KEYS["Android Keystore<br/>P-256 signing + sealed HPKE"]
         TRIAGE["KeywordTriageClassifier<br/>offline advisory"]
         UI --> SVC
         SVC --> ROUTER
@@ -251,6 +251,11 @@ deviceId = "rqn1_" + hex( SHA-256( X.509( publicKey ) ) )
 
 Keys are ECDSA P-256, generated in the Android Keystore where available. The
 trust model has three states and no shortcuts:
+
+A Nearby endpoint is mapped to a stable device id only after a fresh, one-use
+challenge on that connection is signed by the claimed device key. This link
+proof is separate from the human decision to verify a peer. A newly proved key
+remains `UNVERIFIED` until its short code is compared in person.
 
 ```mermaid
 stateDiagram-v2

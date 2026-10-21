@@ -95,7 +95,7 @@ public final class MeshEngine {
                         database.appendDelivery(messageId, current, detail,
                                 System.currentTimeMillis(), identity.deviceId()));
         this.trustStore = new TrustStore(new SQLiteTrustPersistence(database), 256);
-        this.transport = new NearbyTransport(this.context, identity.deviceId(),
+        this.transport = new NearbyTransport(this.context, identity,
                 displayName, new NearbyTransport.Listener() {
             @Override
             public void onTransportError(String operation, String message) {
@@ -121,6 +121,8 @@ public final class MeshEngine {
                 }
             }
         });
+        transport.setBindingApproval(deviceId -> trustStore.entry(deviceId)
+                .map(entry -> entry.trust() != TrustStore.Trust.BLOCKED).orElse(false));
 
         RouterConfig config = RouterConfig.builder()
                 // Six hops reaches a school-sized site. Beyond that, a message
@@ -240,18 +242,31 @@ public final class MeshEngine {
                     return;
                 }
 
+                // The public key is only a claim. The transport promotes this
+                // endpoint after a fresh proof signed by the matching private key.
                 if (fromPeerDeviceId != null) {
-                    transport.promoteBinding(fromPeerDeviceId, deviceId);
+                    transport.requestBindingProof(fromPeerDeviceId, deviceId, publicKey);
                 }
                 rememberEncryptionKey(deviceId, encryptionKey);
                 return;
             }
 
+            // Ask the transport to prove the provisional binding.
+            //
+            // Until this happens the transport knows the peer only by its
+            // Nearby endpoint id, which is a per-session radio handle. The
+            // router asks the transport which peers it can reach and compares
+            // that set against a deviceId, so with endpoint ids in place the
+            // comparison never matches and every directed message floods
+            // instead of going to the one peer that could deliver it.
+            //
+            // This records the key as UNVERIFIED. It does not authorize an
+            // endpoint until the matching private key answers the challenge.
             TrustStore.Entry entry = router.acceptPeerKey(announcement.label(), publicKey);
             rememberEncryptionKey(deviceId, encryptionKey);
 
             if (fromPeerDeviceId != null) {
-                transport.promoteBinding(fromPeerDeviceId, deviceId);
+                transport.requestBindingProof(fromPeerDeviceId, deviceId, publicKey);
             }
 
             publish(new EngineStatus("peer-seen", DeviceIdentity.shortDeviceId(deviceId)
@@ -467,6 +482,7 @@ public final class MeshEngine {
     public void blockPeer(String deviceId) {
         executor.execute(() -> {
             trustStore.block(deviceId);
+            transport.revokeBinding(deviceId);
             publish(new EngineStatus("peer-blocked", deviceId));
         });
     }

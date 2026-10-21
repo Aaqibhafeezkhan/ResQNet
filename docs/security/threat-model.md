@@ -43,6 +43,51 @@ protocol: floods, replays, or forwards selectively to make a victim believe a
 message was delivered when it was not.
 
 ### D3 — Impersonator
+Wants to send messages as a verified responder or as a specific pers# Threat Model
+
+ResQNet is safety-adjacent software. A design flaw here does not merely leak
+data; it can misdirect a rescue. This document states what the system defends
+against, what it deliberately does not, and where the residual risk sits.
+
+Scope: the mesh protocol and routing engine (`packages/mesh-core`), the Android
+transport adapter, and the coordination gateway.
+
+---
+
+## 1. Assets
+
+Ordered by how much damage their compromise would cause.
+
+| # | Asset | Why it matters |
+| --- | --- | --- |
+| A1 | Integrity of an SOS | A forged or altered rescue request sends scarce responders to the wrong place |
+| A2 | Authenticity of a device identity | Without it, any phone can claim to be a verified responder |
+| A3 | Availability of the mesh | A dead battery during a flood is a death |
+| A4 | Integrity of responder actions | An audit trail that can be rewritten is worthless |
+| A5 | Confidentiality of directed messages and location | Being located, or having a private update read, can endanger people, especially survivors |
+| A6 | Availability of the coordination backend | Affects situational awareness, not the emergency network |
+
+Directed SOS and text messages are end-to-end encrypted between the sender and
+the verified recipient (measured overhead:
+[docs/benchmarks/e2ee.md](../benchmarks/e2ee.md)). Public SOS broadcasts remain deliberately unencrypted:
+they are addressed to everyone in range and must stay usable by people who have
+not exchanged keys. The two paths are distinct message types, and the client
+never silently falls back from an encrypted send to a public one.
+
+## 2. Adversaries
+
+### D1 — Opportunistic eavesdropper within radio range
+Has a phone, no special access, can see every frame the mesh carries. Can read
+public broadcasts and all envelope metadata (origin, destination, timestamps,
+type, size), but not the plaintext of a correctly encrypted directed message. May
+capture and replay bytes.
+
+### D2 — Malicious participant
+Has joined the mesh legitimately, has been given a key, and then abuses the
+protocol: floods, replays, or forwards selectively to make a victim believe a
+message was delivered when it was not.
+
+### D3 — Impersonator
 Wants to send messages as a verified responder or as a specific person, without
 that person's key.
 
@@ -219,7 +264,37 @@ signing-key substitution is structurally impossible.
 **Tests.** `SecurityTest.unsignedIdentityClaimGrantsNothing`,
 `SecurityTest.deviceIdIsBoundToItsKey`.
 
-### T12 — HPKE key substitution (A5) · D1, D3
+### T12 — Nearby peer identity rebinding (A2, A3) · D1, D3
+*An attacker replays a known device's public identity announcement on a new
+Nearby endpoint to capture messages addressed to that device.*
+
+**Mitigation.** An announcement only records an unverified key. Each connected
+endpoint stays provisional until it answers a fresh 256-bit random challenge
+with a signature from the claimed identity's private key. The signed bytes
+include a protocol domain, challenger and claimant identities, and the nonce.
+The verifier accepts the answer only on the endpoint where it issued that
+challenge, within 15 seconds, once, while that connection remains active.
+Disconnect, stop, failed verification, and timeout discard pending proof.
+While the same provisional connection remains active, a failed or unanswered
+challenge is retried after 15 seconds with a new nonce; a failed connection
+request is retried while discovery still reports that endpoint.
+A blocked identity cannot be promoted. A successful proof identifies a key
+holder; it does not change the user's UNVERIFIED or VERIFIED trust decision.
+Blocking an already connected identity immediately removes its stable directed
+route and leaves the radio handle provisional.
+Identity announcements and mesh envelopes still route while a link is
+provisional.
+
+**Tests.** `LinkIdentityProofTest` covers possession, replay, wrong signatures,
+endpoint swaps, timeout and interruption. `IdentityRebindingTest` checks that
+an announcement alone cannot bind a known identity. `PeerBindingsTest` checks
+replacement and removal of stale endpoint mappings. `NearbyProofFlowTest`
+exercises announcement, signed proof, directed delivery, reconnect, retry,
+blocking and concurrent disconnect through the engine and transport on an
+emulator with an in-process byte pipe. These tests do not exercise physical
+radio delivery.
+
+### T13 — HPKE key substitution (A5) · D1, D3
 *An attacker captures an identity announcement and appends their own encryption
 key, hoping the sender will encrypt to the attacker.*
 
@@ -231,10 +306,10 @@ hard refusal, not a silent rotation. Protected sends require the recipient to be
 `VERIFIED`, so an unverified announcement cannot be an encryption target.
 
 **Tests.** `EncryptionKeyBindingTest`, `TrustStoreEncryptionKeyTest`,
-`MeshE2eeTest.rejectsUnverifiedRecipient`,
-`MeshE2eeTest.refusesEncryptionKeyRotation`.
+`MeshE2eeTest.refusesUnverifiedRecipient`,
+`TrustStoreEncryptionKeyTest.refusesKeyRotation`.
 
-### T13 — Ciphertext tampering or envelope rebinding (A1, A5) · D2
+### T14 — Ciphertext tampering or envelope rebinding (A1, A5) · D2
 *A relay rewrites the destination or type, or flips ciphertext bytes, to change
 where or how a message is interpreted.*
 
@@ -245,11 +320,10 @@ ciphertext. A relay can decrement the hop counters — as it must — but any
 content-affecting edit fails either the signature or the AEAD tag. The client
 never displays unauthenticated ciphertext.
 
-**Tests.** `ProtectedPayloadTest.rejectsTamperedAssociatedData`,
-`MeshE2eeTest.rejectsTamperedCiphertext`,
-`MeshE2eeTest.rejectsTamperedHeader`.
+**Tests.** `ProtectedPayloadTest.associatedDataBindsHeader`,
+`MeshE2eeTest.editedHeaderFailsAuthentication`.
 
-### T14 — Local plaintext at rest (A5) · D4
+### T15 — Local plaintext at rest (A5) · D4
 *Someone with the database file reads a message the sender wrote.*
 
 **Mitigation and explicit boundary.** Incoming directed messages are stored as
@@ -278,6 +352,7 @@ model.
 | R4 — First-contact trust is unavailable | Devices that have never met cannot authenticate each other, so traffic between them is refused | Deliberate. Identification is an in-person act; this is the honest trade |
 | R5 — Classification errors | The offline classifier can be wrong | Confidence is reported, results are advisory, manual override is always available |
 | R6 — Background execution limits | Android can suspend or kill the app | Documented; store-and-forward recovers on relaunch |
+| R7 — Live relay of a proof exchange | An attacker with simultaneous access to the real key holder can forward a live challenge and answer; the protocol does not establish physical proximity or prevent radio relay attacks | Treat a proof as key possession at the end of the byte pipe, not as distance evidence; validate the link on real devices and retain human fingerprint verification |
 
 ## 6. Reporting
 
@@ -293,14 +368,3 @@ See `SECURITY.md` at the repository root.
   direction, and none is made.
 - **Not full local-storage encryption.** Outgoing directed bodies are retained
   in plaintext inside app-private SQLite for the sender's own history.
-
----
-
-## 8. Implementation dependency
-
-Identity announcements and peer binding currently rely on the Nearby
-identity-proof fix tracked as PR #52 (`fix/nearby-link-identity-proof`). That
-change is not merged in this branch. The HPKE binding proof added here is
-independent and verifies on its own, but the transport-level endpoint-to-device
-binding should be treated as a prerequisite when reviewing the combined
-security story.
