@@ -98,6 +98,18 @@ public final class EnvelopeValidator {
                     "Hop count " + e.hopCount() + " is impossible");
         }
 
+        if (e.type().protectedContent()) {
+            if (destination == null) {
+                throw new ProtocolException(RejectReason.MALFORMED,
+                        "Encrypted content must be addressed to exactly one device");
+            }
+            if (!e.signed()) {
+                throw new ProtocolException(RejectReason.INVALID_SIGNATURE,
+                        "Encrypted content must be signed by its origin");
+            }
+            ProtectedPayload.decode(e.payload());
+        }
+
         if (e.type() == MessageType.ACK) {
             if (e.correlationId().isEmpty()) {
                 throw new ProtocolException(RejectReason.MALFORMED,

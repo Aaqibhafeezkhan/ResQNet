@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
+import dev.resqnet.mesh.crypto.EncryptionIdentity;
 import dev.resqnet.mesh.crypto.SignatureVerifier;
 import dev.resqnet.mesh.crypto.SigningIdentity;
 import dev.resqnet.mesh.crypto.TrustStore;
@@ -19,6 +20,7 @@ import dev.resqnet.mesh.protocol.EnvelopeValidator;
 import dev.resqnet.mesh.protocol.MessageEnvelope;
 import dev.resqnet.mesh.protocol.MessageType;
 import dev.resqnet.mesh.protocol.Priority;
+import dev.resqnet.mesh.protocol.ProtectedPayload;
 import dev.resqnet.mesh.protocol.ProtocolException;
 import dev.resqnet.mesh.protocol.ProtocolVersion;
 import dev.resqnet.mesh.protocol.RejectReason;
@@ -77,6 +79,7 @@ public final class MeshRouter implements AutoCloseable {
     private volatile IdentityAnnouncementListener identityListener;
     private final AtomicLong localSequence = new AtomicLong(1);
     private volatile MessageIdSource idSource = defaultIdSource();
+    private volatile EncryptionIdentity encryptionIdentity;
 
     private static MessageIdSource defaultIdSource() {
         java.util.Random random = new java.util.Random(new java.security.SecureRandom().nextLong());
@@ -173,6 +176,23 @@ public final class MeshRouter implements AutoCloseable {
         return self;
     }
 
+    /**
+     * Installs this device's HPKE identity.
+     *
+     * <p>Kept separate from the constructor so tests and the simulator can
+     * still build a router without any encryption capability, and so the
+     * Android composition root can load a Keystore-sealed keyset after the
+     * signing identity.
+     */
+    public void setEncryptionIdentity(EncryptionIdentity encryptionIdentity) {
+        this.encryptionIdentity = encryptionIdentity;
+    }
+
+    /** This device's HPKE identity, when configured. */
+    public Optional<EncryptionIdentity> encryptionIdentity() {
+        return Optional.ofNullable(encryptionIdentity);
+    }
+
     public TrustStore trustStore() {
         return trustStore;
     }
@@ -257,6 +277,103 @@ public final class MeshRouter implements AutoCloseable {
     public MessageEnvelope originateBroadcast(MessageType type, Priority priority, byte[] payload)
             throws ProtocolException, GeneralSecurityException {
         return originate(null, type, priority, payload, 0L);
+    }
+
+    /**
+     * Encrypts a directed content message to one verified peer and hands the
+     * resulting ciphertext envelope to the same store-and-forward path as any
+     * other message.
+     *
+     * <p>A protected send never falls back to plaintext. If the peer is not
+     * verified, has not published a proof-bound HPKE key, or the HPKE operation
+     * fails, the caller receives {@link RejectReason#ENCRYPTION_UNAVAILABLE}
+     * and nothing is persisted or transmitted.
+     *
+     * @param destinationDeviceId exactly one recipient, never {@code null}
+     * @param type {@link MessageType#SOS} or {@link MessageType#TEXT}
+     * @param plaintext application payload, not yet encoded as an envelope
+     * @param lifetimeMillis requested lifetime, or 0 for the configured value
+     */
+    public MessageEnvelope originateProtected(String destinationDeviceId, MessageType type,
+                                              Priority priority, byte[] plaintext,
+                                              long lifetimeMillis)
+            throws ProtocolException, GeneralSecurityException {
+        if (destinationDeviceId == null || destinationDeviceId.isBlank()) {
+            throw new ProtocolException(RejectReason.MALFORMED,
+                    "Protected messages require one destination device");
+        }
+        if (type == null || !type.cleartextContent()) {
+            throw new ProtocolException(RejectReason.MALFORMED,
+                    "Protected origination requires a content message type");
+        }
+        EncryptionIdentity selfEncryption = encryptionIdentity;
+        if (selfEncryption == null) {
+            throw new ProtocolException(RejectReason.ENCRYPTION_UNAVAILABLE,
+                    "This device has no HPKE identity");
+        }
+        TrustStore.Entry recipient = trustStore.entry(destinationDeviceId)
+                .orElseThrow(() -> new ProtocolException(
+                        RejectReason.ENCRYPTION_UNAVAILABLE,
+                        "Recipient identity is not known"));
+        if (recipient.trust() != TrustStore.Trust.VERIFIED) {
+            throw new ProtocolException(RejectReason.ENCRYPTION_UNAVAILABLE,
+                    "Recipient must be verified before sending an encrypted message");
+        }
+        TrustStore.EncryptionKey recipientKey = trustStore
+                .encryptionKey(destinationDeviceId)
+                .orElseThrow(() -> new ProtocolException(
+                        RejectReason.ENCRYPTION_UNAVAILABLE,
+                        "Recipient has not published an encryption key"));
+        if (plaintext == null || plaintext.length == 0) {
+            throw new ProtocolException(RejectReason.MALFORMED,
+                    "Protected payload must not be empty");
+        }
+        if (plaintext.length > ProtectedPayload.MAX_PLAINTEXT_BYTES) {
+            throw new ProtocolException(RejectReason.PAYLOAD_TOO_LARGE,
+                    "Plaintext " + plaintext.length + "B exceeds protected limit");
+        }
+
+        long now = clock.nowMillis();
+        long lifetime = lifetimeMillis > 0
+                ? Math.min(lifetimeMillis, config.lifetimeMillis()) : config.lifetimeMillis();
+
+        MessageEnvelope header = MessageEnvelope.builder()
+                .messageId(newMessageId(now))
+                .origin(self.deviceId())
+                .originKeyFingerprint(self.keyFingerprint())
+                .destination(destinationDeviceId)
+                .type(type.protectedVariant())
+                .priority(priority)
+                .createdAt(now)
+                .expiresAt(now + lifetime)
+                .hopLimit(config.hopLimit())
+                .payload(new byte[0])
+                .build();
+
+        byte[] associatedData = ProtectedPayload.associatedData(header,
+                recipientKey.keyIdBytes());
+        byte[] ciphertext;
+        try {
+            ciphertext = EncryptionIdentity.encryptTo(recipientKey.publicKey(),
+                    plaintext, associatedData);
+        } catch (GeneralSecurityException e) {
+            throw new ProtocolException(RejectReason.ENCRYPTION_UNAVAILABLE,
+                    "HPKE encryption failed");
+        }
+        byte[] protectedPayload = ProtectedPayload.of(
+                recipientKey.keyIdBytes(), ciphertext).encode();
+
+        MessageEnvelope signed = sign(header.toBuilder().payload(protectedPayload).build());
+        byte[] encoded = EnvelopeCodec.encode(signed);
+
+        store.upsert(StoredMessage.of(signed, encoded, now));
+        enforceQueueCapacity();
+        metrics.recordOriginated(true);
+        emit(new MeshEvent.DeliveryStateChanged(now, self.deviceId(), signed.messageId(),
+                DeliveryState.CREATED, DeliveryState.QUEUED,
+                "encrypted on this device for one verified recipient"));
+        attemptPending();
+        return signed;
     }
 
     /**
@@ -974,7 +1091,7 @@ public final class MeshRouter implements AutoCloseable {
                     // forge, and unbounded flooding of cheap payloads is how a
                     // battery gets drained. Four hops covers a site.
                     .hopLimit(IDENTITY_HOP_LIMIT)
-                    .payload(IdentityAnnouncement.of(self).encode())
+                    .payload(identityAnnouncement().encode())
                     .build());
             if (listener != null) {
                 // Nothing to announce to yet; the transport decides reachability.
@@ -984,6 +1101,13 @@ public final class MeshRouter implements AutoCloseable {
         } catch (ProtocolException | GeneralSecurityException e) {
             return Optional.empty();
         }
+    }
+
+    private IdentityAnnouncement identityAnnouncement() throws GeneralSecurityException {
+        EncryptionIdentity encryption = encryptionIdentity;
+        return encryption == null
+                ? IdentityAnnouncement.of(self)
+                : IdentityAnnouncement.of(self, encryption);
     }
 
     // ----------------------------------------------------------------- triage
@@ -996,7 +1120,11 @@ public final class MeshRouter implements AutoCloseable {
      * classifier failure is swallowed.
      */
     private void classifyForAdvisory(MessageEnvelope envelope, long now) {
-        if (envelope.type() == MessageType.ACK || envelope.payloadLength() == 0) {
+        // Ciphertext is not text. Running a classifier over an encrypted
+        // payload would either produce a meaningless suggestion or, worse,
+        // tempt a later change to display the bytes it read. Only cleartext
+        // content is eligible for advisory triage.
+        if (!envelope.type().cleartextContent() || envelope.payloadLength() == 0) {
             return;
         }
         try {
