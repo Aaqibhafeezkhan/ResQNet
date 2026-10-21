@@ -472,7 +472,7 @@ erode, so it is stated explicitly:
 | Simulator multi-hop demonstration | ✅ Passing, deterministic from a seed |
 | Backend against real PostgreSQL | ✅ Passing in CI |
 | **Physical devices** | ⚠️ **Developer-reported only** |
-| **Three-phone multi-hop** | ❌ **Verified** |
+| **Three-phone multi-hop** | ❌ **Not verified** |
 
 **Physical-device testing.** The developer reports the Android application
 working on **two physical phones**. That is a user report, not independently
