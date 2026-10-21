@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { PUBLIC_SITE_ONLY } from './buildMode';
+import { PublicLayout } from '@/components/public/PublicLayout';
 import { AboutPage } from '@/pages/AboutPage';
 import { ContributePage } from '@/pages/ContributePage';
 import { DemoPage } from '@/pages/DemoPage';
@@ -23,18 +24,20 @@ export function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/demo" element={<DemoPage />} />
-        <Route path="/download" element={<DownloadPage />} />
-        <Route path="/contribute" element={<ContributePage />} />
-        <Route path="/about" element={<AboutPage />} />
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/demo" element={<DemoPage />} />
+          <Route path="/download" element={<DownloadPage />} />
+          <Route path="/contribute" element={<ContributePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
         {!PUBLIC_SITE_ONLY && CommandPage ? (
           <Route path="/command" element={<CommandPage />} />
         ) : null}
         {!PUBLIC_SITE_ONLY && SignInPage ? (
           <Route path="/signin" element={<SignInPage />} />
         ) : null}
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

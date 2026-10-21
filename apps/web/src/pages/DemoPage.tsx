@@ -1,7 +1,6 @@
 import { Check, Unplug, Waypoints } from 'lucide-react';
 
 import { MeshDemo } from '@/components/demo/MeshDemo';
-import { SiteLayout } from '@/components/SiteLayout';
 import { PageHero } from '@/components/public/PageHero';
 import { SafetyNote } from '@/components/public/SafetyNote';
 import { Reveal } from '@/components/primitives/Reveal';
@@ -34,7 +33,7 @@ export function DemoPage() {
   });
 
   return (
-    <SiteLayout>
+    <>
       <PageHero
         eyebrow="Field lab / 01"
         title={
@@ -119,6 +118,6 @@ export function DemoPage() {
           </div>
         </div>
       </section>
-    </SiteLayout>
+    </>
   );
 }

@@ -27,6 +27,12 @@ if (!window.matchMedia) {
 
 window.scrollTo = (() => undefined) as typeof window.scrollTo;
 
+/**
+ * jsdom logs a noisy "not implemented" error and then returns null. WebGL
+ * scenes already have a designed static fallback, so tests take that path.
+ */
+HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext;
+
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => undefined;
 }
