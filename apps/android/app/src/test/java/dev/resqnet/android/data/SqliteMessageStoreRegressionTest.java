@@ -37,7 +37,7 @@ public class SqliteMessageStoreRegressionTest {
 
     @Before
     public void setUp() {
-        database = ResQNetDatabase.get(ApplicationProvider.getApplicationContext());
+        database = ResQNetDatabase.openIsolated(ApplicationProvider.getApplicationContext());
         store = new SqliteMessageStore(database, 16,
                 (messageId, previous, current, detail) -> { });
     }

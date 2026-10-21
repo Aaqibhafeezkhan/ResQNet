@@ -108,25 +108,32 @@ public final class SqliteMessageStore implements MessageStore {
      * <p>Updating in place keeps the row identity stable and leaves columns
      * this method does not know about exactly as they were.
      */
-    private long upsertReturningRowId(SQLiteDatabase db, ContentValues values, String messageId) {
-        long rowId = db.update(ResQNetDatabase.TABLE_MESSAGES, values,
+        private long upsertReturningRowId(SQLiteDatabase db, ContentValues values, String messageId) {
+        db.update(ResQNetDatabase.TABLE_MESSAGES, values,
                 "message_id = ?", new String[] { messageId });
-        if (rowId > 0) {
-            return rowId;
+
+        // Check whether the message already exists and return its actual local_id.
+        try (Cursor cursor = db.query(ResQNetDatabase.TABLE_MESSAGES,
+                new String[] { "local_id" }, "message_id = ?", new String[] { messageId },
+                null, null, null)) {
+            if (cursor.moveToFirst()) {
+                return cursor.getLong(0);
+            }
         }
-        // update() returns 0 both for "no such row" and for "row unchanged",
-        // so an INSERT is attempted and its conflict handled explicitly.
+
+        // The message does not exist, so insert it.
         try {
             return db.insertOrThrow(ResQNetDatabase.TABLE_MESSAGES, null, values);
         } catch (SQLException raced) {
-            // Another writer inserted between the update and the insert.
+            // Another writer may have inserted the message at the same time.
             try (Cursor cursor = db.query(ResQNetDatabase.TABLE_MESSAGES,
-                    new String[] { "rowid" }, "message_id = ?", new String[] { messageId },
+                    new String[] { "local_id" }, "message_id = ?", new String[] { messageId },
                     null, null, null)) {
                 return cursor.moveToFirst() ? cursor.getLong(0) : -1L;
             }
         }
     }
+
 
     @Override
     public Optional<StoredMessage> find(String messageId) {
