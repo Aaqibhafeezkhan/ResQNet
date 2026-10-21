@@ -18,6 +18,8 @@ interface CommandHeaderProps {
    * the indicator is decorative.
    */
   live?: boolean;
+  /** Set when the last refresh failed although the gateway answered. */
+  stale?: boolean;
   /** Opens the manual incident reporter. */
   onCreateIncident?: (() => void) | undefined;
 }
@@ -33,6 +35,7 @@ export function CommandHeader({
   connected,
   unreachable,
   live,
+  stale = false,
   onCreateIncident,
 }: CommandHeaderProps) {
   const identity = useAuthStore((state) => state.identity);
@@ -54,6 +57,11 @@ export function CommandHeader({
               <WifiOff size={12} aria-hidden="true" />
               Gateway unreachable
             </StatusChip>
+          ) : stale ? (
+            <StatusChip tone="emergency">
+              <ShieldAlert size={12} aria-hidden="true" />
+              Data out of date
+            </StatusChip>
           ) : connected ? (
             <StatusChip tone="delivered" pulse>
               <Wifi size={12} aria-hidden="true" />
@@ -71,7 +79,7 @@ export function CommandHeader({
             slower refresh is the kind of thing nobody notices until the moment
             it matters, so it is stated rather than hidden.
           */}
-          {connected && !live && !unreachable ? (
+          {connected && !live && !unreachable && !stale ? (
             <span className="text-[11px] text-ink-tertiary">
               live stream unavailable; refreshing every 15s
             </span>

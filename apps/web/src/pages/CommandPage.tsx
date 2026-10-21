@@ -38,6 +38,8 @@ export function CommandPage() {
   const overview = useIncidentStore((state) => state.overview);
   const loading = useIncidentStore((state) => state.loading);
   const unreachable = useIncidentStore((state) => state.unreachable);
+  const stale = useIncidentStore((state) => state.stale);
+  const refreshError = useIncidentStore((state) => state.error);
   const refresh = useIncidentStore((state) => state.refresh);
   const updateStatus = useIncidentStore((state) => state.updateStatus);
   const setStatusFilter = useIncidentStore((state) => state.setStatusFilter);
@@ -168,7 +170,8 @@ export function CommandPage() {
       <CommandHeader
         connected={!unreachable}
         unreachable={unreachable}
-        live={live && !unreachable}
+        live={live && !unreachable && !stale}
+        stale={stale}
         onCreateIncident={identity ? () => setCreating(true) : undefined}
       />
 
@@ -187,13 +190,24 @@ export function CommandPage() {
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {unreachable
           ? 'The coordination gateway is unreachable. The incident list below may be out of date.'
-          : incidents.length === 1
+          : stale
+            ? 'The last refresh failed. The incident list below may be out of date.'
+            : incidents.length === 1
             ? '1 incident in the queue.'
             : `${incidents.length} incidents in the queue.`}
         {overview ? ` ${overview.open} open, ${overview.critical} critical.` : ''}
       </div>
 
       <main className="mx-auto w-full max-w-[1600px] flex-1 px-5 py-6 sm:px-8">
+        {stale ? (
+          <div
+            role="alert"
+            className="mb-5 rounded-lg border border-emergency/45 bg-emergency-soft px-4 py-3 text-sm text-emergency"
+          >
+            The last refresh failed{refreshError ? ` (${refreshError})` : ''}. The incident
+            list is from the previous refresh and may be out of date.
+          </div>
+        ) : null}
         <OverviewTiles
           overview={overview}
           nodeCount={activeRun?.nodeCount ?? null}
