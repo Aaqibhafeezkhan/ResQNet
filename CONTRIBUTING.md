@@ -73,30 +73,48 @@ merge decision.
 [ResQNet Guardian](docs/guardian.md) records a deterministic readiness state in
 one summary comment per pull request and edits that comment in place. The states
 are `AWAITING_ASSIGNMENT`, `NEEDS_CHANGES`, `CHECKS_RUNNING`, `CHECKS_FAILED`,
-`INFRASTRUCTURE_BLOCKED`, `AWAITING_AI_REVIEW`, `AWAITING_HUMAN_REVIEW`,
-`READY_FOR_MAINTAINER_REVIEW`, `STALE`, `MERGED`, `CLOSED`, and `UNKNOWN`.
-Guardian never merges, approves, closes, deploys, or opens a pull request. The
-state is advisory; a maintainer always makes the final decision. Only reviews
-from users with repository write access count toward readiness.
+`INFRASTRUCTURE_BLOCKED`, `AWAITING_AI_REVIEW`, `READY_FOR_MAINTAINER_REVIEW`,
+`STALE`, `MERGED`, `CLOSED`, and `UNKNOWN`. (`AWAITING_HUMAN_REVIEW` is retained
+as a legacy constant but is no longer emitted.) Guardian never merges, approves,
+closes, deploys, or opens a pull request. The state is advisory; a maintainer
+always makes the final decision.
 
-Missing checks are never treated as a pass. If a docs-only or path-filtered PR
-has no checks, Guardian reports `INFRASTRUCTURE_BLOCKED` until a maintainer
+`READY_FOR_MAINTAINER_REVIEW` means assignment, the path-aware expected CI,
+security checks, mergeability, and any enabled AI-review condition are
+satisfied, with no known blocking findings. It means the pull request is ready
+for the **first** maintainer review; it does **not** mean a human approved it or
+that it is mergeable. Human approval is reported separately. Only reviews from
+users with repository write access count.
+
+Missing expected checks are never treated as a pass. A single passing check, such
+as GitGuardian, cannot stand in for Web or Android CI. If the complete
+changed-file list cannot be determined, Guardian blocks rather than applying a
+partial policy; branch protection and ruleset requirements are added when the
+workflow token can read them. Missing expected checks
+(`checks.expected-missing`) and security-check failures cannot be dismissed. If
+a docs-only or path-filtered PR has no expected code checks and
+no checks at all, Guardian reports `INFRASTRUCTURE_BLOCKED` until a maintainer
 confirms the absence with `/guardian dismiss checks.no-data <reason>`. Unknown
 API data also blocks; it cannot be dismissed.
 
 Contributors can comment `/guardian status` to see the last recorded state, or
 `/guardian explain` for a live explanation. Maintainers with repository write
 access can comment `/guardian recheck` to refresh the summary and
-`/guardian dismiss <finding-id> <reason>` to dismiss a verified check or review
-false positive. `/guardian merge` does not exist. See
+`/guardian dismiss <finding-id> <reason>` to dismiss a verified non-required
+finding. `/guardian merge` does not exist. See
 [docs/guardian.md](docs/guardian.md) for the full state and command reference.
 
 Guardian starts in dry-run mode (`GUARDIAN_DRY_RUN=true`), so maintainers can
 inspect its logs before enabling summary and notification writes. It uses the
 repository `GITHUB_TOKEN` with least-privilege permissions, not a personal
-access token. The existing assignment bot's HTTP 403s on PR comments and labels
-were caused by the missing `pull-requests: write` permission; ordinary issue
-writes succeeded because `issues: write` was already present.
+access token. CodeRabbit is not installed, so Guardian performs deterministic
+checks and contributor feedback, not independent AI code review.
+
+The assignment bot's historical HTTP 403s on PR comments and labels are not yet
+confirmed as fixed. GitHub documents that those endpoints accept either
+`issues: write` or `pull-requests: write`, so adding the second scope is a
+candidate remediation, not a proven fix. Live verification is required before
+treating it as resolved.
 
 ## Repository layout
 

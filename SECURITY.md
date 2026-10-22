@@ -109,9 +109,9 @@ for a maintainer before requesting review.
 Issues labelled `security`, `security-sensitive`, or `vulnerability` (or whose
 title clearly describes a vulnerability) are assigned by maintainers, not by the
 `/assign` bot. Pull requests that link such an issue are flagged by ResQNet
-Guardian and cannot reach `READY_FOR_MAINTAINER_REVIEW` without an approval from
-a reviewer with repository write access; the flag is advisory and the human
-reviewer decides.
+Guardian. `READY_FOR_MAINTAINER_REVIEW` does not mean security sign-off or human
+approval: it means the automated conditions are met and the pull request is
+ready for the first maintainer review. The human reviewer decides.
 
 Guardian and the contributor bots are repository automation, not security
 review:
