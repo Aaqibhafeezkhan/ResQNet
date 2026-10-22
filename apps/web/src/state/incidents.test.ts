@@ -66,6 +66,19 @@ describe('incident refresh failures', () => {
     expect(useIncidentStore.getState().error).toBeNull();
   });
 
+  it('clears unreachable when the next failure comes from the gateway', async () => {
+    vi.spyOn(api, 'incidents')
+      .mockRejectedValueOnce(new ApiError(0, 'GATEWAY_UNREACHABLE', 'Gateway unreachable'))
+      .mockRejectedValueOnce(new ApiError(500, 'INTERNAL', 'Something went wrong'));
+
+    await useIncidentStore.getState().refresh();
+    expect(useIncidentStore.getState().unreachable).toBe(true);
+
+    await useIncidentStore.getState().refresh();
+    expect(useIncidentStore.getState().unreachable).toBe(false);
+    expect(useIncidentStore.getState().stale).toBe(true);
+  });
+
   it('still treats an unreachable gateway as unreachable, not stale', async () => {
     vi.spyOn(api, 'incidents').mockRejectedValue(new ApiError(0, 'GATEWAY_UNREACHABLE', 'Gateway unreachable'));
 
@@ -74,5 +87,48 @@ describe('incident refresh failures', () => {
     expect(useIncidentStore.getState().unreachable).toBe(true);
     expect(useIncidentStore.getState().stale).toBe(false);
     expect(useIncidentStore.getState().items).toEqual([]);
+  });
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+describe('overlapping refreshes', () => {
+  it('keeps the newer queue when an older refresh finishes later', async () => {
+    const newer = { reference: 'INC-2', title: 'Blocked road' } as IncidentSummary;
+    const slow = deferred<Page<IncidentSummary>>();
+    vi.spyOn(api, 'incidents')
+      .mockReturnValueOnce(slow.promise)
+      .mockResolvedValueOnce(page([newer]));
+
+    const older = useIncidentStore.getState().refresh();
+    await useIncidentStore.getState().refresh();
+    expect(useIncidentStore.getState().items).toEqual([newer]);
+
+    slow.resolve(page([incident]));
+    await older;
+    expect(useIncidentStore.getState().items).toEqual([newer]);
+  });
+
+  it('does not sign out a session that started after the request', async () => {
+    const slow = deferred<Page<IncidentSummary>>();
+    vi.spyOn(api, 'incidents').mockReturnValueOnce(slow.promise);
+    const next = { token: 'token-2', username: 'ada', role: 'RESPONDER' } as LoginResponse;
+
+    const pending = useIncidentStore.getState().refresh();
+    useAuthStore.setState({ token: next.token, identity: next, error: null });
+    slow.reject(new ApiError(401, 'UNAUTHORIZED', 'Unauthorized'));
+    await pending;
+
+    expect(useAuthStore.getState().token).toBe('token-2');
+    expect(useAuthStore.getState().identity).toEqual(next);
+    expect(useAuthStore.getState().error).toBeNull();
   });
 });

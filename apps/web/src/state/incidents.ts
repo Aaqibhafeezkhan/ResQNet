@@ -39,6 +39,12 @@ interface IncidentState {
 }
 
 /**
+ * Sequence number of the latest refresh. A refresh whose number is no longer
+ * the latest has been overtaken by a newer one and must not apply its result.
+ */
+let latestRefresh = 0;
+
+/**
  * Incident list state.
  *
  * `unreachable` exists because "no incidents" and "the gateway is down" are
@@ -71,6 +77,12 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
    */
   async refresh() {
     const { filters } = get();
+    // Results only count for the refresh that is still the latest, and only
+    // for the session it started in: an older request finishing late must not
+    // overwrite a newer queue or sign out a session that started after it.
+    const id = ++latestRefresh;
+    const token = useAuthStore.getState().token;
+    const current = () => id === latestRefresh && useAuthStore.getState().token === token;
     if (get().items.length === 0) {
       set({ loading: true });
     }
@@ -83,8 +95,10 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
         ? page.content
         : page.content.filter((item) => item.severity === filters.severity);
       const overview = await api.overview();
+      if (!current()) return;
       set({ items, overview, loading: false, unreachable: false, stale: false });
     } catch (cause) {
+      if (!current()) return;
       if (cause instanceof ApiError && cause.status === 0) {
         set({ unreachable: true, stale: false, loading: false, error: cause.message, items: [] });
         return;
@@ -93,7 +107,7 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
         // A console that still looks usable after the session ended invites
         // acting on it. Sign out, which brings back the sign-in screen, and say
         // why there.
-        set({ items: [], overview: null, loading: false, stale: false, error: null });
+        set({ items: [], overview: null, loading: false, unreachable: false, stale: false, error: null });
         useAuthStore.getState().signOut();
         useAuthStore.setState({ error: 'Your session expired. Sign in again.' });
         return;
@@ -102,6 +116,7 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
       // so the responder still sees it, but mark it stale.
       set({
         loading: false,
+        unreachable: false,
         stale: true,
         error: cause instanceof Error ? cause.message : 'Could not load incidents',
       });

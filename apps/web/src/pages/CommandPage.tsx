@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { CommandHeader } from '@/components/command/CommandHeader';
 import { CreateIncidentDialog } from '@/components/command/CreateIncidentDialog';
@@ -33,6 +34,7 @@ const POLL_INTERVAL_MS = 15_000;
 export function CommandPage() {
   const identity = useAuthStore((state) => state.identity);
   const signOut = useAuthStore((state) => state.signOut);
+  const navigate = useNavigate();
 
   const incidents = useIncidentStore((state) => state.items);
   const overview = useIncidentStore((state) => state.overview);
@@ -309,8 +311,12 @@ export function CommandPage() {
           <button
             type="button"
             onClick={() => {
-              signOut();
-              window.location.reload();
+              // Reloading /command brought this gate straight back. Go to the
+              // sign-in page instead, and only sign out if a token is still
+              // stored: an expired session is already signed out, and signing
+              // out again would clear the message that says why.
+              if (useAuthStore.getState().token) signOut();
+              navigate('/signin', { replace: true });
             }}
             className="mt-6 min-h-[44px] w-full rounded-xl bg-network px-4 text-sm font-medium text-base-900"
           >
