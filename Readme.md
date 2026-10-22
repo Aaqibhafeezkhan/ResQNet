@@ -121,7 +121,7 @@ sequenceDiagram
     Note over C: Verify origin signature
     C-->>B: Application-level ACK
     B-->>A: Forward ACK to sender
-    Note over A,C: Directed messages are HPKE ciphertext; public SOS stays clear
+    Note over A,C: Directed messages are encrypted with HPKE, while public SOS stays clear
 
 ```
 
