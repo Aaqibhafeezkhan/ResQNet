@@ -2,6 +2,9 @@
 
 <!-- What changed, and why? One logical change per pull request. -->
 
+<!-- ResQNet Guardian records readiness in one summary comment and never merges,
+     approves, or closes a pull request. See docs/guardian.md. -->
+
 ## Related issue
 
 <!-- Claim the issue first with /assign, then use Closes #123 (or Fixes/Resolves #123).
@@ -44,3 +47,5 @@ Commands and results:
 - [ ] No secrets, credentials, keystores, or personal data are included.
 - [ ] The verified / simulated / untested distinction remains accurate.
 - [ ] UI changes preserve keyboard access and reduced-motion behaviour.
+- [ ] I understand that Guardian's readiness state is advisory and that a
+      maintainer makes the final review and merge decision.

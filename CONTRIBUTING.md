@@ -58,7 +58,8 @@ Comment `/assign` on an unassigned issue and wait for the existing Contributor
 Bot to confirm. If someone else is assigned, coordinate with them or a
 maintainer instead of changing the assignment yourself. If the warning is
 incorrect, check the issue reference and assignment, then ask a maintainer to
-review it.
+review it. Once a Guardian summary exists, the assignment bot retires its own
+advisory comment so you do not receive the same feedback twice.
 
 Documentation-only or maintenance PRs that do not need an issue can be approved
 by a maintainer applying the `no-issue-required` label. Contributors should not
@@ -66,6 +67,54 @@ add this label themselves. Maintainer PRs and trusted automation are allowed
 through the advisory policy. The `awaiting-issue-assignment` and
 `contribution-policy-ok` labels are managed by the bot; they do not affect the
 merge decision.
+
+### Guardian readiness
+
+[ResQNet Guardian](docs/guardian.md) records a deterministic readiness state in
+one summary comment per pull request and edits that comment in place. The states
+are `AWAITING_ASSIGNMENT`, `NEEDS_CHANGES`, `CHECKS_RUNNING`, `CHECKS_FAILED`,
+`INFRASTRUCTURE_BLOCKED`, `AWAITING_AI_REVIEW`, `READY_FOR_MAINTAINER_REVIEW`,
+`STALE`, `MERGED`, `CLOSED`, and `UNKNOWN`. (`AWAITING_HUMAN_REVIEW` is retained
+as a legacy constant but is no longer emitted.) Guardian never merges, approves,
+closes, deploys, or opens a pull request. The state is advisory; a maintainer
+always makes the final decision.
+
+`READY_FOR_MAINTAINER_REVIEW` means assignment, the path-aware expected CI,
+security checks, mergeability, and any enabled AI-review condition are
+satisfied, with no known blocking findings. It means the pull request is ready
+for the **first** maintainer review; it does **not** mean a human approved it or
+that it is mergeable. Human approval is reported separately. Only reviews from
+users with repository write access count.
+
+Missing expected checks are never treated as a pass. A single passing check, such
+as GitGuardian, cannot stand in for Web or Android CI. If the complete
+changed-file list cannot be determined, Guardian blocks rather than applying a
+partial policy; branch protection and ruleset requirements are added when the
+workflow token can read them. Missing expected checks
+(`checks.expected-missing`) and security-check failures cannot be dismissed. If
+a docs-only or path-filtered PR has no expected code checks and
+no checks at all, Guardian reports `INFRASTRUCTURE_BLOCKED` until a maintainer
+confirms the absence with `/guardian dismiss checks.no-data <reason>`. Unknown
+API data also blocks; it cannot be dismissed.
+
+Contributors can comment `/guardian status` to see the last recorded state, or
+`/guardian explain` for a live explanation. Maintainers with repository write
+access can comment `/guardian recheck` to refresh the summary and
+`/guardian dismiss <finding-id> <reason>` to dismiss a verified non-required
+finding. `/guardian merge` does not exist. See
+[docs/guardian.md](docs/guardian.md) for the full state and command reference.
+
+Guardian starts in dry-run mode (`GUARDIAN_DRY_RUN=true`), so maintainers can
+inspect its logs before enabling summary and notification writes. It uses the
+repository `GITHUB_TOKEN` with least-privilege permissions, not a personal
+access token. CodeRabbit is not installed, so Guardian performs deterministic
+checks and contributor feedback, not independent AI code review.
+
+The assignment bot's historical HTTP 403s on PR comments and labels are not yet
+confirmed as fixed. GitHub documents that those endpoints accept either
+`issues: write` or `pull-requests: write`, so adding the second scope is a
+candidate remediation, not a proven fix. Live verification is required before
+treating it as resolved.
 
 ## Repository layout
 
@@ -179,7 +228,8 @@ obvious from the diff.
    and what passed in the pull request.
 7. Open a pull request using the template. Link the issue with `Closes #123`.
    The PR assignment bot provides advisory feedback if the issue is missing or
-   not assigned to you; it does not block review or merging.
+   not assigned to you, and Guardian records the readiness state. Neither bot
+   blocks review or merging by itself, and neither can merge or approve.
 8. Respond to review. Maintainers may ask for evidence or for the change to be
    split; this is about keeping safety-critical claims defensible, not about
    gatekeeping.

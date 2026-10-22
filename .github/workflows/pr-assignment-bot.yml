@@ -9,7 +9,13 @@ name: PR assignment advisory
 permissions:
   contents: read
   issues: write
-  pull-requests: read
+  # The issue-comment and label endpoints accept either `issues: write` or
+  # `pull-requests: write`. `issues: write` covers label creation; this second
+  # scope is retained as a candidate remediation for the 403s in #58/#60/#61.
+  # Those failures happened with `Issues: write` present, so this is not proof
+  # of the root cause. Verify with a live run on the default branch; do not add
+  # a PAT.
+  pull-requests: write
 
 concurrency:
   group: pr-assignment-${{ github.repository }}
@@ -25,14 +31,15 @@ jobs:
     steps:
       # pull_request_target has write access. Only this trusted default-branch
       # script is checked out and executed; PR head code is never fetched.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '24'
       - name: Reconcile PR assignment advisory
         env:
           GH_TOKEN: ${{ github.token }}
+          GUARDIAN_BOT_LOGIN: ${{ vars.GUARDIAN_BOT_LOGIN || 'github-actions[bot]' }}
         run: node .github/scripts/pr-assignment-bot.mjs

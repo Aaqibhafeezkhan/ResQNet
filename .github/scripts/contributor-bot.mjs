@@ -1,9 +1,10 @@
 import { readFile } from 'node:fs/promises';
+import { createGitHubClient } from './lib/github-client.mjs';
+import { CONTRIBUTOR_INTEREST_MARKER_PREFIX as MARKER } from './lib/markers.mjs';
 
 const LIMIT = 2;
 const HELP_URL = 'https://github.com/Gautam-aman/ResQNet/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22';
 const GUIDE_URL = 'https://github.com/Gautam-aman/ResQNet/blob/main/CONTRIBUTING.md';
-const MARKER = '<!-- resqnet-contributor-bot:interest:';
 const INTEREST_PATTERNS = [
   /\b(?:i(?:'d| would)?|we(?:'d| would)?|would|'d)?(?:\s+(?:really|also|just))*\s*(?:like|love|want) to (?:work on|contribute(?: to)?|help(?: (?:with|on))?|take(?: on)?|handle|fix|resolve|implement|improve|be assigned)\b/i,
   /\b(?:i(?:'m| am)|we(?:'re| are)) (?:very |really )?interested in (?:working on|contributing(?: to)?|helping(?: (?:with|on))?|taking(?: on)?|this|the)\b/i,
@@ -100,45 +101,26 @@ export async function handle(event, api) {
 }
 
 function githubApi(token, owner, repo) {
-  const base = `https://api.github.com/repos/${owner}/${repo}`;
-  async function request(path, method = 'GET', body) {
-    const response = await fetch(`${base}${path}`, {
-      method,
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-    if (!response.ok) {
-      const error = new Error(`GitHub API ${method} ${path}: HTTP ${response.status}`);
-      error.status = response.status;
-      throw error;
-    }
-    return response.status === 204 ? null : response.json();
-  }
-  async function pages(path) {
-    const result = [];
-    for (let page = 1; ; page++) {
-      const batch = await request(`${path}${path.includes('?') ? '&' : '?'}per_page=100&page=${page}`);
-      result.push(...batch);
-      if (batch.length < 100) return result;
-    }
-  }
+  const client = createGitHubClient({ token, owner, repo });
   return {
-    issue: (number) => request(`/issues/${number}`),
-    comments: (number) => pages(`/issues/${number}/comments`),
-    assignedOpenIssues: (login) => pages(`/issues?state=open&assignee=${encodeURIComponent(login)}`),
-    comment: (number, body) => request(`/issues/${number}/comments`, 'POST', { body }),
-    assign: (number, login) => request(`/issues/${number}/assignees`, 'POST', { assignees: [login] }),
-    unassign: (number, login) => request(`/issues/${number}/assignees`, 'DELETE', { assignees: [login] }),
+    issue: (number) => client.getIssue(number),
+    comments: (number) => client.listIssueComments(number),
+    assignedOpenIssues: (login) => client.listIssuesAssignedTo(login),
+    comment: (number, body) => client.createIssueComment(number, body),
+    assign: (number, login) => client.assignIssue(number, login),
+    unassign: (number, login) => client.unassignIssue(number, login),
   };
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+async function runCli() {
   const event = JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
-  await handle(event, githubApi(process.env.GH_TOKEN, owner, repo));
+  await handle(event, githubApi(process.env.GH_TOKEN || process.env.GITHUB_TOKEN, owner, repo));
+}
+
+if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+  runCli().catch((error) => {
+    console.error(`contributor-bot: ${error?.diagnostic?.() ?? error?.message ?? 'unexpected failure'}`);
+    process.exitCode = 1;
+  });
 }
