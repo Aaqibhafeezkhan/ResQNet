@@ -55,6 +55,7 @@ test('lifecycle: assignment, review, failure, recovery, and notification dedupe'
   assert.equal(summaryComments(api).length, 1);
   assert.equal(notificationComments(api).length, 1);
   assert.match(notificationComments(api)[0].body, /ready for maintainer review/);
+  assert.match(notificationComments(api)[0].body, /Human approval: `maintainer`/);
 
   const rerun = await runGuardian({ eventName: 'pull_request_target', event, api, config, now: NOW });
   assert.equal(rerun.results[0].summary, 'unchanged');

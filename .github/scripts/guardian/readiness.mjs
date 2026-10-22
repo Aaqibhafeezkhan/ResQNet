@@ -190,6 +190,8 @@ export function computeReadiness({
     activeFindings,
     dismissedFindings,
     dismissals: appliedDismissals,
+    approvedBy: reviews?.approvedBy ?? [],
+    changesRequestedBy: reviews?.changesRequestedBy ?? [],
     stale: Boolean(pullSignals.stale),
     ageDays: pullSignals.ageDays ?? null,
   };
