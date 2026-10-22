@@ -33,6 +33,7 @@ export const TRIGGER_WORKFLOWS = Object.freeze([
   'Java',
   'Android',
   'Android instrumented',
+  'Guardian tests',
 ]);
 
 export function loadConfig(env = process.env) {

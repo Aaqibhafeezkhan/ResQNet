@@ -60,6 +60,17 @@ export const CI_CHECK_GROUPS = Object.freeze([
     ],
     checks: ['mesh core + simulator', 'benchmark smoke'],
   },
+  {
+    id: 'guardian-tests',
+    paths: [
+      '.github/scripts/**',
+      '.github/workflows/guardian.yml',
+      '.github/workflows/guardian-tests.yml',
+      '.github/workflows/contributor-bot.yml',
+      '.github/workflows/pr-assignment-bot.yml',
+    ],
+    checks: ['guardian + bot tests'],
+  },
 ]);
 
 /**

@@ -95,6 +95,12 @@ changed paths to the GitHub Actions jobs that must report:
 | same, `android-instrumented.yml` | `emulator instrumentation` |
 | `services/backend/**`, `packages/mesh-core/**`, `pom.xml`, `backend.yml` | backend unit, PostgreSQL, and boot jobs |
 | `packages/mesh-core/**`, `packages/mesh-simulator/**`, `scripts/**`, `pom.xml`, `java.yml` | Java mesh and benchmark jobs |
+| `.github/scripts/**`, Guardian/contributor/assignment workflow files, `guardian-tests.yml` | `guardian + bot tests` |
+
+The `Guardian tests` workflow runs the local Guardian, contributor-bot,
+assignment-bot, and shared-library suites on Node.js 24. It uses the unprivileged
+`pull_request` event with `contents: read`, no secrets, and no write permissions;
+it is also triggered on pushes to `main` that touch the same paths.
 
 Branch-protection required status checks and repository ruleset
 `required_status_checks` are added to that set when the workflow token can read
@@ -361,7 +367,9 @@ branch-protection and ruleset requirements, stale approvals, AI-review
 staleness, fork PR resolution, policy bypass attempts, untrusted markers,
 unknown-data blocking, dismissal scoping, check reruns, and the 403 shapes
 observed in PRs #58, #60, and #61. These are deterministic tests, not live
-GitHub integration tests.
+GitHub integration tests. The read-only `Guardian tests` workflow runs the same
+suite and publishes the required `guardian + bot tests` check for automation
+changes.
 
 A read-only live dry-run can be performed locally with an authenticated `gh`
 token and `GUARDIAN_DRY_RUN=true`; Guardian will not write. Live workflow

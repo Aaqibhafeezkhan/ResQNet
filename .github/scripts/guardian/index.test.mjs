@@ -137,6 +137,44 @@ test('workflow_run ignores untrusted workflow names and follows allowed ones', a
     now: NOW,
   });
   assert.equal(followed.results[0].pullNumber, 90);
+
+  const guardianTests = await runGuardian({
+    eventName: 'workflow_run',
+    event: { workflow_run: { name: 'Guardian tests', head_sha: 'a'.repeat(40), pull_requests: [{ number: 90 }] } },
+    api: createApi(),
+    config: baseConfig(),
+    now: NOW,
+  });
+  assert.equal(guardianTests.results[0].pullNumber, 90);
+});
+
+test('Guardian and bot changes cannot be ready without their test job', async () => {
+  const base = {
+    issues: new Map([[42, makeIssue(42, { assignees: ['alice'] })]]),
+    timelineEvents: [{
+      event: 'cross-referenced',
+      source: { issue: { number: 90, state: 'open', pull_request: {}, body: 'Closes #42' } },
+    }],
+    files: [{ filename: '.github/scripts/guardian/index.mjs' }],
+    commitDate: '2026-10-22T10:00:00Z',
+  };
+  const config = baseConfig({ dryRun: true, notify: false, checkRun: false });
+  const event = { pull_request: { number: 90 } };
+
+  const missingApi = createApi({
+    ...base,
+    checkRuns: [checkRun('GitGuardian Security Checks', { app: 'gitguardian' })],
+  });
+  const missing = await runGuardian({ eventName: 'pull_request_target', event, api: missingApi, config, now: NOW });
+  assert.equal(missing.results[0].state, STATES.INFRASTRUCTURE_BLOCKED);
+
+  const failingApi = createApi({
+    ...base,
+    commitDate: '2026-10-22T11:55:00Z',
+    checkRuns: [checkRun('guardian + bot tests', { conclusion: 'failure' })],
+  });
+  const failing = await runGuardian({ eventName: 'pull_request_target', event, api: failingApi, config, now: NOW });
+  assert.equal(failing.results[0].state, STATES.CHECKS_FAILED);
 });
 
 test('issue assignment events resolve linked pull requests from the issue timeline', async () => {

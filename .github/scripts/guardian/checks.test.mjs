@@ -11,8 +11,10 @@ import {
 
 const WEB_FILES = [{ filename: 'apps/web/src/components/App.tsx' }];
 const ANDROID_FILES = [{ filename: 'apps/android/app/src/main/AndroidManifest.xml' }];
+const GUARDIAN_FILES = [{ filename: '.github/scripts/guardian/index.mjs' }];
 const WEB_CHECK = 'typecheck + test + build';
 const ANDROID_CHECK = 'assemble + unit tests';
+const GUARDIAN_CHECK = 'guardian + bot tests';
 
 async function run({
   checkRuns = [],
@@ -110,6 +112,29 @@ test('a single passing GitGuardian check is not enough when Android CI is missin
   });
   assert.equal(result.status, 'blocked');
   assert.deepEqual(result.missing, [ANDROID_CHECK, 'emulator instrumentation']);
+});
+
+test('a passing GitGuardian check is not enough when the Guardian test job is missing', async () => {
+  const { result } = await run({
+    files: GUARDIAN_FILES,
+    commitDate: '2026-10-22T10:00:00Z',
+    checkRuns: [checkRun('GitGuardian Security Checks', { app: 'gitguardian' })],
+  });
+  assert.equal(result.status, 'blocked');
+  assert.deepEqual(result.expected, [GUARDIAN_CHECK]);
+  assert.deepEqual(result.missing, [GUARDIAN_CHECK]);
+  assert.ok(result.findings.some((item) => item.id === 'checks.expected-missing'));
+});
+
+test('a failing Guardian test job blocks Guardian and bot changes', async () => {
+  const { result } = await run({
+    files: [{ filename: '.github/workflows/contributor-bot.yml' }],
+    checkRuns: [checkRun(GUARDIAN_CHECK, { conclusion: 'failure' })],
+  });
+  assert.equal(result.status, 'failed');
+  assert.deepEqual(result.expected, [GUARDIAN_CHECK]);
+  assert.deepEqual(result.failing, [GUARDIAN_CHECK]);
+  assert.ok(result.findings.some((item) => item.id.startsWith('checks.failed.')));
 });
 
 test('missing expected checks shortly after the head commit are pending, never ready', async () => {

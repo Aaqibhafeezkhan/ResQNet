@@ -47,6 +47,20 @@ test('Java simulator and workflow changes require Java CI', () => {
   assert.deepEqual(workflow.groups, ['java']);
 });
 
+test('Guardian and bot configuration changes require the Guardian test job', () => {
+  for (const filename of [
+    '.github/scripts/guardian/index.mjs',
+    '.github/workflows/guardian.yml',
+    '.github/workflows/guardian-tests.yml',
+    '.github/workflows/contributor-bot.yml',
+    '.github/workflows/pr-assignment-bot.yml',
+  ]) {
+    const result = expectedChecksForFiles([{ filename }]);
+    assert.deepEqual(result.groups, ['guardian-tests'], filename);
+    assert.deepEqual(result.checks.map((check) => check.name), ['guardian + bot tests'], filename);
+  }
+});
+
 test('docs-only changes do not invent required code CI', () => {
   const result = expectedChecksForFiles([{ filename: 'README.md' }, { filename: 'docs/guardian.md' }]);
   assert.deepEqual(result.groups, []);
