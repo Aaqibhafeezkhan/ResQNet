@@ -99,6 +99,41 @@ vulnerabilities, but do report a concrete way to make one worse than described:
   evidence about real radios; see
   [apps/android/DEVICE_TESTING.md](apps/android/DEVICE_TESTING.md).
 
+## Security-sensitive pull requests
+
+Do not open a public pull request that demonstrates an unfixed vulnerability.
+Report it privately first, then coordinate the fix with the maintainer. If a
+change must touch security-sensitive code, say so in the pull request and wait
+for a maintainer before requesting review.
+
+Issues labelled `security`, `security-sensitive`, or `vulnerability` (or whose
+title clearly describes a vulnerability) are assigned by maintainers, not by the
+`/assign` bot. Pull requests that link such an issue are flagged by ResQNet
+Guardian and cannot reach `READY_FOR_MAINTAINER_REVIEW` without an approval from
+a reviewer with repository write access; the flag is advisory and the human
+reviewer decides.
+
+Guardian and the contributor bots are repository automation, not security
+review:
+
+- They run trusted code from the default branch and never check out, build, or
+  execute pull-request head code. The `pull_request_target` workflow does not
+  expose repository secrets to fork code.
+- They use the repository `GITHUB_TOKEN` and never a personal access token.
+  Guardian has `contents: read`, `issues: write`, `pull-requests: write`,
+  `checks: write`, and `statuses: read`; the issue bots have only
+  `contents: read` and `issues: write`, plus `pull-requests: write` for the PR
+  assignment bot.
+- They never merge, approve, close, deploy, create releases, or open pull
+  requests. Guardian readiness is advisory and cannot satisfy a required review.
+- They treat comment bodies as untrusted data: text is escaped, command parsing
+  is bounded, and maintainer commands require repository write permission.
+- A passing Guardian state is not a security review. Guardian does not inspect
+  diffs for vulnerable code; it only enforces process readiness.
+
+See [docs/guardian.md](docs/guardian.md) for the full security model and
+[CONTRIBUTING.md](CONTRIBUTING.md) for the contributor workflow.
+
 ## Verifying release artifacts
 
 Each Android release ships with `SHA256SUMS`, `ARTIFACTS.md`, and a certificate
