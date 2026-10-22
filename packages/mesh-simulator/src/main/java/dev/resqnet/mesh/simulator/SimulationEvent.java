@@ -48,6 +48,21 @@ public record SimulationEvent(
     @FunctionalInterface
     public interface NodeResolver {
         String labelOf(String deviceId);
+
+        /**
+         * Maps a device identity onto the node index that owns it.
+         *
+         * <p>Indices rather than identities are used because the simulator
+         * generates a fresh key pair for every node on every run: identities
+         * differ between two runs of the same seed, indices do not. A report
+         * that named identities in every event line would also differ between
+         * runs, which defeats the point of a reproducible report.
+         *
+         * @return the node index, or {@code -1} when the identity is unknown
+         */
+        default int indexOf(String deviceId) {
+            return -1;
+        }
     }
 
     /**
@@ -63,12 +78,14 @@ public record SimulationEvent(
         String nodeShortId = "n" + nodeIndex;
         if (event instanceof MeshEvent.Accepted accepted) {
             return new SimulationEvent(accepted.atEpochMillis(), round, nodeIndex, nodeShortId,
-                    "accepted", accepted.envelope().messageId(), List.of(),
+                    "accepted", accepted.envelope().messageId(),
+                    peersOf(resolver, accepted.fromPeerDeviceId()),
                     accepted.hopCount(), null, "from " + resolver.labelOf(accepted.fromPeerDeviceId()), true);
         }
         if (event instanceof MeshEvent.Forwarded forwarded) {
             return new SimulationEvent(forwarded.atEpochMillis(), round, nodeIndex, nodeShortId,
-                    "forwarded", forwarded.messageId(), List.of(), forwarded.hopCount(), null,
+                    "forwarded", forwarded.messageId(),
+                    peersOf(resolver, forwarded.peerDeviceIds()),                    forwarded.hopCount(), null,
                     "relayed to " + forwarded.peerDeviceIds().size() + " peer(s)", true);
         }
         if (event instanceof MeshEvent.Delivered delivered) {
@@ -78,23 +95,27 @@ public record SimulationEvent(
         }
         if (event instanceof MeshEvent.AcknowledgementReceived ack) {
             return new SimulationEvent(ack.atEpochMillis(), round, nodeIndex, nodeShortId,
-                    "acknowledged", ack.messageId(), List.of(), -1, null,
+                    "acknowledged", ack.messageId(),
+                    peersOf(resolver, ack.acknowledgedBy()), -1, null,
                     "confirmed by " + resolver.labelOf(ack.acknowledgedBy()), true);
         }
         if (event instanceof MeshEvent.AcknowledgementSent ack) {
             return new SimulationEvent(ack.atEpochMillis(), round, nodeIndex, nodeShortId,
-                    "acknowledgement-sent", ack.messageId(), List.of(), -1, null,
+                    "acknowledgement-sent", ack.messageId(),
+                    peersOf(resolver, ack.acknowledgedTo()), -1, null,
                     "confirming to " + resolver.labelOf(ack.acknowledgedTo()), true);
         }
         if (event instanceof MeshEvent.PeerConnectionChanged peer) {
             return new SimulationEvent(peer.atEpochMillis(), round, nodeIndex, nodeShortId,
-                    peer.connected() ? "peer-connected" : "peer-disconnected", null, List.of(),
-                    -1, null, "peer " + resolver.labelOf(peer.deviceId()), true);
+                    peer.connected() ? "peer-connected" : "peer-disconnected", null,
+                    peersOf(resolver, peer.deviceId()), -1, null,
+                    "peer " + resolver.labelOf(peer.deviceId()), true);
         }
         if (event instanceof MeshEvent.Rejected rejected) {
             return new SimulationEvent(rejected.atEpochMillis(), round, nodeIndex, nodeShortId,
                     "rejected", rejected.messageId(),
-                    List.of(), -1, rejected.reason(),
+                    peersOf(resolver, rejected.fromPeerDeviceId(), rejected.originDeviceId()),
+                    -1, rejected.reason(),
                     rejected.detail() + " (via " + resolver.labelOf(rejected.fromPeerDeviceId())
                             + ", origin " + resolver.labelOf(rejected.originDeviceId()) + ")",
                     true);
@@ -117,6 +138,43 @@ public record SimulationEvent(
         }
         return new SimulationEvent(0L, round, nodeIndex, nodeShortId, "other", null, List.of(),
                 -1, null, event.getClass().getSimpleName(), true);
+    }
+
+    /**
+     * Resolves device identities to node indices, dropping unknown ones.
+     *
+     * <p>An empty list means "no peer was involved" and is different from
+     * "the peer is not in this report": a resolved list always contains real
+     * node indices, so a viewer can draw a line it knows the simulator drew.
+     */
+    private static List<Integer> peersOf(NodeResolver resolver, String... deviceIds) {
+        List<Integer> peers = new java.util.ArrayList<>(deviceIds.length);
+        for (String deviceId : deviceIds) {
+            if (deviceId == null) {
+                continue;
+            }
+            int index = resolver.indexOf(deviceId);
+            if (index >= 0 && !peers.contains(index)) {
+                peers.add(index);
+            }
+        }
+        return List.copyOf(peers);
+    }
+
+    /** Overload for the peer list carried by a forward event. */
+    private static List<Integer> peersOf(NodeResolver resolver,
+                                         java.util.Collection<String> deviceIds) {
+        List<Integer> peers = new java.util.ArrayList<>(deviceIds.size());
+        for (String deviceId : deviceIds) {
+            if (deviceId == null) {
+                continue;
+            }
+            int index = resolver.indexOf(deviceId);
+            if (index >= 0 && !peers.contains(index)) {
+                peers.add(index);
+            }
+        }
+        return List.copyOf(peers);
     }
 
     /** JSON projection used by the gateway ingestion endpoint. */

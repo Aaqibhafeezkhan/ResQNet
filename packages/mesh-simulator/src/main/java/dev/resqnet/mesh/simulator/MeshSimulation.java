@@ -44,6 +44,7 @@ public final class MeshSimulation implements AutoCloseable {
     private final List<SimulatedNode> nodes = new ArrayList<>();
     private final Random schedule;
     private List<SimulationEvent> collectedEvents = new ArrayList<>();
+    private final List<SimulationReport.MessageReport> originatedMessages = new ArrayList<>();
 
     /** Upper bound on events retained in a report. */
     public static final int MAX_RECORDED_EVENTS = 4_000;
@@ -187,8 +188,16 @@ public final class MeshSimulation implements AutoCloseable {
         }
 
         String body = SAMPLE_MESSAGES[index % SAMPLE_MESSAGES.length];
-        source.router().originate(destination, MessageType.SOS, Priority.SOS,
+        dev.resqnet.mesh.protocol.MessageEnvelope envelope = source.router().originate(destination,
+                MessageType.SOS, Priority.SOS,
                 body.getBytes(java.nio.charset.StandardCharsets.UTF_8), 0L);
+
+        // Recorded so a report can say which node composed a message and which
+        // node it was addressed to. Without this, a message id in the event
+        // stream is a label with no journey attached to it.
+        originatedMessages.add(new SimulationReport.MessageReport(envelope.messageId(),
+                source.index(), broadcast ? -1 : network.indexOf(destination), broadcast,
+                envelope.createdAtEpochMillis()));
     }
 
     /**
@@ -241,10 +250,17 @@ public final class MeshSimulation implements AutoCloseable {
         int partitions = countPartitions();
         long duration = config.rounds() * config.stepMillis();
 
+        List<SimulationReport.LinkChangeReport> linkChangeRecords = new ArrayList<>();
+        for (SimulationNetwork.LinkChange change : network.linkChanges()) {
+            linkChangeRecords.add(new SimulationReport.LinkChangeReport(change.atEpochMillis(),
+                    change.round(), change.nodeA(), change.nodeB(), change.up()));
+        }
+
         return new SimulationReport(config, nodeReports, collectedEvents,
                 network.framesSent(), network.framesDelivered(), network.framesDropped(),
                 network.linkChanges().size(), partitions, duration, cpuMillis, allLatencies,
-                aggregate, hopDistribution, Map.of());
+                aggregate, hopDistribution, Map.of(), originatedMessages, linkChangeRecords,
+                totalEventCount);
     }
 
     private static Map<Integer, Long> mergeCounts(Map<Integer, Long> target,
