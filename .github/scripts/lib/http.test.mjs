@@ -36,6 +36,42 @@ test('classifies the PR #58/#60/#61 permission shape without leaking the token',
   assert.equal(isGitHubApiError(error, 'permission'), true);
 });
 
+test('a 403 diagnostic reports accepted permissions as alternatives, not proof of a root cause', () => {
+  const error = classifyHttpError({
+    status: 403,
+    method: 'POST',
+    path: '/repos/Gautam-aman/ResQNet/issues/60/labels',
+    headers: new Headers({
+      'x-github-request-id': 'req-403',
+      'x-accepted-github-permissions': 'issues=write; pull_requests=write',
+    }),
+    body: {
+      message: 'Resource not accessible by integration',
+      documentation_url: 'https://docs.github.com/rest/issues/labels#add-labels-to-an-issue',
+    },
+  });
+  const diagnostic = error.diagnostic();
+  assert.match(diagnostic, /HTTP 403/);
+  assert.match(diagnostic, /classification=permission/);
+  assert.match(diagnostic, /accepted-permissions=issues=write; pull_requests=write/);
+  assert.match(diagnostic, /next-check=effective-workflow-token-and-event-context/);
+  assert.match(diagnostic, /Resource not accessible by integration/);
+  assert.match(diagnostic, /docs: https:\/\/docs.github.com\/rest\/issues\/labels/);
+  assert.equal(/root cause/i.test(diagnostic), false);
+});
+
+test('validation failures include bounded API error details', () => {
+  const error = classifyHttpError({
+    status: 422,
+    body: {
+      message: 'Validation Failed',
+      errors: [{ resource: 'Issue', field: 'labels', code: 'invalid' }],
+    },
+  });
+  assert.equal(error.kind, 'validation');
+  assert.match(error.diagnostic(), /details=\[.*labels.*\]/);
+});
+
 test('retries an idempotent GET after a transient 500', async () => {
   let calls = 0;
   const fetchImpl = async () => {

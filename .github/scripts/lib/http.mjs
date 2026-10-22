@@ -11,7 +11,7 @@
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
 export class GitHubApiError extends Error {
-  constructor({ method, path, status = 0, kind = 'unknown', message, requestId, documentationUrl, acceptedPermissions, retryable = false, cause }) {
+  constructor({ method, path, status = 0, kind = 'unknown', message, requestId, documentationUrl, acceptedPermissions, details, retryable = false, cause }) {
     super(message ?? `GitHub API ${method} ${path} failed with HTTP ${status}`);
     this.name = 'GitHubApiError';
     this.method = method;
@@ -21,6 +21,7 @@ export class GitHubApiError extends Error {
     this.requestId = requestId ?? null;
     this.documentationUrl = documentationUrl ?? null;
     this.acceptedPermissions = acceptedPermissions ?? null;
+    this.details = details ?? null;
     this.retryable = retryable;
     if (cause) this.cause = cause;
   }
@@ -32,6 +33,12 @@ export class GitHubApiError extends Error {
     parts.push(`classification=${this.kind}`);
     if (this.requestId) parts.push(`request-id=${this.requestId}`);
     if (this.acceptedPermissions) parts.push(`accepted-permissions=${this.acceptedPermissions}`);
+    if (this.kind === 'permission') {
+      // GitHub lists accepted permissions as alternatives, not as a diff. The
+      // workflow's effective token and event context still have to be checked.
+      parts.push('next-check=effective-workflow-token-and-event-context');
+    }
+    if (this.details) parts.push(`details=${this.details}`);
     let text = parts.join(' ');
     if (this.message && !this.message.startsWith('GitHub API ')) text += `: ${this.message}`;
     if (this.documentationUrl) text += ` (docs: ${this.documentationUrl})`;
@@ -60,6 +67,15 @@ function bodyMessage(body) {
   if (typeof body === 'string') return body;
   if (typeof body.message === 'string') return body.message;
   return '';
+}
+
+function bodyDetails(body) {
+  if (!body || typeof body !== 'object' || !Array.isArray(body.errors) || !body.errors.length) return null;
+  try {
+    return JSON.stringify(body.errors).slice(0, 500);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -104,6 +120,7 @@ export function classifyHttpError({ status, body, headers, method = 'GET', path 
     requestId: header(headers, 'x-github-request-id'),
     documentationUrl: body && typeof body === 'object' ? body.documentation_url : undefined,
     acceptedPermissions: header(headers, 'x-accepted-github-permissions'),
+    details: bodyDetails(body),
     retryable: kind === 'network' || kind === 'server' || kind === 'rate_limit',
   });
 }

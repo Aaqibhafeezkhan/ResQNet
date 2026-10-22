@@ -9,9 +9,12 @@ name: PR assignment advisory
 permissions:
   contents: read
   issues: write
-  # PR comments use the Issues API, but GitHub requires pull-requests write for
-  # pull-request objects. Without this, POST /issues/{n}/comments and label
-  # writes on a PR fail with HTTP 403 while ordinary issue writes still work.
+  # The issue-comment and label endpoints accept either `issues: write` or
+  # `pull-requests: write`. `issues: write` covers label creation; this second
+  # scope is retained as a candidate remediation for the 403s in #58/#60/#61.
+  # Those failures happened with `Issues: write` present, so this is not proof
+  # of the root cause. Verify with a live run on the default branch; do not add
+  # a PAT.
   pull-requests: write
 
 concurrency:

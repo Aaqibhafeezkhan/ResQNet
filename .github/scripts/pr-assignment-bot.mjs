@@ -265,7 +265,7 @@ async function runCli() {
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   runCli().catch((error) => {
-    console.error(`pr-assignment-bot: ${error?.diagnostic?.() ?? error?.message ?? 'unexpected failure'}`);
+    console.error(`pr-assignment-bot: event=${process.env.GITHUB_EVENT_NAME ?? 'unknown'} ${error?.diagnostic?.() ?? error?.message ?? 'unexpected failure'}`);
     process.exitCode = 1;
   });
 }
