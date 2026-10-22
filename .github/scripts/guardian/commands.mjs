@@ -45,7 +45,7 @@ function helpText() {
     '- `/guardian status` — show the last recorded state.',
     '- `/guardian explain` — evaluate live and explain the current findings without writing the summary.',
     '- `/guardian recheck` — re-evaluate and update the summary (write access required).',
-    '- `/guardian dismiss <finding-id> <reason>` — dismiss a verified check or review false positive (write access required).',
+    '- `/guardian dismiss <finding-id> <reason>` — dismiss a verified non-required check or review false positive (write access required).',
     '- `/guardian help` — show this help.',
     '',
     '`/guardian merge` does not exist. Guardian never merges, approves, closes, deploys, or opens pull requests.',
@@ -213,7 +213,7 @@ export async function handleGuardianCommand({
     if (!isDismissibleFinding(target.id)) {
       return send({
         command: 'dismiss',
-        message: `Finding ${'`'}${target.id}${'`'} cannot be dismissed. Unknown-data and mergeability findings must be resolved by restoring trustworthy data.`,
+        message: `Finding ${'`'}${target.id}${'`'} cannot be dismissed. Unknown-data, missing-expected-check, security, and mergeability findings must be resolved rather than suppressed.`,
         state: snapshot.outcome.state,
       });
     }

@@ -69,7 +69,7 @@ jobs:
           GUARDIAN_AI_REVIEW_LOGIN: ${{ vars.GUARDIAN_AI_REVIEW_LOGIN || 'coderabbitai[bot]' }}
           GUARDIAN_STALE_DAYS: ${{ vars.GUARDIAN_STALE_DAYS || '30' }}
           GUARDIAN_NO_CHECKS_GRACE_MINUTES: ${{ vars.GUARDIAN_NO_CHECKS_GRACE_MINUTES || '15' }}
-          GUARDIAN_MAINTAINERS: ${{ vars.GUARDIAN_MAINTAINERS }}
+          GUARDIAN_MAINTAINERS: ${{ vars.GUARDIAN_MAINTAINERS || 'Gautam-aman' }}
           GUARDIAN_BOT_LOGIN: ${{ vars.GUARDIAN_BOT_LOGIN || 'github-actions[bot]' }}
           GUARDIAN_MAX_PULLS: ${{ vars.GUARDIAN_MAX_PULLS || '25' }}
           GUARDIAN_MERGEABLE_RETRY_MS: ${{ vars.GUARDIAN_MERGEABLE_RETRY_MS || '800' }}

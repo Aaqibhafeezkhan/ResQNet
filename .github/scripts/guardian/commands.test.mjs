@@ -169,7 +169,7 @@ test('dismiss persists an authorized, reasoned dismissal and recomputes readines
   assert.equal(dismissal.reason, 'flaky runner, tracked in #77');
   assert.equal(dismissal.by, 'alice');
   assert.equal(dismissal.headSha, pull.head.sha);
-  assert.equal(persisted.snapshot.outcome.state, STATES.AWAITING_HUMAN_REVIEW);
+  assert.equal(persisted.snapshot.outcome.state, STATES.READY_FOR_MAINTAINER_REVIEW);
   assert.match(state.api.state.comments.at(-1).body, /was dismissed/);
 });
 

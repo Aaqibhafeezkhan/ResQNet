@@ -33,8 +33,8 @@ function evaluate({ pull = makePull(), policy: policyValue = policy(), checks: c
   });
 }
 
-test('checks pass with no reviews means awaiting human review', () => {
-  assert.equal(evaluate().state, STATES.AWAITING_HUMAN_REVIEW);
+test('checks pass with no approval is ready for the first maintainer review', () => {
+  assert.equal(evaluate().state, STATES.READY_FOR_MAINTAINER_REVIEW);
 });
 
 test('human approval with passing checks is ready for maintainer review', () => {
@@ -107,8 +107,50 @@ test('missing checks block readiness and can be dismissed knowingly', () => {
       },
     },
   });
-  assert.equal(dismissed.state, STATES.AWAITING_HUMAN_REVIEW);
+  assert.equal(dismissed.state, STATES.READY_FOR_MAINTAINER_REVIEW);
   assert.equal(dismissed.dismissedFindings.length, 1);
+});
+
+test('missing expected checks block and cannot be dismissed', () => {
+  const blocked = evaluate({
+    checks: checks({
+      status: 'blocked',
+      expected: ['typecheck + test + build'],
+      missing: ['typecheck + test + build'],
+      findings: [finding('checks.expected-missing')],
+    }),
+  });
+  assert.equal(blocked.state, STATES.INFRASTRUCTURE_BLOCKED);
+  assert.equal(isDismissibleFinding('checks.expected-missing'), false);
+  const dismissed = evaluate({
+    checks: checks({
+      status: 'blocked',
+      expected: ['typecheck + test + build'],
+      missing: ['typecheck + test + build'],
+      findings: [finding('checks.expected-missing')],
+    }),
+    dismissals: {
+      'checks.expected-missing': {
+        reason: 'trying to bypass required CI',
+        by: 'maintainer',
+        at: '2026-10-22T10:00:00Z',
+        headSha: 'a'.repeat(40),
+      },
+    },
+  });
+  assert.equal(dismissed.state, STATES.INFRASTRUCTURE_BLOCKED);
+});
+
+test('a failed security check blocks readiness', () => {
+  const result = evaluate({
+    checks: checks({
+      status: 'failed',
+      failing: ['GitGuardian Security Checks'],
+      findings: [finding('checks.security-failed')],
+    }),
+  });
+  assert.equal(result.state, STATES.CHECKS_FAILED);
+  assert.equal(isDismissibleFinding('checks.security-failed'), false);
 });
 
 test('unknown check data cannot be dismissed', () => {
@@ -147,7 +189,7 @@ test('AI review is required before human review when enabled', () => {
     aiReviewEnabled: true,
     reviews: reviews({ aiReviewed: true }),
   });
-  assert.equal(reviewed.state, STATES.AWAITING_HUMAN_REVIEW);
+  assert.equal(reviewed.state, STATES.READY_FOR_MAINTAINER_REVIEW);
   const approved = evaluate({
     aiReviewEnabled: true,
     reviews: reviews({ status: 'approved', approvedBy: ['maintainer'], aiReviewed: true, findings: [finding('review.approved', SEVERITIES.INFO)] }),
@@ -191,7 +233,7 @@ test('dismissed check failures stop blocking, but only for the current head', ()
     checks: checks({ status: 'failed', findings: [finding('checks.failed.test')] }),
     dismissals: dismissal,
   });
-  assert.equal(current.state, STATES.AWAITING_HUMAN_REVIEW);
+  assert.equal(current.state, STATES.READY_FOR_MAINTAINER_REVIEW);
   assert.equal(current.dismissedFindings.length, 1);
 
   const newHead = evaluate({
@@ -247,7 +289,7 @@ test('dismissed human change requests stop blocking, but policy cannot be dismis
       },
     },
   });
-  assert.equal(result.state, STATES.AWAITING_HUMAN_REVIEW);
+  assert.equal(result.state, STATES.READY_FOR_MAINTAINER_REVIEW);
   assert.equal(isDismissibleFinding('policy.no-issue-reference'), false);
 });
 

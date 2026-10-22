@@ -23,10 +23,10 @@ const NEXT_ACTIONS = Object.freeze({
   [STATES.NEEDS_CHANGES]: 'Address the findings above, then push a new commit or ask the reviewer for a fresh review. Guardian does not dismiss human reviews.',
   [STATES.CHECKS_RUNNING]: 'Wait for CI to finish. Guardian re-evaluates automatically when checks complete.',
   [STATES.CHECKS_FAILED]: 'Fix the failing checks and push a new commit. A maintainer can re-run checks from the Actions tab; Guardian does not re-run CI by itself.',
-  [STATES.INFRASTRUCTURE_BLOCKED]: 'A maintainer should run `/guardian recheck` after the data source recovers. Unknown data is never treated as a pass. Only verified missing-check false positives can be dismissed.',
-  [STATES.AWAITING_AI_REVIEW]: 'Wait for the configured AI reviewer, or ask a maintainer whether the integration is expected to run. AI review is advisory.',
-  [STATES.AWAITING_HUMAN_REVIEW]: 'Wait for a human reviewer. Guardian does not approve pull requests or request reviewers automatically.',
-  [STATES.READY_FOR_MAINTAINER_REVIEW]: 'A maintainer can now make the final review and merge decision. Guardian never merges or approves.',
+  [STATES.INFRASTRUCTURE_BLOCKED]: 'A maintainer should run `/guardian recheck` after the data source recovers. Unknown data is never treated as a pass. Only `checks.no-data` can be dismissed after confirming the absence is expected; missing expected checks and security failures cannot.',
+  [STATES.AWAITING_AI_REVIEW]: 'Wait for the configured AI reviewer, or ask a maintainer whether the integration is expected to run. AI review is advisory, and without the GitHub App no independent AI review is occurring.',
+  [STATES.AWAITING_HUMAN_REVIEW]: 'This legacy state is no longer emitted. Guardian reports readiness for the first maintainer review as READY_FOR_MAINTAINER_REVIEW.',
+  [STATES.READY_FOR_MAINTAINER_REVIEW]: 'A maintainer can now perform the first review. Human approval and merge eligibility are separate; Guardian never merges or approves.',
   [STATES.STALE]: 'A maintainer or contributor should confirm whether the work is still active. Stale pull requests are not closed automatically.',
   [STATES.MERGED]: 'No action needed. Guardian did not merge this pull request.',
   [STATES.CLOSED]: 'No action needed. Guardian did not close this pull request.',
@@ -124,10 +124,25 @@ export function findGuardianSummary(comments = [], botLogin = 'github-actions[bo
 
 function checksDetail(checks) {
   if (!checks) return 'Check data unavailable.';
-  if (checks.status === 'passed') return `${checks.total} check(s) passed.`;
-  if (checks.status === 'failed') return `${checks.failing.length} check(s) failed: ${checks.failing.map((name) => codeSpan(name)).join(', ')}.`;
-  if (checks.status === 'running') return `Waiting for ${checks.pending.length || 'some'} check(s).`;
-  if (checks.status === 'blocked') return 'No checks were reported for the head commit.';
+  if (checks.status === 'passed') {
+    const expected = checks.expected?.length
+      ? `${checks.expected.length} expected check(s) passed`
+      : `${checks.total} check(s) passed`;
+    return `${expected}.`;
+  }
+  if (checks.status === 'failed') {
+    return `${checks.failing.length} required or security check(s) failed: ${checks.failing.map((name) => codeSpan(name)).join(', ')}.`;
+  }
+  if (checks.status === 'running') {
+    const waiting = checks.pending?.length ? checks.pending : checks.missing ?? [];
+    return `Waiting for ${waiting.length ? waiting.map((name) => codeSpan(name)).join(', ') : 'required checks'}.`;
+  }
+  if (checks.status === 'blocked') {
+    if (checks.missing?.length) {
+      return `Missing expected check(s): ${checks.missing.map((name) => codeSpan(name)).join(', ')}.`;
+    }
+    return 'No checks were reported for the head commit.';
+  }
   return 'Check data could not be verified.';
 }
 
@@ -179,6 +194,8 @@ export function renderSummaryBody({
 
   if (settings.aiReviewEnabled) {
     lines.push(summaryLine('AI review', `enabled (${codeSpan(settings.aiReviewLogin ?? 'configured reviewer')})`));
+  } else {
+    lines.push(summaryLine('AI review', 'not enabled — independent AI review is not part of this readiness decision'));
   }
 
   lines.push(
@@ -204,7 +221,7 @@ export function renderSummaryBody({
     '- `/guardian status` — show the last recorded readiness state.',
     '- `/guardian explain` — explain the current findings.',
     '- `/guardian recheck` — re-evaluate the pull request (repository write access required).',
-    '- `/guardian dismiss <finding-id> <reason>` — dismiss a verified check or review false positive (repository write access required). Policy and unknown-data findings cannot be dismissed.',
+    '- `/guardian dismiss <finding-id> <reason>` — dismiss a verified non-required finding (repository write access required). Policy, unknown-data, missing-expected-check, and security findings cannot be dismissed.',
     '- `/guardian help` — show command help.',
     '',
     'Guardian is advisory. It never merges, approves, closes, deploys, or opens pull requests. Existing required checks and branch protection, when configured, remain authoritative.',

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { runGuardian } from './index.mjs';
+import { runGuardian, loadConfig } from './index.mjs';
 import { STATES } from './constants.mjs';
 import {
   BOT_LOGIN,
@@ -27,7 +27,8 @@ test('lifecycle: assignment, review, failure, recovery, and notification dedupe'
   const issue = makeIssue(42);
   const api = createApi({
     issues: new Map([[42, issue]]),
-    checkRuns: [checkRun('test')],
+    checkRuns: [checkRun('typecheck + test + build')],
+    files: [{ filename: 'apps/web/src/App.tsx' }],
     permissions: { maintainer: { permission: 'write' } },
     timelineEvents: [{
       event: 'cross-referenced',
@@ -45,17 +46,19 @@ test('lifecycle: assignment, review, failure, recovery, and notification dedupe'
 
   api.state.issues.get(42).assignees = [{ login: 'alice' }];
   const assigned = await runGuardian({ eventName: 'issues', event: { action: 'assigned', issue: { number: 42 } }, api, config, now: NOW });
-  assert.equal(assigned.results[0].state, STATES.AWAITING_HUMAN_REVIEW);
+  assert.equal(assigned.results[0].state, STATES.READY_FOR_MAINTAINER_REVIEW);
   assert.equal(summaryComments(api).length, 1);
-  assert.equal(notificationComments(api).length, 0);
+  assert.equal(notificationComments(api).length, 1);
+  assert.match(notificationComments(api)[0].body, /@Gautam-aman/);
+  assert.match(notificationComments(api)[0].body, /first maintainer review/);
+  assert.match(notificationComments(api)[0].body, /none yet/);
 
   api.state.reviews = [review('maintainer', 'APPROVED')];
   const ready = await runGuardian({ eventName: 'pull_request_review', event: { pull_request: { number: 90 } }, api, config, now: NOW });
   assert.equal(ready.results[0].state, STATES.READY_FOR_MAINTAINER_REVIEW);
   assert.equal(summaryComments(api).length, 1);
   assert.equal(notificationComments(api).length, 1);
-  assert.match(notificationComments(api)[0].body, /ready for maintainer review/);
-  assert.match(notificationComments(api)[0].body, /Human approval: `maintainer`/);
+  assert.match(summaryComments(api)[0].body, /Approved by maintainer/);
 
   const rerun = await runGuardian({ eventName: 'pull_request_target', event, api, config, now: NOW });
   assert.equal(rerun.results[0].summary, 'unchanged');
@@ -64,7 +67,7 @@ test('lifecycle: assignment, review, failure, recovery, and notification dedupe'
 
   api.state.pull.head = { sha: 'b'.repeat(40), repo: { full_name: 'alice/ResQNet' } };
   api.state.pull.updated_at = '2026-10-22T12:01:00Z';
-  const failedRun = checkRun('test', { conclusion: 'failure' });
+  const failedRun = checkRun('typecheck + test + build', { conclusion: 'failure' });
   failedRun.completed_at = '2026-10-22T12:05:00Z';
   api.state.checkRuns = [failedRun];
   const failed = await runGuardian({ eventName: 'workflow_run', event: { workflow_run: { name: 'Web', head_sha: 'b'.repeat(40), pull_requests: [{ number: 90 }] } }, api, config, now: NOW });
@@ -73,10 +76,10 @@ test('lifecycle: assignment, review, failure, recovery, and notification dedupe'
 
   api.state.pull.head = { sha: 'c'.repeat(40), repo: { full_name: 'alice/ResQNet' } };
   api.state.pull.updated_at = '2026-10-22T12:02:00Z';
-  const fixedRun = checkRun('test', { conclusion: 'success' });
+  const fixedRun = checkRun('typecheck + test + build', { conclusion: 'success' });
   fixedRun.completed_at = '2026-10-22T12:10:00Z';
   api.state.checkRuns = [fixedRun];
-  const recovered = await runGuardian({ eventName: 'workflow_run', event: { workflow_run: { name: 'Backend', head_sha: 'c'.repeat(40), pull_requests: [{ number: 90 }] } }, api, config, now: NOW });
+  const recovered = await runGuardian({ eventName: 'workflow_run', event: { workflow_run: { name: 'Web', head_sha: 'c'.repeat(40), pull_requests: [{ number: 90 }] } }, api, config, now: NOW });
   assert.equal(recovered.results[0].state, STATES.READY_FOR_MAINTAINER_REVIEW);
   assert.equal(summaryComments(api).length, 1);
   assert.equal(notificationComments(api).length, 2);
@@ -243,9 +246,18 @@ test('dry-run writes nothing, including summaries, check runs, and notifications
   assert.equal(api.calls.filter(([method]) => method.startsWith('create') || method.startsWith('update')).length, 0);
 });
 
-test('no notification is sent for a pre-existing ready PR with no recorded previous state', async () => {
+test('the default notification recipient is the repository maintainer', () => {
+  assert.deepEqual(loadConfig({}).maintainers, ['Gautam-aman']);
+  assert.deepEqual(loadConfig({ GUARDIAN_MAINTAINERS: 'maintainer, helper' }).maintainers, ['maintainer', 'helper']);
+  assert.deepEqual(loadConfig({ GUARDIAN_MAINTAINERS: ' , ' }).maintainers, ['Gautam-aman']);
+  assert.deepEqual(loadConfig({ GUARDIAN_MAINTAINERS: 'maintainer, maintainer' }).maintainers, ['maintainer']);
+});
+
+test('an approval of an earlier commit is not reported as current-head approval', async () => {
   const api = createApi({
-    reviews: [review('maintainer', 'APPROVED')],
+    files: [{ filename: 'apps/web/src/App.tsx' }],
+    checkRuns: [checkRun('typecheck + test + build')],
+    reviews: [review('maintainer', 'APPROVED', '2026-10-21T10:00:00Z', 'User', 'b'.repeat(40))],
     permissions: { maintainer: { permission: 'write' } },
   });
   api.state.issues.get(42).assignees = [{ login: 'alice' }];
@@ -257,7 +269,51 @@ test('no notification is sent for a pre-existing ready PR with no recorded previ
     now: NOW,
   });
   assert.equal(result.results[0].state, STATES.READY_FOR_MAINTAINER_REVIEW);
-  assert.equal(notificationComments(api).length, 0);
+  assert.match(summaryComments(api)[0].body, /Approval is for an earlier commit/);
+  assert.match(notificationComments(api)[0].body, /none yet/);
+  assert.doesNotMatch(notificationComments(api)[0].body, /Human approval already recorded/);
+});
+
+test('maintainer-authored and bot-authored ready pull requests do not notify a maintainer', async () => {
+  for (const pull of [
+    makePull({ author_association: 'OWNER', user: { login: 'Gautam-aman', type: 'User' } }),
+    makePull({ author_association: 'NONE', user: { login: 'dependabot[bot]', type: 'Bot' } }),
+  ]) {
+    const api = createApi({
+      pull,
+      files: [{ filename: 'apps/web/src/App.tsx' }],
+      checkRuns: [checkRun('typecheck + test + build')],
+    });
+    const result = await runGuardian({
+      eventName: 'pull_request_target',
+      event: { pull_request: { number: 90 } },
+      api,
+      config: baseConfig({ notify: true }),
+      now: NOW,
+    });
+    assert.equal(result.results[0].state, STATES.READY_FOR_MAINTAINER_REVIEW);
+    assert.equal(notificationComments(api).length, 0);
+  }
+});
+
+test('the first ready evaluation notifies the default maintainer even with no approvals', async () => {
+  const api = createApi({
+    files: [{ filename: 'apps/web/src/App.tsx' }],
+    checkRuns: [checkRun('typecheck + test + build')],
+  });
+  api.state.issues.get(42).assignees = [{ login: 'alice' }];
+  const result = await runGuardian({
+    eventName: 'pull_request_target',
+    event: { pull_request: { number: 90 } },
+    api,
+    config: baseConfig({ notify: true }),
+    now: NOW,
+  });
+  assert.equal(result.results[0].state, STATES.READY_FOR_MAINTAINER_REVIEW);
+  assert.equal(notificationComments(api).length, 1);
+  assert.match(notificationComments(api)[0].body, /@Gautam-aman/);
+  assert.match(notificationComments(api)[0].body, /none yet/);
+  assert.match(notificationComments(api)[0].body, /did not approve or merge/);
 });
 
 test('permission failures in the summary write are reported with a 403 diagnostic', async () => {

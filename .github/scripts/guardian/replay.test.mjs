@@ -28,6 +28,7 @@ test('replay: assignment-to-ready lifecycle keeps one summary and one notificati
   api.state.searchPulls = [{ number: scenario.pr }];
   const config = baseConfig();
   let expectedNotifications = 0;
+  let notifiedHead = null;
 
   for (const step of scenario.steps) {
     api.state.issues.get(scenario.issue).assignees = step.assignee ? [{ login: step.assignee }] : [];
@@ -49,7 +50,11 @@ test('replay: assignment-to-ready lifecycle keeps one summary and one notificati
     const summaries = api.state.comments.filter((comment) => comment.body.startsWith('<!-- resqnet-guardian-summary -->'));
     assert.equal(summaries.length, 1, `${step.name}: exactly one summary`);
 
-    if (step.expected === STATES.READY_FOR_MAINTAINER_REVIEW) expectedNotifications += 1;
+    const headSha = api.state.pull.head.sha;
+    if (step.expected === STATES.READY_FOR_MAINTAINER_REVIEW && headSha !== notifiedHead) {
+      expectedNotifications += 1;
+      notifiedHead = headSha;
+    }
     const notifications = api.state.comments.filter((comment) => comment.body.startsWith('<!-- resqnet-guardian-notification:'));
     assert.equal(notifications.length, expectedNotifications, `${step.name}: notification count`);
   }

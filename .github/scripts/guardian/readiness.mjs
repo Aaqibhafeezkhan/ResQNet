@@ -103,10 +103,14 @@ export function evaluatePullSignals({ pull, staleDays = 30, now = Date.now() }) 
  * reported state always names the first actionable blocker:
  *
  * merged/closed, policy unknown, assignment, draft/conflict/review changes,
- * failed checks, infrastructure, running checks, AI review, human approval.
+ * failed checks, infrastructure, running checks, AI review, ready.
  *
- * Dismissed findings stop blocking, except for unknown-data findings, which
- * can never be dismissed.
+ * Human approval is deliberately not a readiness gate. A contributor PR is
+ * ready for the maintainer's first review once the automated conditions are
+ * satisfied; approval and merge eligibility are reported separately.
+ *
+ * Dismissed findings stop blocking, except for unknown-data, missing-expected-
+ * check, and security findings, which can never be dismissed.
  */
 export function computeReadiness({
   pull,
@@ -155,9 +159,10 @@ export function computeReadiness({
     state = STATES.NEEDS_CHANGES;
   } else if (hasActive('review.changes-requested') || hasActive('review.ai-changes-requested')) {
     state = STATES.NEEDS_CHANGES;
-  } else if (checks?.status === 'failed' && hasActivePrefix('checks.failed.')) {
+  } else if (checks?.status === 'failed' && (hasActivePrefix('checks.failed.') || hasActive('checks.security-failed'))) {
     state = STATES.CHECKS_FAILED;
-  } else if (checks?.status === 'blocked' && hasActive('checks.no-data')) {
+  } else if (checks?.status === 'blocked'
+    && (hasActive('checks.no-data') || hasActive('checks.expected-missing'))) {
     state = STATES.INFRASTRUCTURE_BLOCKED;
   } else if (checks?.status === 'unknown' || hasActive('checks.unknown-conclusion')) {
     state = STATES.INFRASTRUCTURE_BLOCKED;
@@ -169,10 +174,8 @@ export function computeReadiness({
     state = STATES.CHECKS_RUNNING;
   } else if (aiReviewEnabled && !reviews?.aiReviewed) {
     state = STATES.AWAITING_AI_REVIEW;
-  } else if (reviews?.approvedBy?.length) {
-    state = STATES.READY_FOR_MAINTAINER_REVIEW;
   } else {
-    state = STATES.AWAITING_HUMAN_REVIEW;
+    state = STATES.READY_FOR_MAINTAINER_REVIEW;
   }
 
   if (pullSignals.stale && [

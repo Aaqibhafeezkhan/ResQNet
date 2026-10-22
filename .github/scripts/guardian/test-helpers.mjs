@@ -24,7 +24,7 @@ export function makePull(overrides = {}) {
     title: 'Fix the routing table',
     user: { login: 'alice', type: 'User' },
     author_association: 'CONTRIBUTOR',
-    base: { repo: { full_name: REPOSITORY } },
+    base: { ref: 'main', repo: { full_name: REPOSITORY } },
     head: { sha: 'a'.repeat(40), repo: { full_name: 'alice/ResQNet' } },
     labels: [],
     created_at: '2026-10-01T00:00:00Z',
@@ -81,6 +81,10 @@ export function createApi({
   pullRequestsForCommit = [],
   searchPulls = [],
   openPulls = [],
+  files = [],
+  branchProtection = null,
+  rulesets = [],
+  rulesetDetails = {},
   errors = {},
 } = {}) {
   const state = {
@@ -97,6 +101,10 @@ export function createApi({
     pullRequestsForCommit: clone(pullRequestsForCommit),
     searchPulls: clone(searchPulls),
     openPulls: clone(openPulls),
+    files: clone(files),
+    branchProtection: clone(branchProtection),
+    rulesets: clone(rulesets),
+    rulesetDetails: clone(rulesetDetails),
     errors: { ...errors },
     calls: [],
   };
@@ -212,6 +220,26 @@ export function createApi({
       maybeThrow('listReviews');
       return state.reviews;
     },
+    listPullFiles: async (number) => {
+      state.calls.push(['listPullFiles', number]);
+      maybeThrow('listPullFiles');
+      return state.files;
+    },
+    getBranchProtection: async (branch) => {
+      state.calls.push(['getBranchProtection', branch]);
+      maybeThrow('getBranchProtection');
+      return clone(state.branchProtection);
+    },
+    listRepositoryRulesets: async () => {
+      state.calls.push(['listRepositoryRulesets']);
+      maybeThrow('listRepositoryRulesets');
+      return clone(state.rulesets);
+    },
+    getRuleset: async (id) => {
+      state.calls.push(['getRuleset', id]);
+      maybeThrow('getRuleset');
+      return clone(state.rulesetDetails[id] ?? null);
+    },
     listPullsForCommit: async (sha) => {
       state.calls.push(['listPullsForCommit', sha]);
       maybeThrow('listPullsForCommit');
@@ -302,7 +330,7 @@ export function baseConfig(overrides = {}) {
     aiReviewLogin: 'coderabbitai[bot]',
     staleDays: 30,
     noChecksGraceMinutes: 15,
-    maintainers: [],
+    maintainers: ['Gautam-aman'],
     botLogin: BOT_LOGIN,
     checkRun: true,
     maxPullsPerRun: 25,
@@ -312,12 +340,13 @@ export function baseConfig(overrides = {}) {
   };
 }
 
-export function review(login, state, submittedAt = '2026-10-21T10:00:00Z', type = 'User') {
+export function review(login, state, submittedAt = '2026-10-21T10:00:00Z', type = 'User', commitId = 'a'.repeat(40)) {
   return {
-    id: createHash('sha1').update(`${login}:${state}:${submittedAt}`).digest('hex').slice(0, 10),
+    id: createHash('sha1').update(`${login}:${state}:${submittedAt}:${commitId}`).digest('hex').slice(0, 10),
     user: { login, type },
     state,
     submitted_at: submittedAt,
+    commit_id: commitId,
   };
 }
 

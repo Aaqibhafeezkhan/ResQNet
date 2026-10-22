@@ -1,6 +1,8 @@
 import { GUARDIAN_NOTIFICATION_MARKER_PREFIX } from '../lib/markers.mjs';
 import { STATES } from './constants.mjs';
-import { codeSpan, escapeInline, isSafeLogin, shortSha } from './util.mjs';
+import { codeSpan, isSafeLogin, shortSha } from './util.mjs';
+
+const MAINTAINER_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
 
 function notificationMarker(headSha) {
   return `${GUARDIAN_NOTIFICATION_MARKER_PREFIX}${headSha} -->`;
@@ -14,32 +16,38 @@ function existingNotification(comments, headSha, botLogin) {
     && comment.body.startsWith(marker));
 }
 
+function isMaintainerAuthored(pull) {
+  return MAINTAINER_ASSOCIATIONS.has(String(pull?.author_association ?? '').toUpperCase())
+    || /\[bot\]$/i.test(pull?.user?.login ?? '');
+}
+
 export function buildNotificationBody({ pull, headSha, approvedBy = [], maintainers = [] }) {
-  const mentions = maintainers.filter(isSafeLogin).map((login) => `@${login}`);
+  const mentions = [...new Set(maintainers.filter(isSafeLogin))].map((login) => `@${login}`);
   const audience = mentions.length ? mentions.join(' ') : 'Maintainers';
   return [
     notificationMarker(headSha),
     `## Guardian: ready for maintainer review`,
     '',
-    `${audience}: pull request #${pull.number} has passed its checks and has human approval. It is ready for a final maintainer review.`,
+    `${audience}: pull request #${pull.number} is ready for its first maintainer review. Automated readiness conditions are satisfied.`,
     '',
     `- Head: ${codeSpan(shortSha(headSha))}`,
-    ...(approvedBy.length ? [`- Human approval: ${approvedBy.map((login) => codeSpan(login)).join(', ')}`] : []),
+    ...(approvedBy.length
+      ? [`- Human approval already recorded: ${approvedBy.map((login) => codeSpan(login)).join(', ')}`]
+      : ['- Human approval: none yet. Approval is not required to request review.']),
     '',
-    'Guardian did not approve or merge this pull request. Required checks and branch protection, when configured, remain authoritative.',
+    'Human approval and merge eligibility are separate from readiness. Guardian did not approve or merge this pull request, and required checks and branch protection remain authoritative.',
   ].join('\n');
 }
 
 /**
- * Notify once per genuine transition into READY_FOR_MAINTAINER_REVIEW.
- * A missing previous state is not treated as a transition, so enabling
- * notifications does not announce every already-ready pull request.
+ * Notify once per ready head SHA. The first evaluation that reaches
+ * READY_FOR_MAINTAINER_REVIEW is a genuine transition, including when Guardian
+ * has no earlier summary (for example after rollout).
  */
 export async function maybeNotify({
   api,
   pull,
   outcome,
-  previousState,
   comments = [],
   enabled = false,
   dryRun = false,
@@ -48,10 +56,7 @@ export async function maybeNotify({
 }) {
   if (!enabled) return { action: 'disabled' };
   if (outcome.state !== STATES.READY_FOR_MAINTAINER_REVIEW) return { action: 'not-ready' };
-  if (previousState !== STATES.READY_FOR_MAINTAINER_REVIEW && previousState == null) {
-    return { action: 'no-previous-state' };
-  }
-  if (previousState === STATES.READY_FOR_MAINTAINER_REVIEW) return { action: 'no-transition' };
+  if (isMaintainerAuthored(pull)) return { action: 'maintainer-authored' };
 
   const headSha = pull?.head?.sha;
   if (!headSha) return { action: 'missing-head-sha' };

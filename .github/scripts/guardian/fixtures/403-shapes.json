@@ -1,7 +1,7 @@
 {
   "shapes": [
     {
-      "name": "pr-comment-write-with-only-issues-write",
+      "name": "pr-comment-write-403-with-issues-write",
       "method": "POST",
       "path": "/repos/Gautam-aman/ResQNet/issues/58/comments",
       "status": 403,
@@ -16,7 +16,7 @@
       "expected": "permission"
     },
     {
-      "name": "pr-label-write-with-only-issues-write",
+      "name": "pr-label-write-403-with-issues-write",
       "method": "POST",
       "path": "/repos/Gautam-aman/ResQNet/issues/60/labels",
       "status": 403,

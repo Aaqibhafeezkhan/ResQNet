@@ -17,7 +17,7 @@
       "assignee": "alice",
       "checks": [["test", "success"]],
       "reviews": [],
-      "expected": "AWAITING_HUMAN_REVIEW"
+      "expected": "READY_FOR_MAINTAINER_REVIEW"
     },
     {
       "name": "human-approved",

@@ -7,6 +7,7 @@ import {
 } from './util.mjs';
 import {
   DEFAULT_AI_REVIEW_LOGIN,
+  DEFAULT_MAINTAINER,
   DEFAULT_NO_CHECKS_GRACE_MINUTES,
   DEFAULT_STALE_DAYS,
 } from './constants.mjs';
@@ -15,6 +16,7 @@ import { extractIssueNumbers } from '../lib/issue-references.mjs';
 import { evaluatePolicy } from './policy.mjs';
 import { evaluateChecks } from './checks.mjs';
 import { evaluateReviews } from './reviews.mjs';
+import { loadChangedFiles, loadRepositoryPolicy } from './repository-policy.mjs';
 import { computeReadiness } from './readiness.mjs';
 import {
   findGuardianSummary,
@@ -34,6 +36,10 @@ export const TRIGGER_WORKFLOWS = Object.freeze([
 ]);
 
 export function loadConfig(env = process.env) {
+  const maintainers = [...new Set(
+    parseCsv(env.GUARDIAN_MAINTAINERS || DEFAULT_MAINTAINER).filter(isSafeLogin),
+  )].slice(0, 10);
+  if (!maintainers.length) maintainers.push(DEFAULT_MAINTAINER);
   return {
     dryRun: envFlag(env.GUARDIAN_DRY_RUN, true),
     notify: envFlag(env.GUARDIAN_NOTIFY, false),
@@ -45,7 +51,7 @@ export function loadConfig(env = process.env) {
       DEFAULT_NO_CHECKS_GRACE_MINUTES,
       { min: 0, max: 1440 },
     ),
-    maintainers: parseCsv(env.GUARDIAN_MAINTAINERS).filter(isSafeLogin).slice(0, 10),
+    maintainers,
     botLogin: env.GUARDIAN_BOT_LOGIN || DEFAULT_BOT_LOGIN,
     checkRun: envFlag(env.GUARDIAN_CHECK_RUN, true),
     maxPullsPerRun: envInteger(env.GUARDIAN_MAX_PULLS, 25, { min: 1, max: 100 }),
@@ -93,6 +99,19 @@ export async function evaluatePull({ api, pullNumber, config, now = Date.now(), 
   const previous = findGuardianSummary(comments, config.botLogin);
   const dismissals = previous.previousState?.dismissals ?? {};
 
+  const [changedFileResult, repositoryPolicy] = await Promise.all([
+    loadChangedFiles({ api, pull }),
+    loadRepositoryPolicy({ api, pull }),
+  ]);
+  if (changedFileResult.files == null) {
+    log(`guardian: changed-file policy data unavailable for PR #${pullNumber} (${changedFileResult.reason ?? 'unknown'})`);
+  }
+  if (repositoryPolicy.unavailable?.length) {
+    log(`guardian: repository policy partially unavailable (${repositoryPolicy.unavailable.join(', ')}); using the static path policy`);
+  } else if (repositoryPolicy.sources?.length) {
+    log(`guardian: repository policy sources=${repositoryPolicy.sources.join(',')} required-checks=${repositoryPolicy.requiredChecks.length}`);
+  }
+
   const [policy, checks, reviews] = await Promise.all([
     evaluatePolicy({
       api,
@@ -105,12 +124,15 @@ export async function evaluatePull({ api, pullNumber, config, now = Date.now(), 
       pull,
       now,
       noChecksGraceMinutes: config.noChecksGraceMinutes,
+      changedFiles: changedFileResult.files,
+      repositoryPolicy,
     }),
     evaluateReviews({
       api,
       pull,
       aiReviewEnabled: config.aiReviewEnabled,
       aiReviewLogin: config.aiReviewLogin,
+      repositoryPolicy,
     }),
   ]);
 
@@ -146,7 +168,6 @@ export async function persistOutcome({
   log = () => {},
 }) {
   let comments = snapshot.comments;
-  let previousState = snapshot.previousState;
   let outcome = snapshot.outcome;
 
   if (!dryRun) {
@@ -154,7 +175,6 @@ export async function persistOutcome({
     // overwritten by a slightly older evaluation.
     comments = await api.listPullComments(snapshot.pull.number);
     const latest = findGuardianSummary(comments, config.botLogin);
-    previousState = latest.previousState?.state ?? null;
     const dismissals = {
       ...(latest.previousState?.dismissals ?? {}),
       ...(snapshot.outcome.dismissals ?? {}),
@@ -208,7 +228,6 @@ export async function persistOutcome({
       api,
       pull: snapshot.pull,
       outcome,
-      previousState,
       comments,
       enabled: notify,
       dryRun,

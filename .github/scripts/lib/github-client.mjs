@@ -107,7 +107,16 @@ export function createGitHubClient({
     listIssueEvents: (number, options) => paginate(`/issues/${number}/events`, options),
     listIssueTimeline: (number, options) => paginate(`/issues/${number}/timeline`, options),
     listReviews: (number, options) => paginate(`/pulls/${number}/reviews`, options),
-    listPullFiles: (number, options) => paginate(`/pulls/${number}/files`, options),
+    listPullFiles: (number) => paginate(`/pulls/${number}/files`, {
+      maxPages: 30,
+      maxItems: 3000,
+    }),
+
+    getBranchProtection: (branch) => requestOrNull(
+      `/branches/${encodeURIComponent(branch)}/protection`,
+    ),
+    listRepositoryRulesets: () => paginate('/rulesets', { maxPages: 3, maxItems: 100 }),
+    getRuleset: (id) => requestOrNull(`/rulesets/${encodeURIComponent(id)}`),
 
     listCheckRunsForRef: async (ref, { maxPages = 10, maxItems = 1000 } = {}) => {
       const runs = [];
