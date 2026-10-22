@@ -1,15 +1,22 @@
 import { readFile } from 'node:fs/promises';
+import { createGitHubClient } from './lib/github-client.mjs';
+import { extractIssueNumbers } from './lib/issue-references.mjs';
+import {
+  DEFAULT_BOT_LOGIN,
+  GUARDIAN_SUMMARY_MARKER,
+  PR_ASSIGNMENT_COMMENT_MARKER as COMMENT_MARKER,
+  PR_ASSIGNMENT_RESOLUTION_MARKER as RESOLUTION_MARKER,
+} from './lib/markers.mjs';
 
-export const COMMENT_MARKER = '<!-- resqnet-pr-assignment-bot -->';
-export const RESOLUTION_MARKER = '<!-- resqnet-pr-assignment-bot:resolved -->';
-const ACTIONS_BOT_LOGIN = 'github-actions[bot]';
+export { COMMENT_MARKER, RESOLUTION_MARKER, extractIssueNumbers };
 export const LABELS = Object.freeze({
   awaiting: 'awaiting-issue-assignment',
   ok: 'contribution-policy-ok',
   exception: 'no-issue-required',
 });
 
-const MAX_ISSUE_REFERENCES = 10;
+const ACTIONS_BOT_LOGIN = 'github-actions[bot]';
+const SUPERSEDED_BODY = `${COMMENT_MARKER}\n${RESOLUTION_MARKER}\n🛡️ Assignment feedback is now included in the ResQNet Guardian summary above. This comment will not be updated again.`;
 
 function isBot(user) {
   return user?.type === 'Bot' || /\[bot\]$/i.test(user?.login ?? '');
@@ -19,29 +26,11 @@ function isOwnComment(comment) {
   return comment?.user?.login?.toLowerCase() === ACTIONS_BOT_LOGIN && comment.body?.includes(COMMENT_MARKER);
 }
 
-function stripCode(text) {
-  return text
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/~~~[\s\S]*?~~~/g, ' ')
-    .replace(/`[^`\n]*`/g, ' ');
-}
-
-/** Extract deliberate same-repository issue references, excluding external forms. */
-export function extractIssueNumbers(body = '') {
-  const text = stripCode(String(body));
-  const found = new Set();
-  const patterns = [
-    /\b(?:close[sd]?|fix(?:es|ed)?|resolve[sd]?)\s+(?:#(\d+)|([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)#\d+)\b/gi,
-    /\brelated\s+issue\s*:\s*#(\d+)\b/gi,
-    /\bissue\s+#(\d+)\b/gi,
-  ];
-  for (const pattern of patterns) {
-    for (const match of text.matchAll(pattern)) {
-      // External owner/repository#number references are intentionally ignored.
-      if (match[1] && !match[2]) found.add(Number(match[1]));
-    }
-  }
-  return [...found].filter((number) => Number.isSafeInteger(number) && number > 0).slice(0, MAX_ISSUE_REFERENCES);
+function isGuardianComment(comment) {
+  const guardianLogin = process.env.GUARDIAN_BOT_LOGIN || DEFAULT_BOT_LOGIN;
+  return comment?.user?.login === guardianLogin
+    && comment?.user?.type === 'Bot'
+    && comment.body?.startsWith(GUARDIAN_SUMMARY_MARKER);
 }
 
 function labelNames(labels = []) {
@@ -128,8 +117,9 @@ export async function validatePull(pull, api, options = {}) {
   const result = policyResult({ pull, issues, exception, bypass });
   const existing = await api.comments(pull.number);
   const hasWarning = existing.some(isOwnComment);
+  const guardianPresent = existing.some(isGuardianComment);
   const desiredBody = result.state === 'ok' && !hasWarning ? null : result.body;
-  await reconcileComment(pull.number, desiredBody, api, existing);
+  await reconcileComment(pull.number, desiredBody, api, existing, { suppress: guardianPresent });
   await reconcileLabels(pull.number, labels, result.labels, api);
   return result;
 }
@@ -162,8 +152,16 @@ export async function handlePullEvent(event, api, options = {}) {
   });
 }
 
-async function reconcileComment(number, desiredBody, api, comments) {
+async function reconcileComment(number, desiredBody, api, comments, { suppress = false } = {}) {
   const own = comments.filter(isOwnComment);
+  if (suppress) {
+    // Guardian owns the contributor-facing summary. Retire this bot's older
+    // advisory once, then stay silent on every later run.
+    for (const comment of own) {
+      if (comment.body !== SUPERSEDED_BODY) await api.updateComment(number, comment.id, SUPERSEDED_BODY);
+    }
+    return;
+  }
   if (!desiredBody) {
     for (const comment of own) {
       if (!comment.body.includes(RESOLUTION_MARKER)) {
@@ -225,98 +223,49 @@ export async function actorCanManageException(api, actor) {
 }
 
 function githubApi(token, owner, repo) {
-  const base = `https://api.github.com/repos/${owner}/${repo}`;
-  async function request(path, method = 'GET', body) {
-    const response = await fetch(`${base}${path}`, {
-      method,
-      headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-    if (!response.ok) {
-      const error = new Error(`GitHub API ${method} ${path}: HTTP ${response.status}`);
-      error.status = response.status;
-      throw error;
-    }
-    return response.status === 204 ? null : response.json();
-  }
-  async function pages(path, maxPages = 10) {
-    const results = [];
-    for (let page = 1; page <= maxPages; page++) {
-      const batch = await request(`${path}${path.includes('?') ? '&' : '?'}per_page=100&page=${page}`);
-      results.push(...batch);
-      if (batch.length < 100) break;
-    }
-    return results;
-  }
-  async function actorPermission(login) {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/collaborators/${encodeURIComponent(login)}/permission`, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' } });
-    if (response.status === 404) return null;
-    if (!response.ok) throw new Error(`GitHub API collaborator permission: HTTP ${response.status}`);
-    return response.json();
-  }
-  async function exceptionLabelActor(pullNumber, labelName) {
-    const events = [];
-    for (let page = 1; page <= 10; page++) {
-      const batch = await request(`/issues/${pullNumber}/events?per_page=100&page=${page}`);
-      events.push(...batch);
-      if (batch.length < 100) {
-        const latest = events
-          .filter((item) => ['labeled', 'unlabeled'].includes(item.event)
-            && item.label?.name?.toLowerCase() === labelName.toLowerCase())
-          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
-        return latest?.event === 'labeled' ? latest.actor : null;
-      }
-    }
-    // A full bounded scan may have omitted a newer authorization or revocation.
-    return null;
-  }
-  const pull = async (number) => {
-    const pr = await request(`/pulls/${number}`);
-    return { ...pr, base: { ...pr.base, repo: pr.base.repo } };
-  };
+  const client = createGitHubClient({ token, owner, repo });
+  const permission = (login) => client.getCollaboratorPermission(login);
   return {
-    issue: (number) => request(`/issues/${number}`),
-    pull,
-    comments: (number) => pages(`/issues/${number}/comments`),
-    comment: (number, body) => request(`/issues/${number}/comments`, 'POST', { body }),
-    updateComment: (_number, id, body) => request(`/issues/comments/${id}`, 'PATCH', { body }),
-    ensureLabel: async (name) => {
-      try { await request(`/labels/${encodeURIComponent(name)}`); }
-      catch (error) {
-        if (error.status !== 404) throw error;
-        try { await request('/labels', 'POST', { name, color: name === LABELS.awaiting ? 'FBCA04' : '0E8A16', description: 'Managed by ResQNet PR assignment validation' }); }
-        catch (createError) { if (createError.status !== 422) throw createError; }
-      }
-    },
-    addLabel: (number, name) => request(`/issues/${number}/labels`, 'POST', { labels: [name] }),
-    removeLabel: async (number, name) => {
-      try { await request(`/issues/${number}/labels/${encodeURIComponent(name)}`, 'DELETE'); }
-      catch (error) { if (error.status !== 404) throw error; }
-    },
+    issue: (number) => client.getIssue(number),
+    pull: (number) => client.getPull(number),
+    comments: (number) => client.listIssueComments(number),
+    comment: (number, body) => client.createIssueComment(number, body),
+    updateComment: (_number, id, body) => client.updateIssueComment(_number, id, body),
+    ensureLabel: (name) => client.ensureLabel(name, {
+      color: name === LABELS.awaiting ? 'FBCA04' : '0E8A16',
+      description: 'Managed by ResQNet PR assignment validation',
+    }),
+    addLabel: (number, name) => client.addLabels(number, [name]),
+    removeLabel: (number, name) => client.removeLabel(number, name),
     searchPulls: async (issueNumber) => {
-      const query = encodeURIComponent(`repo:${owner}/${repo} is:pr is:open #${issueNumber}`);
-      const response = await fetch(`https://api.github.com/search/issues?q=${query}&per_page=100`, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28' } });
-      if (!response.ok) throw new Error(`GitHub API search: HTTP ${response.status}`);
-      return (await response.json()).items.map((item) => ({ number: item.number }));
+      const pulls = await client.searchOpenPullsForIssue(issueNumber);
+      return pulls.map((item) => ({ number: item.number }));
     },
     exceptionAuthorized: async (pullNumber, labelName) => {
-      const actor = await exceptionLabelActor(pullNumber, labelName);
-      if (!actor?.login || isBot(actor)) return false;
-      const permission = await actorPermission(actor.login);
-      return ['admin', 'maintain', 'write'].includes((permission?.permission ?? '').toLowerCase());
+      const event = await client.latestLabelEvent(pullNumber, labelName);
+      if (!event || event.event !== 'labeled' || !event.actor?.login || isBot(event.actor)) return false;
+      const actorPermission = await permission(event.actor.login);
+      return ['admin', 'maintain', 'write'].includes((actorPermission?.permission ?? '').toLowerCase());
     },
-    permission: actorPermission,
+    permission,
   };
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+async function runCli() {
   const event = JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
-  const api = githubApi(process.env.GH_TOKEN, owner, repo);
+  const api = githubApi(process.env.GH_TOKEN || process.env.GITHUB_TOKEN, owner, repo);
   const options = { repository: `${owner}/${repo}` };
   if (event.pull_request) {
     await handlePullEvent(event, api, options);
   } else if (event.issue) {
     await handleIssueEvent(event, api, options);
   }
+}
+
+if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+  runCli().catch((error) => {
+    console.error(`pr-assignment-bot: ${error?.diagnostic?.() ?? error?.message ?? 'unexpected failure'}`);
+    process.exitCode = 1;
+  });
 }
