@@ -1,8 +1,15 @@
 import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { useLabStore } from '@/lab/labStore';
+import type { ReplayModel } from '@/lab/replay';
 import type { LabEvent } from '@/lab/types';
+
+interface CountCache {
+  model: ReplayModel;
+  cursor: number;
+  counts: Map<string, number>;
+}
 
 const KIND_TONE: Record<string, string> = {
   accepted: 'bg-delivered',
@@ -53,13 +60,30 @@ export function EventStream() {
   const setSearch = useLabStore((state) => state.setSearch);
   const selectMessage = useLabStore((state) => state.selectMessage);
   const selectedMessageId = useLabStore((state) => state.selectedMessageId);
+  const countCache = useRef<CountCache | null>(null);
 
   const counts = useMemo(() => {
-    const map = new Map<string, number>();
-    if (!model) return map;
-    for (const event of model.orderedEvents.slice(0, cursor)) {
-      map.set(event.kind, (map.get(event.kind) ?? 0) + 1);
+    if (!model) return new Map<string, number>();
+    const cached = countCache.current;
+    if (cached && cached.model === model && cached.cursor <= cursor) {
+      if (cached.cursor === cursor) return cached.counts;
+      // Playback advances one event at a time. Copying a small map and
+      // applying the delta avoids rescanning the whole prefix every frame.
+      const map = new Map(cached.counts);
+      for (let index = cached.cursor; index < cursor; index += 1) {
+        const event = model.orderedEvents[index];
+        if (event) map.set(event.kind, (map.get(event.kind) ?? 0) + 1);
+      }
+      countCache.current = { model, cursor, counts: map };
+      return map;
     }
+
+    const map = new Map<string, number>();
+    for (let index = 0; index < cursor; index += 1) {
+      const event = model.orderedEvents[index];
+      if (event) map.set(event.kind, (map.get(event.kind) ?? 0) + 1);
+    }
+    countCache.current = { model, cursor, counts: map };
     return map;
   }, [model, cursor]);
 
@@ -67,20 +91,25 @@ export function EventStream() {
     if (!model) return [];
     const query = search.trim().toLowerCase();
     const filtered: LabEvent[] = [];
-    for (let index = 0; index < cursor; index += 1) {
+    // Read backwards from the cursor and stop once the capped list is full.
+    // A 200 000-event report no longer costs a full prefix scan per frame.
+    for (let index = cursor - 1; index >= 0 && filtered.length < 120; index -= 1) {
       const event = model.orderedEvents[index];
       if (!event) continue;
       if (!activeKinds.has(event.kind)) continue;
       if (!matches(event, query)) continue;
       filtered.push(event);
     }
-    // Newest first, capped so a 200 000-event report cannot freeze the list.
-    return filtered.slice(-120).reverse();
+    return filtered;
   }, [model, cursor, activeKinds, search]);
+
+  const kinds = useMemo(
+    () => (model ? [...new Set(model.orderedEvents.map((event) => event.kind))].sort() : []),
+    [model],
+  );
 
   if (!model) return null;
 
-  const kinds = [...new Set(model.orderedEvents.map((event) => event.kind))].sort();
   const allActive = kinds.every((kind) => activeKinds.has(kind));
 
   return (

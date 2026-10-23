@@ -41,9 +41,9 @@ export function ReportLoader({ loadedName, warnings, onLoad, bare = false }: Rep
     }
     if (file.size > MAX_REPORT_BYTES) {
       setError(
-        `That file is ${formatBytes(file.size)}. The Lab reads reports up to ${formatBytes(
+        `That file is ${formatBytes(file.size)} (${file.size.toLocaleString('en-US')} bytes), over the ${formatBytes(
           MAX_REPORT_BYTES,
-        )} and refuses larger ones rather than freezing the tab.`,
+        )} limit. The Lab refuses larger reports rather than freezing the tab.`,
       );
       return;
     }

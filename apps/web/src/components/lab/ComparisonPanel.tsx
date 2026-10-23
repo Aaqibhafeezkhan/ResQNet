@@ -282,7 +282,7 @@ function Slot({
   };
 
   return (
-    <div className="rounded-xl border border-base-700 bg-base-900/40 p-3.5">
+    <div className="min-w-0 rounded-xl border border-base-700 bg-base-900/40 p-3.5">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor={selectId} className="eyebrow">
           Report {label}
@@ -308,7 +308,7 @@ function Slot({
         onChange={(event) => {
           if (event.target.value) loadSample(event.target.value);
         }}
-        className="mt-2 w-full rounded-lg border border-base-600 bg-base-900 px-2.5 py-2 text-[12px] text-ink-primary focus-visible:border-network focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-network"
+        className="mt-2 min-w-0 w-full rounded-lg border border-base-600 bg-base-900 px-2.5 py-2 text-[12px] text-ink-primary focus-visible:border-network focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-network"
       >
         <option value="">Choose a built-in sample…</option>
         {SAMPLE_REPORTS.map((sample) => (

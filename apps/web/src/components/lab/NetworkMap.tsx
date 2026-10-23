@@ -69,9 +69,9 @@ export function NetworkMap({
   const journey = useMemo(
     () =>
       selectedMessageId
-        ? buildJourney(model, selectedMessageId, { untilEpochMillis: currentTime })
+        ? buildJourney(model, selectedMessageId, { untilEventIndex: cursor })
         : null,
-    [model, selectedMessageId, currentTime],
+    [model, selectedMessageId, cursor],
   );
 
   const journeyRoles = useMemo(() => {
@@ -455,8 +455,9 @@ export function NetworkMap({
             index={selectedNodeIndex}
             report={report}
             activeLinks={degreeByNode.get(selectedNodeIndex) ?? 0}
-            recordedEvents={model.eventsByNode.get(selectedNodeIndex) ?? []}
-            cursorTime={currentTime}
+            recordedEvents={(model.eventsByNode.get(selectedNodeIndex) ?? []).filter(
+              (event) => (model.eventOrder.get(event) ?? -1) < cursor,
+            )}
             onClose={() => onSelectNode(null)}
           />
         ) : null}
@@ -497,18 +498,16 @@ function NodeDetails({
   report,
   activeLinks,
   recordedEvents,
-  cursorTime,
   onClose,
 }: {
   index: number;
   report: LabReport;
   activeLinks: number;
   recordedEvents: readonly LabEvent[];
-  cursorTime: number;
   onClose: () => void;
 }) {
   const node = report.nodes.find((entry) => entry.index === index);
-  const upToCursor = recordedEvents.filter((entry) => entry.atEpochMillis <= cursorTime);
+  const upToCursor = recordedEvents;
   const lastEvent = upToCursor[upToCursor.length - 1];
 
   return (

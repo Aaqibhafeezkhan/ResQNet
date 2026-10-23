@@ -1,13 +1,18 @@
 import { ArrowRight, CornerDownRight, Info, Radio } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useLabStore } from '@/lab/labStore';
 import {
   JOURNEY_OUTCOME_LABELS,
   buildJourney,
-  simTimeAtCursor,
   type JourneyOutcome,
 } from '@/lab/replay';
+
+/** A select with hundreds of thousands of options is slower than the parse. */
+const MAX_MESSAGE_OPTIONS = 500;
+
+/** Keep one enormous journey from putting 200 000 rows in the DOM. */
+const MAX_VISIBLE_STEPS = 200;
 
 const OUTCOME_TONE: Record<JourneyOutcome, string> = {
   acknowledged: 'border-delivered/45 bg-delivered/[0.08] text-delivered',
@@ -32,33 +37,59 @@ export function MessageInspector() {
   const selectedMessageId = useLabStore((state) => state.selectedMessageId);
   const selectMessage = useLabStore((state) => state.selectMessage);
   const seek = useLabStore((state) => state.seek);
+  const [messageFilter, setMessageFilter] = useState('');
 
   const journey = useMemo(() => {
     if (!model || !selectedMessageId) return null;
-    return buildJourney(model, selectedMessageId, {
-      untilEpochMillis: simTimeAtCursor(model, cursor),
-    });
+    return buildJourney(model, selectedMessageId, { untilEventIndex: cursor });
   }, [model, selectedMessageId, cursor]);
+  const visibleSteps = journey ? journey.steps.slice(-MAX_VISIBLE_STEPS) : [];
+  const hiddenSteps = journey ? journey.steps.length - visibleSteps.length : 0;
+
+  const messageGroups = useMemo(() => {
+    const composed: string[] = [];
+    const eventOnly: string[] = [];
+    if (!model) return { composed, eventOnly };
+    for (const id of model.messageIds) {
+      if (model.messagesById.has(id)) composed.push(id);
+      else eventOnly.push(id);
+    }
+    return { composed, eventOnly };
+  }, [model]);
 
   if (!model) return null;
 
   const message = selectedMessageId ? model.messagesById.get(selectedMessageId) : undefined;
-  const composedIds = model.messageIds.filter((id) => model.messagesById.has(id));
-  const eventOnlyIds = model.messageIds.filter((id) => !model.messagesById.has(id));
+  const query = messageFilter.trim().toLowerCase();
+  const matchesFilter = (id: string): boolean =>
+    query === '' || id.toLowerCase().includes(query);
+  const composedMatches =
+    query === '' ? messageGroups.composed : messageGroups.composed.filter(matchesFilter);
+  const eventOnlyMatches =
+    query === '' ? messageGroups.eventOnly : messageGroups.eventOnly.filter(matchesFilter);
+  const composedShown = composedMatches.slice(0, MAX_MESSAGE_OPTIONS);
+  const eventOnlyShown = eventOnlyMatches.slice(0, MAX_MESSAGE_OPTIONS);
+  const selectedShown =
+    selectedMessageId !== null &&
+    (composedShown.includes(selectedMessageId) || eventOnlyShown.includes(selectedMessageId));
+  const shownCount = composedShown.length + eventOnlyShown.length;
+  const matchingCount = composedMatches.length + eventOnlyMatches.length;
 
-  const optionFor = (id: string) => {
+  const optionLabel = (id: string): string => {
     const entry = model.messagesById.get(id);
     const route = entry
       ? entry.broadcast
         ? 'broadcast'
         : `${entry.origin ?? '?'} → ${entry.destination ?? '?'}`
       : 'provenance not recorded';
-    return (
-      <option key={id} value={id}>
-        {id} · {route}
-      </option>
-    );
+    return `${id} · ${route}`;
   };
+
+  const optionFor = (id: string) => (
+    <option key={id} value={id}>
+      {optionLabel(id)}
+    </option>
+  );
 
   return (
     <section className="surface flex flex-col" aria-labelledby="message-inspector-title">
@@ -67,8 +98,19 @@ export function MessageInspector() {
           <h2 id="message-inspector-title" className="text-sm font-medium text-ink-primary">
             Message journey
           </h2>
-          <span className="eyebrow">{composedIds.length} composed</span>
+          <span className="eyebrow">{messageGroups.composed.length} composed</span>
         </div>
+
+        {model.messageIds.length > 20 ? (
+          <input
+            type="search"
+            value={messageFilter}
+            onChange={(event) => setMessageFilter(event.target.value)}
+            placeholder="Filter message ids"
+            aria-label="Filter message ids"
+            className="mt-3 w-full rounded-lg border border-base-600 bg-base-900 px-2.5 py-1.5 text-[11px] text-ink-primary placeholder:text-ink-tertiary focus-visible:border-network focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-network"
+          />
+        ) : null}
 
         <label htmlFor="message-select" className="sr-only">
           Message to inspect
@@ -80,17 +122,27 @@ export function MessageInspector() {
           className="mt-3 w-full rounded-lg border border-base-600 bg-base-900 px-2.5 py-2 text-[12px] text-ink-primary focus-visible:border-network focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-network"
         >
           <option value="">Select a message…</option>
-          {composedIds.length > 0 ? (
-            <optgroup label="Composed messages">{composedIds.map(optionFor)}</optgroup>
+          {selectedMessageId !== null && !selectedShown ? (
+            <option value={selectedMessageId}>{optionLabel(selectedMessageId)} · selected</option>
           ) : null}
-          {eventOnlyIds.length > 0 ? (
-            <optgroup label="Referenced in events only">{eventOnlyIds.map(optionFor)}</optgroup>
+          {composedShown.length > 0 ? (
+            <optgroup label="Composed messages">{composedShown.map(optionFor)}</optgroup>
+          ) : null}
+          {eventOnlyShown.length > 0 ? (
+            <optgroup label="Referenced in events only">{eventOnlyShown.map(optionFor)}</optgroup>
           ) : null}
         </select>
-        {eventOnlyIds.length > 0 ? (
+        {matchingCount > shownCount ? (
           <p className="mt-1.5 text-[10px] leading-relaxed text-ink-tertiary">
-            {eventOnlyIds.length} further ids appear in the event stream — acknowledgements and
-            relays — but this report does not record who composed them.
+            Showing {shownCount} of {matchingCount.toLocaleString('en-US')} matching ids. Type above
+            to narrow the list.
+          </p>
+        ) : null}
+        {messageGroups.eventOnly.length > 0 ? (
+          <p className="mt-1.5 text-[10px] leading-relaxed text-ink-tertiary">
+            {messageGroups.eventOnly.length.toLocaleString('en-US')} further ids appear in the
+            event stream — acknowledgements and relays — but this report does not record who
+            composed them.
           </p>
         ) : null}
       </header>
@@ -164,15 +216,23 @@ export function MessageInspector() {
           ) : null}
 
           <h3 className="eyebrow mt-5">Recorded steps up to this point</h3>
+          {hiddenSteps > 0 ? (
+            <p className="mt-1.5 text-[10px] leading-relaxed text-ink-tertiary">
+              Showing the last {visibleSteps.length} of{' '}
+              {journey.steps.length.toLocaleString('en-US')} recorded steps. Earlier steps are
+              not rendered so a very large journey cannot freeze the tab; search the event stream
+              for an earlier record.
+            </p>
+          ) : null}
           {journey.steps.length === 0 ? (
             <p className="mt-2 rounded-lg border border-base-600 px-3 py-4 text-center text-[11px] text-ink-tertiary">
               Nothing has happened to this message yet.
             </p>
           ) : (
             <ol className="mt-2 max-h-[300px] space-y-0 overflow-y-auto border-l border-base-600 pl-4">
-              {journey.steps.map((step, index) => {
-                const last = index === journey.steps.length - 1;
-                const position = model.orderedEvents.indexOf(step.event);
+              {visibleSteps.map((step, index) => {
+                const last = index === visibleSteps.length - 1;
+                const position = model.eventOrder.get(step.event) ?? -1;
                 return (
                   <li key={`${step.event.atEpochMillis}-${step.event.nodeIndex}-${index}`} className="relative pb-3">
                     <span
