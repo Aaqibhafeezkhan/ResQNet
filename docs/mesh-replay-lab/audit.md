@@ -38,7 +38,7 @@ a message schedule derived only from the seed. The same
 | `simulation` | object | `topology`, `nodeCount`, `linkCount`, `seed`, `messageCount`, `rounds`, `stepMillis`, `hopLimit`, `linkDropProbability`, `broadcastRatio`, `churnEveryRounds` |
 | `outcome` | object | `originated`, `directedOriginated`, `broadcastOriginated`, `acknowledged`, `deliveredRecords`, `expired`, `failed`, `stillQueued`, `duplicatesSuppressed`, `rejected`, `forwards` |
 | `deliveryRate` | number | fraction of **directed** messages confirmed |
-| `amplificationFactor` | number | forwarded copies per originated message |
+| `amplificationFactor` | number | forwarded copies per accepted envelope (`RoutingMetrics.amplificationFactor()`); not per originated message |
 | `latencyMillis` | object | `median`, `p95`, `p99`, `max` — `-1` means *not measured* |
 | `hopDistribution` | object | `{ "1": 12, "2": 30 }` |
 | `radio` | object | `framesSent`, `framesDelivered`, `framesDropped`, `linkChanges` (count), `partitions` |

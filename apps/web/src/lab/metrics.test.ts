@@ -42,6 +42,22 @@ describe('extractMetrics', () => {
     expect(metrics.partitions).toBe(5);
   });
 
+  it('treats a zero-denominator acknowledgement rate as unavailable', () => {
+    const result = validateReport({
+      simulation: {},
+      events: [],
+      outcome: { originated: 4, directedOriginated: 0, broadcastOriginated: 4 },
+      deliveryRate: 0,
+    });
+    if (!result.ok) throw new Error(result.error);
+    const metrics = extractMetrics(result.report);
+
+    expect(metrics.directedOriginated).toBe(0);
+    expect(metrics.acknowledgementRate).toBeNull();
+    expect(metrics.deliveryRate).toBeNull();
+    expect(headlineMetrics(metrics)[0]?.value).toBeNull();
+  });
+
   it('turns a sentinel into null rather than zero', () => {
     const result = validateReport({
       simulation: {},

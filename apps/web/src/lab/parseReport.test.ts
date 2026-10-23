@@ -134,7 +134,7 @@ describe('validateReport', () => {
     expect(result.warnings).toHaveLength(3);
     expect(result.warnings.join(' ')).toMatch(/topology edges/);
     expect(result.warnings.join(' ')).toMatch(/link changes/);
-    expect(result.warnings.join(' ')).toMatch(/composed each message/);
+    expect(result.warnings.join(' ')).toMatch(/composed messages/);
   });
 
   it('rejects an events array where no entry can be placed on a timeline', () => {
@@ -161,6 +161,76 @@ describe('validateReport', () => {
 
     expect(result.report.events).toHaveLength(1);
     expect(result.warnings.join(' ')).toMatch(/skipped 2 event entries/i);
+  });
+
+  it('skips malformed link changes instead of inventing a cut at epoch 0', () => {
+    const result = expectOk(
+      validateReport({
+        ...minimal,
+        linkChanges: [
+          { from: 0, to: 1, up: false },
+          { atEpochMillis: 1000, from: 0, to: 1 },
+          { atEpochMillis: 1000, from: 0, to: 1, up: false },
+        ],
+      }),
+    );
+
+    expect(result.report.linkChanges).toEqual([
+      { atEpochMillis: 1000, round: -1, from: 0, to: 1, up: false },
+    ]);
+    expect(result.warnings.join(' ')).toMatch(/skipped 2 link-change entries/i);
+  });
+
+  it('normalises the old -1 broadcast sentinel to no destination', () => {
+    const result = expectOk(
+      validateReport({
+        ...minimal,
+        messages: [
+          { id: 'm1', origin: 0, destination: -1, broadcast: false, originatedAt: 1000 },
+        ],
+      }),
+    );
+
+    expect(result.report.messages[0]?.broadcast).toBe(true);
+    expect(result.report.messages[0]?.destination).toBeNull();
+  });
+
+  it('rejects node indices that would make the map unbounded', () => {
+    const tooMany = validateReport({
+      simulation: { topology: 'LINE', nodeCount: 1_000_000, edges: [] },
+      events: [],
+    });
+    expect(tooMany.ok).toBe(false);
+    if (!tooMany.ok) expect(tooMany.error).toMatch(/at most 500 nodes/i);
+
+    const peer = validateReport({
+      simulation: { topology: 'LINE', nodeCount: 2, edges: [[0, 1]] },
+      events: [
+        {
+          atEpochMillis: 1000,
+          node: 'n0',
+          kind: 'forwarded',
+          peers: [1_000_000],
+        },
+      ],
+    });
+    expect(peer.ok).toBe(false);
+    if (!peer.ok) expect(peer.error).toMatch(/node index 1000000/i);
+  });
+
+  it('drops an epoch-0 unknown event when the report declares a real start clock', () => {
+    const result = expectOk(
+      validateReport({
+        simulation: { topology: 'LINE', nodeCount: 2, startEpochSeconds: 1_760_000_000 },
+        events: [
+          { atEpochMillis: 0, node: 'n0', kind: 'other' },
+          { atEpochMillis: 1_760_000_000_000, node: 'n0', kind: 'state' },
+        ],
+      }),
+    );
+
+    expect(result.report.events).toHaveLength(1);
+    expect(result.warnings.join(' ')).toMatch(/no positive simulated timestamp/i);
   });
 
   it('rejects a file that is not a report, with an actionable message', () => {

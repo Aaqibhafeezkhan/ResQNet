@@ -59,9 +59,16 @@ export interface LabMetrics {
  * acknowledge it.
  */
 export function extractMetrics(report: LabReport): LabMetrics {
+  // The Java report writes deliveryRate = 0 when no directed message was
+  // originated, because its denominator is zero. That is not a measured 0 %
+  // acknowledgement rate: there was nothing that could be acknowledged. The
+  // outcome count is the only way to distinguish the two cases.
+  const noDirectedMessages = report.outcome.directedOriginated === 0;
+  const acknowledgementRate = noDirectedMessages ? null : report.deliveryRate;
+
   return {
-    acknowledgementRate: report.deliveryRate,
-    deliveryRate: report.deliveryRate,
+    acknowledgementRate,
+    deliveryRate: acknowledgementRate,
     directedOriginated: report.outcome.directedOriginated,
     broadcastOriginated: report.outcome.broadcastOriginated,
     originated: report.outcome.originated,
@@ -148,8 +155,8 @@ export function headlineMetrics(metrics: LabMetrics): LabMetric[] {
       label: 'Amplification',
       value: metrics.amplificationFactor,
       kind: 'factor',
-      unavailableBecause: 'The run did not originate a message, so nothing could be amplified.',
-      note: 'Forwarded copies per originated message.',
+      unavailableBecause: 'The run accepted no envelopes, so there was no forwarding work to measure.',
+      note: 'Forwarded copies per accepted envelope.',
     },
     {
       key: 'framesDropped',

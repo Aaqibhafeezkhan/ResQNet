@@ -37,6 +37,22 @@ export const MAX_REPORT_BYTES = 16 * 1024 * 1024;
 /** Largest number of events the Lab will index. */
 export const MAX_EVENTS = 200_000;
 
+/**
+ * Largest drawable network the Lab will accept.
+ *
+ * <p>The simulator's own scenario builder is intended for at most 500 nodes.
+ * The map renders one SVG group per node, so an arbitrarily large node index
+ * in an imported report could otherwise freeze the tab even though the file is
+ * tiny.
+ */
+export const MAX_NODES = 500;
+
+/** Largest recorded initial edge list the map will draw. */
+export const MAX_EDGES = 20_000;
+
+/** Largest recorded link-change list the map will apply. */
+export const MAX_LINK_CHANGES = 20_000;
+
 export interface ParseSuccess {
   ok: true;
   report: LabReport;
@@ -63,6 +79,13 @@ function isObject(value: unknown): value is Json {
 /** A number, or `null` when absent or not a number. */
 function num(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** A non-negative integer node index, or `null` when it cannot be drawn. */
+function nodeIndex(value: unknown): number | null {
+  const parsed = num(value);
+  if (parsed === null || !Number.isInteger(parsed) || parsed < 0) return null;
+  return parsed;
 }
 
 /**
@@ -120,15 +143,15 @@ function readSimulation(raw: Json): LabSimulation {
   if (Array.isArray(rawEdges)) {
     for (const entry of rawEdges) {
       if (!Array.isArray(entry) || entry.length < 2) continue;
-      const from = num(entry[0]);
-      const to = num(entry[1]);
+      const from = nodeIndex(entry[0]);
+      const to = nodeIndex(entry[1]);
       if (from === null || to === null) continue;
       edges.push([from, to]);
     }
   }
   return {
     topology: str(raw.topology) ?? 'UNKNOWN',
-    nodeCount: num(raw.nodeCount),
+    nodeCount: nodeIndex(raw.nodeCount),
     linkCount: num(raw.linkCount),
     degree: num(raw.degree),
     seed: num(raw.seed),
@@ -208,17 +231,20 @@ function readEvents(raw: unknown): LabEvent[] {
     // An event without a time, a node or a kind cannot be placed on a
     // timeline. Skipping it is honest; inventing a timestamp or a node is not.
     if (atEpochMillis === null || !label || !kind) continue;
+    const eventNodeIndex = nodeIndexOf(label);
+    // A label that does not end in a node number cannot be placed on the map.
+    if (eventNodeIndex < 0) continue;
     const peers: number[] = [];
     if (Array.isArray(entry.peers)) {
       for (const peer of entry.peers) {
-        const parsed = numeric(peer);
+        const parsed = nodeIndex(numeric(peer));
         if (parsed !== null) peers.push(parsed);
       }
     }
     events.push({
       atEpochMillis,
       round: num(entry.round) ?? -1,
-      nodeIndex: nodeIndexOf(label),
+      nodeIndex: eventNodeIndex,
       node: label,
       kind,
       messageId: str(entry.messageId),
@@ -237,6 +263,8 @@ function readNodes(raw: unknown): LabNode[] {
   if (!Array.isArray(raw)) return nodes;
   for (const entry of raw) {
     if (!isObject(entry)) continue;
+    const index = nodeIndex(entry.index);
+    if (index === null) continue;
     const stateCounts: Record<string, number> = {};
     const rawStates = entry.stateCounts;
     if (isObject(rawStates)) {
@@ -246,8 +274,8 @@ function readNodes(raw: unknown): LabNode[] {
       }
     }
     nodes.push({
-      index: num(entry.index) ?? -1,
-      label: str(entry.label) ?? `node-${num(entry.index) ?? '?'}`,
+      index,
+      label: str(entry.label) ?? `node-${index}`,
       originated: num(entry.originated),
       accepted: num(entry.accepted),
       forwarded: num(entry.forwarded),
@@ -274,11 +302,16 @@ function readMessages(raw: unknown): LabMessage[] {
     if (!isObject(entry)) continue;
     const id = str(entry.id);
     if (!id) continue;
-    const broadcast = bool(entry.broadcast) ?? entry.destination === null;
+    const rawDestination = num(entry.destination);
+    const destination = nodeIndex(rawDestination);
+    // Older reports use -1 as the "everyone" sentinel; the current simulator
+    // writes null. Neither is a directed message to node -1.
+    const broadcast =
+      rawDestination === -1 || (bool(entry.broadcast) ?? rawDestination === null);
     messages.push({
       id,
-      origin: num(entry.origin),
-      destination: broadcast ? null : num(entry.destination),
+      origin: nodeIndex(entry.origin),
+      destination: broadcast ? null : destination,
       broadcast,
       originatedAt: num(entry.originatedAt),
     });
@@ -291,15 +324,19 @@ function readLinkChanges(raw: unknown): LabLinkChange[] {
   if (!Array.isArray(raw)) return changes;
   for (const entry of raw) {
     if (!isObject(entry)) continue;
-    const from = num(entry.from);
-    const to = num(entry.to);
-    if (from === null || to === null) continue;
+    const from = nodeIndex(entry.from);
+    const to = nodeIndex(entry.to);
+    const atEpochMillis = num(entry.atEpochMillis);
+    const up = bool(entry.up);
+    // A missing timestamp or state is not a cut at epoch 0. Skipping the
+    // record is honest; inventing one changes the map.
+    if (from === null || to === null || atEpochMillis === null || up === null) continue;
     changes.push({
-      atEpochMillis: num(entry.atEpochMillis) ?? 0,
+      atEpochMillis,
       round: num(entry.round) ?? -1,
       from,
       to,
-      up: bool(entry.up) ?? false,
+      up,
     });
   }
   return changes;
@@ -352,39 +389,136 @@ export function validateReport(input: unknown, source = 'imported report'): Pars
     };
   }
 
-  const events = readEvents(input.events);
+  const simulation = readSimulation(obj(input.simulation));
+  if (simulation.edges.length > MAX_EDGES) {
+    return {
+      ok: false,
+      error: `This report records ${simulation.edges.length} topology edges, more than the ${MAX_EDGES} the Lab will draw.`,
+    };
+  }
+  if (Array.isArray(input.nodes) && input.nodes.length > MAX_NODES) {
+    return {
+      ok: false,
+      error: `This report records ${input.nodes.length} node entries, more than the ${MAX_NODES} the Lab will draw.`,
+    };
+  }
+  if (Array.isArray(input.linkChanges) && input.linkChanges.length > MAX_LINK_CHANGES) {
+    return {
+      ok: false,
+      error: `This report records ${input.linkChanges.length} link changes, more than the ${MAX_LINK_CHANGES} the Lab will apply.`,
+    };
+  }
+
+  const parsedEvents = readEvents(input.events);
+  if (parsedEvents.length < input.events.length) {
+    warnings.push(
+      `Skipped ${input.events.length - parsedEvents.length} event ${
+        input.events.length - parsedEvents.length === 1 ? 'entry' : 'entries'
+      } that had no timestamp, a drawable node or a kind.`,
+    );
+  }
+
+  // Some unknown simulator event types are serialised with atEpochMillis = 0.
+  // When the report declares a real start clock, those records have no
+  // placeable time; keeping them would drag the whole replay back to 1970.
+  let events = parsedEvents;
+  const startEpochMillis =
+    simulation.startEpochSeconds === null ? null : simulation.startEpochSeconds * 1000;
+  if (startEpochMillis !== null && startEpochMillis > 0) {
+    const unplaceable = events.filter((event) => event.atEpochMillis <= 0);
+    if (unplaceable.length > 0) {
+      events = events.filter((event) => event.atEpochMillis > 0);
+      warnings.push(
+        `Skipped ${unplaceable.length} event ${
+          unplaceable.length === 1 ? 'entry' : 'entries'
+        } with no positive simulated timestamp.`,
+      );
+    }
+  }
+
   if (input.events.length > 0 && events.length === 0) {
     return {
       ok: false,
       error:
-        'This report has an "events" array, but none of its entries has a timestamp, a node and a kind. It cannot be replayed.',
+        'This report has an "events" array, but none of its entries has a timestamp, a node and a kind that can be placed on a timeline. It cannot be replayed.',
     };
   }
-  if (events.length < input.events.length) {
-    warnings.push(
-      `Skipped ${input.events.length - events.length} event ${
-        input.events.length - events.length === 1 ? 'entry' : 'entries'
-      } that had no timestamp, node or kind.`,
-    );
-  }
+
   const nodes = readNodes(input.nodes);
   const messages = readMessages(input.messages);
   const linkChanges = readLinkChanges(input.linkChanges);
-  const simulation = readSimulation(obj(input.simulation));
+
+  if (Array.isArray(input.nodes) && input.nodes.length > nodes.length) {
+    warnings.push(
+      `Skipped ${input.nodes.length - nodes.length} node ${
+        input.nodes.length - nodes.length === 1 ? 'entry' : 'entries'
+      } with no non-negative integer index.`,
+    );
+  }
+  if (Array.isArray(input.linkChanges) && input.linkChanges.length > linkChanges.length) {
+    warnings.push(
+      `Skipped ${input.linkChanges.length - linkChanges.length} link-change ${
+        input.linkChanges.length - linkChanges.length === 1 ? 'entry' : 'entries'
+      } with no timestamp, endpoints or up/down state.`,
+    );
+  }
+  const rawEdges = isObject(input.simulation) && Array.isArray(input.simulation.edges)
+    ? input.simulation.edges.length
+    : 0;
+  if (rawEdges > simulation.edges.length) {
+    warnings.push(
+      `Skipped ${rawEdges - simulation.edges.length} topology-edge ${
+        rawEdges - simulation.edges.length === 1 ? 'entry' : 'entries'
+      } with no non-negative integer endpoints.`,
+    );
+  }
+
+  const uniqueNodeIndices = new Set(nodes.map((node) => node.index));
+  if (uniqueNodeIndices.size < nodes.length) {
+    warnings.push(
+      `The report records ${nodes.length - uniqueNodeIndices.size} duplicate node ${
+        nodes.length - uniqueNodeIndices.size === 1 ? 'index' : 'indices'
+      }; the first record is used for each node.`,
+    );
+  }
+
+  let maxNodeIndex = (simulation.nodeCount ?? 0) - 1;
+  const considerNode = (index: number | null): void => {
+    if (index !== null && index > maxNodeIndex) maxNodeIndex = index;
+  };
+  for (const node of nodes) considerNode(node.index);
+  for (const [from, to] of simulation.edges) {
+    considerNode(from);
+    considerNode(to);
+  }
+  for (const event of events) {
+    considerNode(event.nodeIndex);
+    for (const peer of event.peers) considerNode(peer);
+  }
+  for (const change of linkChanges) {
+    considerNode(change.from);
+    considerNode(change.to);
+  }
+  if (maxNodeIndex >= MAX_NODES) {
+    return {
+      ok: false,
+      error: `This report references node index ${maxNodeIndex}, but the Lab draws at most ${MAX_NODES} nodes (indices 0–${MAX_NODES - 1}).`,
+    };
+  }
 
   if (simulation.edges.length === 0) {
     warnings.push(
-      'This report does not record the topology edges, so the Lab cannot draw which nodes were connected.',
+      'This report records no topology edges, so the Lab cannot draw which nodes were connected.',
     );
   }
   if (linkChanges.length === 0) {
     warnings.push(
-      'This report does not record link changes, so link failures and recoveries cannot be shown.',
+      'This report records no link changes, so link failures and recoveries cannot be shown.',
     );
   }
   if (messages.length === 0) {
     warnings.push(
-      'This report does not record which node composed each message, so journeys start from the recorded events only.',
+      'This report records no composed messages, so journeys start from the recorded events only.',
     );
   }
 
@@ -418,10 +552,13 @@ export function parseReportText(text: string, source = 'imported report'): Parse
   if (text.length === 0) {
     return { ok: false, error: 'That file is empty.' };
   }
-  if (text.length > MAX_REPORT_BYTES) {
+  // `File.size` is bytes, but a caller can hand us a string directly. Count
+  // UTF-8 bytes so non-ASCII reports cannot slip past the same limit.
+  const byteLength = new TextEncoder().encode(text).byteLength;
+  if (byteLength > MAX_REPORT_BYTES) {
     return {
       ok: false,
-      error: `That report is ${(text.length / (1024 * 1024)).toFixed(1)} MB. The Lab reads reports up to ${MAX_REPORT_BYTES / (1024 * 1024)} MB.`,
+      error: `That report is ${(byteLength / (1024 * 1024)).toFixed(1)} MB. The Lab reads reports up to ${MAX_REPORT_BYTES / (1024 * 1024)} MB.`,
     };
   }
   let decoded: unknown;
@@ -448,7 +585,7 @@ export async function parseReportFile(file: File): Promise<ParseResult> {
   if (file.size > MAX_REPORT_BYTES) {
     return {
       ok: false,
-      error: `That file is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The Lab reads reports up to ${MAX_REPORT_BYTES / (1024 * 1024)} MB.`,
+      error: `That file is ${(file.size / (1024 * 1024)).toFixed(1)} MB (${file.size.toLocaleString('en-US')} bytes), over the ${MAX_REPORT_BYTES / (1024 * 1024)} MB limit.`,
     };
   }
   let text: string;
