@@ -60,8 +60,10 @@ rendered as `0`.
 
 2. **Import the report.** Drop `report.json` on the loader or choose it with
    the file picker. Files are read locally with the browser's File API, parsed
-   in the tab and never uploaded. The import limit is 16 MB and 200 000 events;
-   a malformed, empty or oversized file is rejected with a message that says
+   in the tab and never uploaded. The import limit is 16 MB and 200 000 events,
+   with a 500-node, 20 000-edge and 20 000-link-change drawing bound so a tiny
+   malformed file cannot ask the SVG map to render millions of elements. A
+   malformed, empty or oversized file is rejected with a message that says
    which limit or field failed.
 
    Two reports produced by the simulator are committed and load instantly:
@@ -143,7 +145,7 @@ accepts both strings and numbers.
 | --- | --- |
 | Acknowledgement rate | `acknowledged` directed messages ÷ directed messages originated. Broadcasts cannot be acknowledged and are excluded. A run with no directed messages reports unavailable, not 0 %. |
 | Median / p95 latency | Simulated round-trip latency over acknowledged directed messages, in milliseconds. The simulator advances in fixed steps, so equal step counts produce equal latencies; that is the model, not a radio measurement. |
-| Amplification | Recorded forwards ÷ originated messages. |
+| Amplification | Recorded forwards ÷ accepted envelopes. It measures forwarding work per distinct useful message the mesh accepted, not per originated message. |
 | Frames dropped / sent | Counters from the synthetic radio (`SimulationNetwork`). |
 | Partitions at end | The recorded partition count. |
 | Events retained | `eventWindow.retained` / `eventWindow.total`. If the retained window is smaller, the replay says so; the counters still describe the whole run. |
@@ -203,7 +205,8 @@ Consequences worth knowing:
 
 ```bash
 cd apps/web
-npm install
+npm ci
+npx playwright install chromium  # once, for the browser smoke test
 npm run dev        # http://localhost:5173/lab
 ```
 
@@ -212,17 +215,24 @@ Checks:
 ```bash
 cd apps/web
 npm test                # Vitest, all web tests
-npx tsc -b --force      # type-check
+npm run typecheck       # type-check
 npm run lint            # ESLint, zero warnings
+npm run build           # normal application build
 npm run build:public    # public-only production build
+npm run preview -- --host 127.0.0.1 --port 4173
+# In another terminal, from apps/web:
+npm run test:browser    # imports a sample, replays, compares, checks desktop/mobile, saves screenshots
 
 cd ../..
-mvn -q -pl packages/mesh-simulator -am test   # simulator + report tests
+mvn -B -ntp verify                            # full Java reactor
 ```
 
 The Lab tests are `src/lab/*.test.ts` (parsing, ordering, journeys, metrics,
 scenario commands, comparison) and `src/pages/LabPage.test.tsx` (page, import
-errors, compare, public route).
+errors, compare, public route). `scripts/verify-lab.mjs` exercises the public
+build in Chromium at 1440, 390 and 320 pixels, loads the bundled Java report,
+steps and seeks the replay, compares two bundled reports, checks overflow and
+browser errors, and writes full-page screenshots to `/tmp/resqnet-lab-review`.
 
 ---
 
@@ -250,6 +260,14 @@ are simulations, not field measurements.
 - **Rejected events are noisy.** Many `rejected` events in a report are ACKs a
   relay could not correlate, not messages that failed. The Lab shows the
   recorded reason and does not turn those events into a per-message failure.
+- **Very large journeys are windowed.** The inspector renders the newest 200
+  steps at the cursor and says how many earlier steps are hidden. The message
+  picker filters and renders at most 500 ids at a time; type an id to reach the
+  rest. This is a rendering bound, not a change to the recorded history.
+- **An exact command needs the recorded configuration and the CLI's clock.**
+  The Java CLI always starts at `1760000000`; a report from a different start
+  clock says that its command cannot be reconstructed exactly. The command
+  includes `--lifetime` and quotes its argument list.
 - **No radio physics.** There is no RSSI, SNR, bandwidth or physical range in
   the simulator. The Lab does not draw coverage or signal strength.
 - **The unique path is unknown.** The view lists recorded handoffs and says
