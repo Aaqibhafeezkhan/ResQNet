@@ -49,6 +49,29 @@ class ReportProvenanceTest {
     }
 
     @Test
+    @DisplayName("records the configuration needed to reproduce the run")
+    void recordsReproducibleConfiguration() throws Exception {
+        SimulationConfig config = ring(6, 42L).startingPartitioned();
+        SimulationReport report = tryRun(config);
+
+        Map<String, Object> json = Json.parseObject(report.toJson().toString());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> simulation = (Map<String, Object>) json.get("simulation");
+
+        assertThat(((Number) simulation.get("degree")).intValue())
+                .isEqualTo(config.topology().degree());
+        assertThat(((Number) simulation.get("churnEveryRounds")).intValue())
+                .isEqualTo(config.churnEveryRounds());
+        assertThat(((Number) simulation.get("messageLifetimeSeconds")).longValue())
+                .isEqualTo(config.messageLifetimeSeconds());
+        assertThat(((Number) simulation.get("startEpochSeconds")).longValue())
+                .isEqualTo(config.startEpochSeconds());
+        assertThat(simulation.get("startPartitioned"))
+                .as("a run that started partitioned must say so")
+                .isEqualTo(true);
+    }
+
+    @Test
     @DisplayName("records every link cut and restore, not just a count")
     void recordsLinkChanges() throws Exception {
         SimulationReport report = tryRun(ring(8, 42L));
