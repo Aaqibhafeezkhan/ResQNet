@@ -6,6 +6,7 @@ import {
   type IncidentSummary,
   type Overview,
 } from '@/lib/api';
+import { useAuthStore } from '@/state/auth';
 
 interface IncidentFilters {
   status: IncidentStatus | null;
@@ -20,6 +21,11 @@ interface IncidentState {
   loading: boolean;
   /** Set when the gateway could not be reached. Distinct from an empty list. */
   unreachable: boolean;
+  /**
+   * Set when the last refresh failed but the gateway answered (a 5xx, say).
+   * `items` still holds the previous queue, which may no longer be true.
+   */
+  stale: boolean;
   error: string | null;
   setStatusFilter: (status: IncidentStatus | null) => void;
   setQuery: (query: string) => void;
@@ -31,6 +37,12 @@ interface IncidentState {
     note?: string,
   ) => Promise<void>;
 }
+
+/**
+ * Sequence number of the latest refresh. A refresh whose number is no longer
+ * the latest has been overtaken by a newer one and must not apply its result.
+ */
+let latestRefresh = 0;
 
 /**
  * Incident list state.
@@ -46,6 +58,7 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
   filters: { status: null, query: '', severity: null },
   loading: false,
   unreachable: false,
+  stale: false,
   error: null,
 
   setStatusFilter: (status) => set({ filters: { ...get().filters, status } }),
@@ -64,6 +77,12 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
    */
   async refresh() {
     const { filters } = get();
+    // Results only count for the refresh that is still the latest, and only
+    // for the session it started in: an older request finishing late must not
+    // overwrite a newer queue or sign out a session that started after it.
+    const id = ++latestRefresh;
+    const token = useAuthStore.getState().token;
+    const current = () => id === latestRefresh && useAuthStore.getState().token === token;
     if (get().items.length === 0) {
       set({ loading: true });
     }
@@ -76,18 +95,29 @@ export const useIncidentStore = create<IncidentState>((set, get) => ({
         ? page.content
         : page.content.filter((item) => item.severity === filters.severity);
       const overview = await api.overview();
-      set({ items, overview, loading: false, unreachable: false });
+      if (!current()) return;
+      set({ items, overview, loading: false, unreachable: false, stale: false });
     } catch (cause) {
+      if (!current()) return;
       if (cause instanceof ApiError && cause.status === 0) {
-        set({ unreachable: true, loading: false, error: cause.message, items: [] });
+        set({ unreachable: true, stale: false, loading: false, error: cause.message, items: [] });
         return;
       }
       if (cause instanceof ApiError && cause.isAuthFailure) {
-        set({ loading: false, error: 'Session expired. Sign in again.' });
+        // A console that still looks usable after the session ended invites
+        // acting on it. Sign out, which brings back the sign-in screen, and say
+        // why there.
+        set({ items: [], overview: null, loading: false, unreachable: false, stale: false, error: null });
+        useAuthStore.getState().signOut();
+        useAuthStore.setState({ error: 'Your session expired. Sign in again.' });
         return;
       }
+      // The gateway answered but the refresh failed: keep the previous queue
+      // so the responder still sees it, but mark it stale.
       set({
         loading: false,
+        unreachable: false,
+        stale: true,
         error: cause instanceof Error ? cause.message : 'Could not load incidents',
       });
     }
