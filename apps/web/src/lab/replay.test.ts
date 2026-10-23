@@ -76,6 +76,7 @@ describe('buildReplayModel', () => {
     const model = ringModel();
 
     expect(model.nodeCount).toBe(6);
+    expect(model.eventOrder.size).toBe(model.orderedEvents.length);
     expect(model.eventsByNode.get(0)?.length).toBeGreaterThan(0);
     expect(model.messagesById.size).toBe(10);
     // Composed messages plus the acknowledgement ids that appear only in events.
@@ -129,6 +130,24 @@ describe('buildReplayModel', () => {
     expect(model.linkChanges).toEqual([]);
     expect(model.hasTopology).toBe(false);
     expect(model.nodeCount).toBe(0);
+  });
+
+  it('includes nodes named only by recorded edges or link changes', () => {
+    const result = validateReport({
+      simulation: {
+        topology: 'LINE',
+        edges: [
+          [0, 1],
+          [2, 3],
+        ],
+      },
+      events: [],
+      linkChanges: [{ atEpochMillis: 1000, from: 3, to: 4, up: false }],
+    });
+    if (!result.ok) throw new Error(result.error);
+    const model = buildReplayModel(result.report);
+
+    expect(model.nodeCount).toBe(5);
   });
 });
 
@@ -274,6 +293,46 @@ describe('buildJourney', () => {
     expect(before.limitations.join(' ')).toMatch(/later event/);
   });
 
+  it('cuts the journey at the cursor, not at every event sharing its timestamp', () => {
+    const result = validateReport({
+      simulation: {
+        topology: 'LINE',
+        nodeCount: 2,
+        startEpochSeconds: 1,
+        edges: [[0, 1]],
+      },
+      events: [
+        {
+          atEpochMillis: 1000,
+          round: 0,
+          node: 'n0',
+          kind: 'state',
+          messageId: 'm1',
+          detail: 'QUEUED -> RELAYED: first',
+        },
+        {
+          atEpochMillis: 1000,
+          round: 0,
+          node: 'n1',
+          kind: 'acknowledged',
+          messageId: 'm1',
+        },
+      ],
+      messages: [{ id: 'm1', origin: 0, destination: 1, broadcast: false, originatedAt: 1000 }],
+      linkChanges: [],
+    });
+    if (!result.ok) throw new Error(result.error);
+    const model = buildReplayModel(result.report);
+
+    const atFirst = buildJourney(model, 'm1', { untilEventIndex: 1 });
+    const atSecond = buildJourney(model, 'm1', { untilEventIndex: 2 });
+
+    expect(atFirst.steps).toHaveLength(1);
+    expect(atFirst.outcome).not.toBe('acknowledged');
+    expect(atSecond.steps).toHaveLength(2);
+    expect(atSecond.outcome).toBe('acknowledged');
+  });
+
   it('returns no steps at the very start and says so', () => {
     const model = ringModel();
     const id = model.messageIds[0];
@@ -306,6 +365,30 @@ describe('buildJourney', () => {
     expect(journey.steps).toEqual([]);
     expect(journey.outcome).toBe('unknown');
     expect(journey.limitations.join(' ')).toMatch(/does not record which node composed/);
+  });
+
+  it('does not turn a lone rejection into a delivery outcome', () => {
+    const result = validateReport({
+      simulation: { topology: 'LINE', nodeCount: 2, startEpochSeconds: 1, edges: [[0, 1]] },
+      events: [
+        {
+          atEpochMillis: 1000,
+          round: 0,
+          node: 'n1',
+          kind: 'rejected',
+          messageId: 'm1',
+          reason: 'unknown-message',
+        },
+      ],
+      messages: [{ id: 'm1', origin: 0, destination: 1, broadcast: false, originatedAt: 1000 }],
+      linkChanges: [],
+    });
+    if (!result.ok) throw new Error(result.error);
+    const journey = buildJourney(buildReplayModel(result.report), 'm1');
+
+    expect(journey.outcome).toBe('unknown');
+    expect(journey.limitations.join(' ')).toMatch(/rejected event/i);
+    expect(journey.limitations.join(' ')).toMatch(/not treated as this message's delivery outcome/i);
   });
 
   it('keeps the partitioned report honest about what did not happen', () => {

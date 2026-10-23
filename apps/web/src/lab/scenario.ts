@@ -148,7 +148,10 @@ export function buildCommand(params: ScenarioParams, output = 'report.json'): st
   if (params.partitioned) args.push('--partitioned');
   args.push(`--out ${output}`);
 
-  return `mvn -q -pl packages/mesh-simulator exec:java \\\n  -Dexec.args="${args.join(' ')}"`;
+  // Quote the whole argument list for the shell. The output path is the only
+  // caller-controlled string here, but quoting the whole value keeps a future
+  // field from silently becoming a command-injection point.
+  return `mvn -q -pl packages/mesh-simulator exec:java \\\n  -Dexec.args=${shellQuote(args.join(' '))}`;
 }
 
 /** A human summary of the scenario, for the comparison header and exports. */

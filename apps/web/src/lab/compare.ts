@@ -9,7 +9,11 @@
 
 import { formatMetric, type LabMetrics } from './metrics';
 import { extractMetrics } from './metrics';
+import { TOPOLOGY_SHAPES, shellQuote } from './scenario';
 import type { LabReport } from './types';
+
+/** The start clock the Java CLI hardcodes in `Options.toConfig()`. */
+const CLI_START_EPOCH_SECONDS = 1_760_000_000;
 
 export interface ComparisonRow {
   key: string;
@@ -38,10 +42,16 @@ export interface Comparison {
   rows: ComparisonRow[];
   differences: ConfigDifference[];
   /**
-   * True only when the two runs used exactly the same configuration, including
-   * the seed. A controlled comparison isolates the thing that changed; when
-   * nothing changed, a difference is sampling noise from a different seed and
-   * the Lab says that.
+   * Dimensions that one or both reports did not record. They are not
+   * differences, but they prevent the comparison from being called controlled.
+   */
+  incompleteDimensions: string[];
+  /**
+   * True only when the two runs used exactly the same recorded configuration,
+   * including the seed, and every dimension is present in both reports. A
+   * controlled comparison isolates the thing that changed; when nothing
+   * changed, a difference is sampling noise from a different seed and the Lab
+   * says that.
    */
   controlled: boolean;
   /** One sentence describing what can and cannot be concluded. */
@@ -85,6 +95,11 @@ const DIMENSIONS: readonly Dimension[] = [
     label: 'Starts partitioned',
     read: (r) => r.simulation.startPartitioned,
   },
+  {
+    key: 'startEpochSeconds',
+    label: 'Start epoch (s)',
+    read: (r) => r.simulation.startEpochSeconds,
+  },
 ];
 
 function displayDimension(value: string | number | boolean | null): string {
@@ -100,6 +115,20 @@ function displayDimension(value: string | number | boolean | null): string {
 function rawValue(value: string | number | boolean | null): string {
   if (value === null) return '—';
   return String(value);
+}
+
+/**
+ * Keeps a report-controlled value from breaking out of a Markdown cell or
+ * adding a new block. File names and topology names come from untrusted
+ * input, even when the rest of the report was produced by the simulator.
+ */
+function markdownText(value: string): string {
+  return value.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
+}
+
+/** Escapes a value for a Markdown table cell. */
+function markdownCell(value: string): string {
+  return markdownText(value);
 }
 
 function buildRow(
@@ -148,10 +177,13 @@ export function buildComparison(left: LabReport, right: LabReport): Comparison {
   );
 
   const differences: ConfigDifference[] = [];
+  const incompleteDimensions: string[] = [];
   for (const dimension of DIMENSIONS) {
     const leftValue = dimension.read(left);
     const rightValue = dimension.read(right);
-    if (rawValue(leftValue) !== rawValue(rightValue)) {
+    if (leftValue === null || rightValue === null) {
+      incompleteDimensions.push(dimension.label);
+    } else if (rawValue(leftValue) !== rawValue(rightValue)) {
       differences.push({
         key: dimension.key,
         label: dimension.label,
@@ -161,14 +193,18 @@ export function buildComparison(left: LabReport, right: LabReport): Comparison {
     }
   }
 
-  const controlled = differences.length === 0;
+  const controlled = differences.length === 0 && incompleteDimensions.length === 0;
   const verdict = controlled
     ? 'Both runs used the same configuration, so the differences below are outcome differences within one controlled scenario.'
-    : differences.length === 1
-      ? `One configuration dimension differs (${differences[0]?.label}). The difference below is associated with that change, not proven to be caused by it.`
-      : `${differences.length} configuration dimensions differ. This is not a controlled comparison: the outcome differences cannot be attributed to any one change.`;
+    : differences.length === 0
+      ? `The reports agree on every configuration value they both record, but ${incompleteDimensions.join(', ')} ${
+          incompleteDimensions.length === 1 ? 'is' : 'are'
+        } missing from one or both. This is not a controlled comparison.`
+      : differences.length === 1
+        ? `One configuration dimension differs (${differences[0]?.label}). The difference below is associated with that change, not proven to be caused by it.`
+        : `${differences.length} configuration dimensions differ. This is not a controlled comparison: the outcome differences cannot be attributed to any one change.`;
 
-  return { left, right, rows, differences, controlled, verdict };
+  return { left, right, rows, differences, incompleteDimensions, controlled, verdict };
 }
 
 /** Formats a delta with its sign, or an em dash when not comparable. */
@@ -216,8 +252,8 @@ export function exportComparisonMarkdown(comparison: Comparison): string {
 
   lines.push('## Provenance');
   lines.push('');
-  lines.push(`- **A:** ${provenance(left)}`);
-  lines.push(`- **B:** ${provenance(right)}`);
+  lines.push(`- **A:** ${markdownText(provenance(left))}`);
+  lines.push(`- **B:** ${markdownText(provenance(right))}`);
   lines.push('');
 
   lines.push('## Configuration');
@@ -229,7 +265,7 @@ export function exportComparisonMarkdown(comparison: Comparison): string {
     const rightValue = dimension.read(right);
     const marker = rawValue(leftValue) !== rawValue(rightValue) ? ' **≠**' : '';
     lines.push(
-      `| ${dimension.label}${marker} | ${displayDimension(leftValue)} | ${displayDimension(rightValue)} |`,
+      `| ${markdownCell(dimension.label)}${marker} | ${markdownCell(displayDimension(leftValue))} | ${markdownCell(displayDimension(rightValue))} |`,
     );
   }
   lines.push('');
@@ -253,7 +289,17 @@ export function exportComparisonMarkdown(comparison: Comparison): string {
     lines.push('Differing configuration dimensions:');
     lines.push('');
     for (const difference of comparison.differences) {
-      lines.push(`- ${difference.label}: ${difference.left} → ${difference.right}`);
+      lines.push(
+        `- ${markdownText(difference.label)}: ${markdownText(difference.left)} → ${markdownText(difference.right)}`,
+      );
+    }
+    lines.push('');
+  }
+  if (comparison.incompleteDimensions.length > 0) {
+    lines.push('Configuration dimensions not recorded by one or both reports:');
+    lines.push('');
+    for (const label of comparison.incompleteDimensions) {
+      lines.push(`- ${markdownText(label)}`);
     }
     lines.push('');
   }
@@ -267,11 +313,17 @@ export function exportComparisonMarkdown(comparison: Comparison): string {
   lines.push('```');
   lines.push('');
   lines.push(
-    'Metric definitions: acknowledgement rate is acknowledged directed messages ÷ directed messages (broadcasts cannot be acknowledged); latency is simulated round-trip time in milliseconds; amplification is forwarded copies per originated message.',
+    'Metric definitions: acknowledgement rate is acknowledged directed messages ÷ directed messages (broadcasts cannot be acknowledged); latency is simulated round-trip time in milliseconds; amplification is forwarded copies per accepted envelope.',
   );
   lines.push('');
 
   return lines.join('\n');
+}
+
+/** Maps a recorded topology name to a CLI shape, or null if it is not known. */
+function cliTopology(topology: string): string | null {
+  const normalized = topology.toLowerCase().replace(/_/g, '-');
+  return (TOPOLOGY_SHAPES as readonly string[]).includes(normalized) ? normalized : null;
 }
 
 /** Reconstructs the simulator command for a loaded report, when possible. */
@@ -287,8 +339,11 @@ export function commandFor(report: LabReport): string {
     return String(value);
   };
 
-  const topology = s.topology && s.topology !== 'UNKNOWN' ? s.topology : null;
-  if (!topology) missing.push('topology');
+  // Never interpolate the recorded topology name directly into a command.
+  // A report is user-supplied data, and the value sits inside a shell command
+  // that the Lab invites the reader to copy.
+  const topology = cliTopology(s.topology);
+  if (!topology) missing.push('a recognised topology');
   const nodes = required('node count', s.nodeCount);
   const degree = required('target degree', s.degree);
   const messages = required('message count', s.messageCount);
@@ -299,15 +354,19 @@ export function commandFor(report: LabReport): string {
   const rounds = required('rounds', s.rounds);
   const step = required('step', s.stepMillis);
   const broadcast = required('broadcast share', s.broadcastRatio);
+  const lifetime = required('message lifetime', s.messageLifetimeSeconds);
+  const startEpoch = required('start epoch', s.startEpochSeconds);
   if (s.startPartitioned === null) missing.push('start partition state');
 
   if (missing.length > 0 || !topology) {
     return `# An exact command cannot be reconstructed: the report does not record ${missing.join(', ')}.`;
   }
+  if (s.startEpochSeconds !== CLI_START_EPOCH_SECONDS) {
+    return `# An exact command cannot be reconstructed: the Java CLI always starts at ${CLI_START_EPOCH_SECONDS}, but this report started at ${startEpoch}.`;
+  }
 
-  const parts = [
-    'mvn -q -pl packages/mesh-simulator exec:java -Dexec.args="',
-    `--topology ${topology.toLowerCase().replace(/_/g, '-')}`,
+  const args = [
+    `--topology ${topology}`,
     `--nodes ${nodes}`,
     `--degree ${degree}`,
     `--messages ${messages}`,
@@ -318,8 +377,13 @@ export function commandFor(report: LabReport): string {
     `--rounds ${rounds}`,
     `--step ${step}`,
     `--broadcast ${broadcast}`,
+    `--lifetime ${lifetime}`,
   ];
-  if (s.startPartitioned) parts.push('--partitioned');
-  parts.push('--out report.json"');
-  return parts.join(' ');
+  if (s.startPartitioned) args.push('--partitioned');
+  args.push('--out report.json');
+
+  // Single-quote the whole exec.args value. The values above are numbers or
+  // a whitelisted topology, but quoting the entire argument list keeps this
+  // safe if the reconstruction gains another report-derived field.
+  return `mvn -q -pl packages/mesh-simulator exec:java -Dexec.args=${shellQuote(args.join(' '))}`;
 }

@@ -106,6 +106,31 @@ describe('buildComparison', () => {
     expect(formatDelta(row(comparison, 'framesSent'))).toBe('0');
     expect(formatRelative(row(comparison, 'framesSent'))).toBe('0.0%');
   });
+
+  it('does not call two incomplete configurations controlled', () => {
+    const left = reportFrom({ simulation: { topology: 'LINE' }, events: [] }, 'A');
+    const right = reportFrom({ simulation: { topology: 'LINE' }, events: [] }, 'B');
+    const comparison = buildComparison(left, right);
+
+    expect(comparison.differences).toEqual([]);
+    expect(comparison.incompleteDimensions.length).toBeGreaterThan(0);
+    expect(comparison.controlled).toBe(false);
+    expect(comparison.verdict).toMatch(/not a controlled comparison/i);
+  });
+
+  it('includes the recorded start clock in the controlled dimensions', () => {
+    const left = reportFrom(ringSample, 'A');
+    const right: LabReport = {
+      ...left,
+      simulation: { ...left.simulation, startEpochSeconds: left.simulation.startEpochSeconds! + 1 },
+    };
+    const comparison = buildComparison(left, right);
+
+    expect(comparison.controlled).toBe(false);
+    expect(comparison.differences.map((difference) => difference.key)).toContain(
+      'startEpochSeconds',
+    );
+  });
 });
 
 describe('exportComparisonMarkdown', () => {
@@ -137,6 +162,15 @@ describe('exportComparisonMarkdown', () => {
       strip(exportComparisonMarkdown(comparison)),
     );
   });
+
+  it('does not let a report name inject Markdown blocks or table cells', () => {
+    const left = { ...reportFrom(ringSample, 'A'), source: 'A | B\n## injected' };
+    const right = { ...reportFrom(partitionedSample, 'B'), source: 'B' };
+    const markdown = exportComparisonMarkdown(buildComparison(left, right));
+
+    expect(markdown).not.toContain('\n## injected');
+    expect(markdown).toContain('A \\| B ## injected');
+  });
 });
 
 describe('commandFor', () => {
@@ -152,7 +186,36 @@ describe('commandFor', () => {
     expect(command).toContain('--rounds 30');
     expect(command).toContain('--step 250');
     expect(command).toContain('--broadcast 0.4');
+    expect(command).toContain('--lifetime 900');
     expect(command).not.toContain('--partitioned');
+  });
+
+  it('refuses to interpolate an unrecognised topology into a shell command', () => {
+    const source = reportFrom(ringSample, 'ring');
+    const malicious: LabReport = {
+      ...source,
+      simulation: {
+        ...source.simulation,
+        topology: 'RING$(touch /tmp/pwned)',
+      },
+    };
+    const command = commandFor(malicious);
+
+    expect(command).toContain('cannot be reconstructed');
+    expect(command).toContain('recognised topology');
+    expect(command).not.toContain('touch /tmp/pwned');
+  });
+
+  it('refuses to claim an exact command when the CLI cannot reproduce the start clock', () => {
+    const source = reportFrom(ringSample, 'ring');
+    const shifted: LabReport = {
+      ...source,
+      simulation: { ...source.simulation, startEpochSeconds: 1_700_000_000 },
+    };
+    const command = commandFor(shifted);
+
+    expect(command).toContain('cannot be reconstructed');
+    expect(command).toContain('1700000000');
   });
 
   it('restores the partitioned flag from the report, not from the topology name', () => {

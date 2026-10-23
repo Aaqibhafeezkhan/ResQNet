@@ -31,6 +31,8 @@ export interface RecordedHandoff {
 export interface ReplayModel {
   /** Every event, in the deterministic replay order. */
   orderedEvents: readonly LabEvent[];
+  /** Position of each event in `orderedEvents`, for cursor-based filtering. */
+  eventOrder: ReadonlyMap<LabEvent, number>;
   eventsByMessage: Map<string, LabEvent[]>;
   eventsByNode: Map<number, LabEvent[]>;
   messagesById: Map<string, LabMessage>;
@@ -100,16 +102,32 @@ export function orderEvents(events: readonly LabEvent[]): LabEvent[] {
 /** Builds the replay model for a report. */
 export function buildReplayModel(report: LabReport): ReplayModel {
   const orderedEvents = orderEvents(report.events);
+  const eventOrder = new Map<LabEvent, number>();
+  for (let index = 0; index < orderedEvents.length; index += 1) {
+    const event = orderedEvents[index];
+    if (event) eventOrder.set(event, index);
+  }
 
   const eventsByMessage = new Map<string, LabEvent[]>();
   const eventsByNode = new Map<number, LabEvent[]>();
-  let maxNode = -1;
+  let maxNode = (report.simulation.nodeCount ?? 0) - 1;
+
+  const considerNode = (index: number): void => {
+    if (index > maxNode) maxNode = index;
+  };
+  for (const node of report.nodes) considerNode(node.index);
+  for (const [from, to] of report.simulation.edges) {
+    considerNode(from);
+    considerNode(to);
+  }
+  for (const change of report.linkChanges) {
+    considerNode(change.from);
+    considerNode(change.to);
+  }
 
   for (const event of orderedEvents) {
-    if (event.nodeIndex > maxNode) maxNode = event.nodeIndex;
-    for (const peer of event.peers) {
-      if (peer > maxNode) maxNode = peer;
-    }
+    considerNode(event.nodeIndex);
+    for (const peer of event.peers) considerNode(peer);
     if (event.messageId) {
       const bucket = eventsByMessage.get(event.messageId);
       if (bucket) bucket.push(event);
@@ -128,10 +146,10 @@ export function buildReplayModel(report: LabReport): ReplayModel {
   const declaredStartSeconds = report.simulation.startEpochSeconds;
   const declaredStartMillis = declaredStartSeconds === null ? null : declaredStartSeconds * 1000;
   const firstEventMillis = orderedEvents[0]?.atEpochMillis ?? null;
-  const startMillis =
-    declaredStartMillis !== null && firstEventMillis !== null
-      ? Math.min(declaredStartMillis, firstEventMillis)
-      : (declaredStartMillis ?? firstEventMillis ?? 0);
+  // The declared clock start is the anchor. Falling back to the first event
+  // is only for older reports that did not record it. A stray epoch-0 event
+  // must not drag the whole replay back to 1970.
+  const startMillis = declaredStartMillis ?? firstEventMillis ?? 0;
   const endMillis = orderedEvents.length > 0 ? orderedEvents[orderedEvents.length - 1]!.atEpochMillis : startMillis;
 
   const linkChanges = [...report.linkChanges].sort((a, b) => {
@@ -141,8 +159,7 @@ export function buildReplayModel(report: LabReport): ReplayModel {
     return a.to - b.to;
   });
 
-  const declaredNodes = report.simulation.nodeCount ?? 0;
-  const nodeCount = Math.max(declaredNodes, maxNode + 1, report.nodes.length);
+  const nodeCount = Math.max(0, maxNode + 1);
 
   // A message can be recorded as composed but have no event in the retained
   // window, and an event can name a message the summary does not list. The
@@ -153,6 +170,7 @@ export function buildReplayModel(report: LabReport): ReplayModel {
 
   return {
     orderedEvents,
+    eventOrder,
     eventsByMessage,
     eventsByNode,
     messagesById,
@@ -376,20 +394,37 @@ function describeStep(event: LabEvent, nodeLabel: (index: number) => string): st
  * arrived from a peer and was validated. Neither is a claim about a unique
  * route, and the limitations say so.
  *
- * <p>When `untilEpochMillis` is given, events after that simulated time are
- * excluded and the outcome describes the message at that moment. The replay
- * uses this so the inspector does not reveal an acknowledgement that has not
- * happened yet.
+ * <p>When `untilEventIndex` is given, only events before that position in the
+ * deterministic replay order are included. The cursor is an event index, not
+ * a timestamp: several events can share a millisecond, and a timestamp cutoff
+ * would reveal a later event (such as an acknowledgement) too early.
+ * `untilEpochMillis` remains for callers that only have a clock value.
  */
 export function buildJourney(
   model: ReplayModel,
   messageId: string,
-  options: { untilEpochMillis?: number } = {},
+  options: { untilEpochMillis?: number; untilEventIndex?: number } = {},
 ): Journey {
   const allEvents = model.eventsByMessage.get(messageId) ?? [];
+  const untilIndex = options.untilEventIndex;
   const until = options.untilEpochMillis;
-  const events =
-    until === undefined ? allEvents : allEvents.filter((event) => event.atEpochMillis <= until);
+  let events: readonly LabEvent[];
+  if (untilIndex !== undefined) {
+    // eventsByMessage preserves the order of orderedEvents, so the cutoff can
+    // be found without scanning the whole message history.
+    let low = 0;
+    let high = allEvents.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      const event = allEvents[middle];
+      const position = event ? (model.eventOrder.get(event) ?? -1) : -1;
+      if (position < untilIndex) low = middle + 1;
+      else high = middle;
+    }
+    events = low === allEvents.length ? allEvents : allEvents.slice(0, low);
+  } else {
+    events = until === undefined ? allEvents : allEvents.filter((event) => event.atEpochMillis <= until);
+  }
   const message = model.messagesById.get(messageId);
 
   const nodeLabel = (index: number): string =>
@@ -416,6 +451,7 @@ export function buildJourney(
   }
 
   const outcome = deriveOutcome(events);
+  const rejectedCopies = events.filter((event) => event.kind === 'rejected').length;
 
   const limitations: string[] = [];
   if (!message) {
@@ -426,6 +462,13 @@ export function buildJourney(
   limitations.push(
     'A mesh floods: several copies of a message can travel at once. These are the handoffs the simulator recorded, not one reconstructed route.',
   );
+  if (rejectedCopies > 0) {
+    limitations.push(
+      `${rejectedCopies} rejected ${
+        rejectedCopies === 1 ? 'event is' : 'events are'
+      } recorded for this message id. A rejection can be an uncorrelated acknowledgement, so it is not treated as this message's delivery outcome.`,
+    );
+  }
   if (steps.length === 0) {
     limitations.push(
       allEvents.length > 0
@@ -459,7 +502,6 @@ function deriveOutcome(events: readonly LabEvent[]): JourneyOutcome {
   for (const event of events) {
     if (event.kind === 'acknowledged') candidates.add('acknowledged');
     else if (event.kind === 'delivered') candidates.add('delivered');
-    else if (event.kind === 'rejected') candidates.add('rejected');
     else if (event.kind === 'state') {
       sawState = true;
       const current = parseStateTransition(event.detail);

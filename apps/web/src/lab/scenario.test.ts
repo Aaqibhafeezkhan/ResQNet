@@ -87,7 +87,7 @@ describe('buildCommand', () => {
     const command = buildCommand(DEFAULT_SCENARIO);
 
     expect(command.startsWith('mvn -q -pl packages/mesh-simulator exec:java')).toBe(true);
-    expect(command).toContain('-Dexec.args="');
+    expect(command).toContain("-Dexec.args='");
     expect(command).toContain('--topology ring');
     expect(command).toContain('--nodes 8');
     expect(command).toContain('--messages 24');
@@ -121,10 +121,16 @@ describe('buildCommand', () => {
 
   it('produces a command whose own arguments survive a shell-ish split', () => {
     const command = buildCommand(DEFAULT_SCENARIO);
-    const args = /-Dexec\.args="([^"]*)"/.exec(command)?.[1];
+    const args = /-Dexec\.args='([^']*)'/.exec(command)?.[1];
     if (!args) throw new Error('command does not contain a quoted argument list');
     expect(args.split(' ')).toContain('--seed');
     expect(args.split(' ')).toContain('--out');
+  });
+
+  it('quotes a caller-controlled output path instead of executing it', () => {
+    const command = buildCommand(DEFAULT_SCENARIO, "report'; touch /tmp/pwned; echo '");
+    expect(command).toContain("report'\\''; touch /tmp/pwned; echo '\\'''");
+    expect(command).not.toContain('-Dexec.args="');
   });
 });
 

@@ -20,6 +20,9 @@ export interface LayoutNode {
 export const VIEW_WIDTH = 1000;
 export const VIEW_HEIGHT = 620;
 
+/** Safety net for callers that bypass the report parser. */
+export const MAX_LAYOUT_NODES = 500;
+
 const PADDING = 90;
 
 function circleLayout(count: number, radiusX = 380, radiusY = 240): LayoutNode[] {
@@ -118,7 +121,9 @@ export function layoutNodes(
   nodeCount: number,
   edges: readonly [number, number][],
 ): LayoutNode[] {
-  const count = Math.max(0, nodeCount);
+  const count = Number.isFinite(nodeCount)
+    ? Math.max(0, Math.min(MAX_LAYOUT_NODES, Math.trunc(nodeCount)))
+    : 0;
   switch (topology.toUpperCase().replace(/[_-]/g, '')) {
     case 'LINE':
     case 'CHAIN':
