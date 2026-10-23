@@ -67,8 +67,11 @@ export function NetworkMap({
   }, [layout]);
 
   const journey = useMemo(
-    () => (selectedMessageId ? buildJourney(model, selectedMessageId) : null),
-    [model, selectedMessageId],
+    () =>
+      selectedMessageId
+        ? buildJourney(model, selectedMessageId, { untilEpochMillis: currentTime })
+        : null,
+    [model, selectedMessageId, currentTime],
   );
 
   const journeyRoles = useMemo(() => {
