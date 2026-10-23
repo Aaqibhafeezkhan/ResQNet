@@ -55,7 +55,7 @@ public final class SimulatedNode implements AutoCloseable {
         java.util.Random idRandom = new java.util.Random(config.seed() * 31L + index);
         this.router.setIdSource(idRandom::nextLong);
         this.router.addEventListener(event ->
-                events.add(SimulationEvent.from(event, round, index, network::labelOf)));
+                events.add(SimulationEvent.from(event, round, index, network)));
         this.router.setDeliveryListener((envelope, via, hops) -> inbox.add(envelope.messageId()));
     }
 

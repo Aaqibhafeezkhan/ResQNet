@@ -3,6 +3,7 @@ package dev.resqnet.mesh.simulator;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -21,12 +22,13 @@ import dev.resqnet.mesh.routing.MeshClock;
  * thread and no wall-clock dependency anywhere in this class. Given the same
  * seed and the same message schedule, a run is bit-for-bit repeatable.
  */
-final class SimulationNetwork {
+final class SimulationNetwork implements SimulationEvent.NodeResolver {
 
     private final SimulationConfig config;
     private final MeshClock.ManualClock clock;
     private final Random random;
     private final Map<Integer, SimulatedNode> nodes = new LinkedHashMap<>();
+    private final Map<String, Integer> indexByDeviceId = new HashMap<>();
     private final Map<Long, Boolean> activeLinks = new LinkedHashMap<>();
     private final Deque<Frame> inFlight = new ArrayDeque<>();
     private final List<LinkChange> linkChanges = new ArrayList<>();
@@ -43,7 +45,8 @@ final class SimulationNetwork {
     }
 
     /** Human-readable label for a device identity, or a truncated form. */
-    String labelOf(String deviceId) {
+    @Override
+    public String labelOf(String deviceId) {
         if (deviceId == null || deviceId.isEmpty()) {
             return "?";
         }
@@ -61,6 +64,25 @@ final class SimulationNetwork {
 
     void register(SimulatedNode node) {
         nodes.put(node.index(), node);
+        indexByDeviceId.put(node.deviceId(), node.index());
+    }
+
+    /**
+     * Node index that owns a device identity.
+     *
+     * <p>Reports refer to nodes by index rather than by identity because every
+     * node generates a fresh key pair on every run: the identity changes
+     * between two runs of the same seed, the index does not.
+     *
+     * @return the node index, or {@code -1} when the identity is not in this run
+     */
+    @Override
+    public int indexOf(String deviceId) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            return -1;
+        }
+        Integer index = indexByDeviceId.get(deviceId);
+        return index == null ? -1 : index;
     }
 
     Map<Integer, SimulatedNode> nodes() {

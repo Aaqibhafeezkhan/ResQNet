@@ -9,6 +9,10 @@ import { DemoPage } from '@/pages/DemoPage';
 import { DownloadPage } from '@/pages/DownloadPage';
 import { LandingPage } from '@/pages/LandingPage';
 
+const LabPage = lazy(() =>
+  import('@/pages/LabPage').then((module) => ({ default: module.LabPage })),
+);
+
 const CommandPage = PUBLIC_SITE_ONLY
   ? null
   : lazy(() =>
@@ -27,6 +31,7 @@ export function App() {
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
           <Route path="/demo" element={<DemoPage />} />
+          <Route path="/lab" element={<LabPage />} />
           <Route path="/download" element={<DownloadPage />} />
           <Route path="/contribute" element={<ContributePage />} />
           <Route path="/about" element={<AboutPage />} />

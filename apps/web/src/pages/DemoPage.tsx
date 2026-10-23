@@ -1,4 +1,5 @@
 import { Check, Unplug, Waypoints } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { MeshDemo } from '@/components/demo/MeshDemo';
 import { PageHero } from '@/components/public/PageHero';
@@ -76,6 +77,16 @@ export function DemoPage() {
           <p className="mt-4 text-[11px] leading-relaxed text-ink-tertiary">
             This simulator models protocol states, not radio performance. It
             does not connect to a gateway, request location or transmit data.
+          </p>
+          <p className="mt-4 text-[12px] leading-relaxed text-ink-secondary">
+            Looking for measured runs instead of a hand-built scenario?{' '}
+            <Link
+              to="/lab"
+              className="font-medium text-network underline decoration-network/30 underline-offset-4 transition-colors hover:decoration-network"
+            >
+              Open the Mesh Replay Lab
+            </Link>{' '}
+            to import a report from the Java simulator and inspect every recorded event.
           </p>
         </div>
       </section>

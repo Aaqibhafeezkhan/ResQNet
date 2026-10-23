@@ -10,9 +10,10 @@ import { GITHUB_REPO } from '@/lib/links';
 const NAV = [
   { to: '/#network', label: 'Network', index: '01' },
   { to: '/demo', label: 'Field lab', index: '02' },
-  { to: '/download', label: 'Android', index: '03' },
-  { to: '/contribute', label: 'Contribute', index: '04' },
-  { to: '/about', label: 'About', index: '05' },
+  { to: '/lab', label: 'Replay lab', index: '03' },
+  { to: '/download', label: 'Android', index: '04' },
+  { to: '/contribute', label: 'Contribute', index: '05' },
+  { to: '/about', label: 'About', index: '06' },
 ] as const;
 
 export function SiteHeader() {
@@ -130,7 +131,7 @@ export function SiteHeader() {
             </HeaderLink>
           ))}
           {!PUBLIC_SITE_ONLY ? (
-            <HeaderLink to="/command" index="06" active={location.pathname.startsWith('/command')}>
+            <HeaderLink to="/command" index="07" active={location.pathname.startsWith('/command')}>
               Operations
             </HeaderLink>
           ) : null}
@@ -217,7 +218,7 @@ export function SiteHeader() {
                   className="flex items-center justify-between border-b border-white/[0.08] py-4 text-[26px] font-medium leading-none tracking-[-0.03em] text-ink-primary"
                 >
                   Operations
-                  <span className="tabular text-[9px] tracking-widest text-ink-tertiary">06</span>
+                  <span className="tabular text-[9px] tracking-widest text-ink-tertiary">07</span>
                 </Link>
               ) : null}
             </nav>

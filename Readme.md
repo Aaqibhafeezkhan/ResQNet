@@ -63,6 +63,13 @@ also a concept visualization, with the same disclaimer applying.
 A step-by-step demonstration script with exact commands and failure injection
 is in [docs/demo.md](docs/demo.md).
 
+The public web app also includes a **Mesh Replay Lab** at `/lab`. It imports a
+report written by the Java simulator, replays the recorded events, inspects the
+handoffs behind a message and compares two runs. Reports are read locally and
+every view is labelled **SIMULATED — NOT REAL RADIO TELEMETRY**. The usage
+guide, report schema notes and known limits are in
+[docs/mesh-replay-lab/README.md](docs/mesh-replay-lab/README.md).
+
 ---
 
 ## 3. Why ResQNet exists

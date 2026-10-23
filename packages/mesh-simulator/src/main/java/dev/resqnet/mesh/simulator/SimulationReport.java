@@ -46,26 +46,34 @@ public final class SimulationReport {
     private final long framesSent;
     private final long framesDelivered;
     private final long framesDropped;
-    private final long linkChanges;
+    private final long linkChangeCount;
     private final int partitions;
     private final List<NodeReport> nodes;
     private final List<SimulationEvent> events;
+    private final List<MessageReport> messages;
+    private final List<LinkChangeReport> linkChanges;
+    private final long totalEventCount;
     private final long simulatedDurationMillis;
     private final long wallClockMillis;
 
     SimulationReport(SimulationConfig config, List<NodeReport> nodes, List<SimulationEvent> events,
                      long framesSent, long framesDelivered, long framesDropped,
-                     long linkChanges, int partitions, long simulatedDurationMillis,
+                     long linkChangeCount, int partitions, long simulatedDurationMillis,
                      long wallClockMillis, long[] latencySamples, RoutingMetrics aggregate,
-                     Map<Integer, Long> hopDistribution, Map<Integer, Long> hopLatencySum) {
+                     Map<Integer, Long> hopDistribution, Map<Integer, Long> hopLatencySum,
+                     List<MessageReport> messages, List<LinkChangeReport> linkChangeRecords,
+                     long totalEventCount) {
         this.config = config;
         this.nodes = List.copyOf(nodes);
         this.events = List.copyOf(events);
+        this.messages = List.copyOf(messages);
+        this.linkChanges = List.copyOf(linkChangeRecords);
+        this.totalEventCount = totalEventCount;
         this.nodeCount = nodes.size();
         this.framesSent = framesSent;
         this.framesDelivered = framesDelivered;
         this.framesDropped = framesDropped;
-        this.linkChanges = linkChanges;
+        this.linkChangeCount = linkChangeCount;
         this.partitions = partitions;
         this.simulatedDurationMillis = simulatedDurationMillis;
         this.wallClockMillis = wallClockMillis;
@@ -244,7 +252,7 @@ public final class SimulationReport {
     }
 
     public long linkChanges() {
-        return linkChanges;
+        return linkChangeCount;
     }
 
     /** Number of distinct partitions the topology experienced. */
@@ -274,6 +282,37 @@ public final class SimulationReport {
         return events;
     }
 
+    /**
+     * Messages originated during the run, with the node that composed each one.
+     *
+     * <p>Recorded because a report that lists events without saying which
+     * message went where cannot answer the question a responder actually
+     * asks: did the person I addressed receive it?
+     */
+    public List<MessageReport> messages() {
+        return messages;
+    }
+
+    /** Every link cut and restored during the run, in the order it happened. */
+    public List<LinkChangeReport> linkChangeRecords() {
+        return linkChanges;
+    }
+
+    /** Total events observed, including those outside the retained window. */
+    public long totalEventCount() {
+        return totalEventCount;
+    }
+
+    /**
+     * True when the report could not keep every event.
+     *
+     * <p>A truncated history is still useful, but a viewer that does not know
+     * it is truncated will draw conclusions from a partial run.
+     */
+    public boolean eventsTruncated() {
+        return totalEventCount > events.size();
+    }
+
     /** Average simulated latency observed for messages that took N hops. */
     public long averageLatencyForHopCount(int hops) {
         Long sum = hopLatencySum.get(hops);
@@ -288,6 +327,7 @@ public final class SimulationReport {
                         .put("topology", config.topology().shape().name())
                         .put("nodeCount", config.topology().nodeCount())
                         .put("linkCount", config.topology().linkCount())
+                        .put("degree", config.topology().degree())
                         .put("seed", config.seed())
                         .put("messageCount", config.messageCount())
                         .put("rounds", config.rounds())
@@ -295,7 +335,11 @@ public final class SimulationReport {
                         .put("hopLimit", config.hopLimit())
                         .put("linkDropProbability", config.linkDropProbability())
                         .put("broadcastRatio", config.broadcastRatio())
-                        .put("churnEveryRounds", config.churnEveryRounds()))
+                        .put("churnEveryRounds", config.churnEveryRounds())
+                        .put("messageLifetimeSeconds", config.messageLifetimeSeconds())
+                        .put("startEpochSeconds", config.startEpochSeconds())
+                        .put("startPartitioned", config.startPartitioned())
+                        .put("edges", edgesJson()))
                 .put("outcome", JsonObject.object()
                         .put("originated", originatedCount)
                         .put("directedOriginated", directedOriginatedCount)
@@ -320,14 +364,40 @@ public final class SimulationReport {
                         .put("framesSent", framesSent)
                         .put("framesDelivered", framesDelivered)
                         .put("framesDropped", framesDropped)
-                        .put("linkChanges", linkChanges)
+                        .put("linkChanges", linkChangeCount)
                         .put("partitions", partitions))
                 .put("timing", JsonObject.object()
                         .put("simulatedMillis", simulatedDurationMillis)
                         .put("wallClockMillis", wallClockMillis)
                         .put("throughputPerSecond", simulatedThroughputPerSecond()))
+                .put("eventWindow", JsonObject.object()
+                        .put("retained", events.size())
+                        .put("total", totalEventCount)
+                        .put("truncated", eventsTruncated()))
+                .putObjects("linkChanges", linkChanges.stream()
+                        .map(LinkChangeReport::toJson).toList())
+                .putObjects("messages", messages.stream().map(MessageReport::toJson).toList())
                 .putObjects("nodes", nodes.stream().map(NodeReport::toJson).toList())
                 .putObjects("events", events.stream().map(SimulationEvent::toJson).toList());
+    }
+
+    /**
+     * The initial topology as {@code [from, to]} pairs.
+     *
+     * <p>Recorded rather than drawn: a viewer that shows these links is
+     * showing the graph the simulator actually built, not a decorative mesh.
+     */
+    private dev.resqnet.mesh.simulator.json.JsonArray edgesJson() {
+        dev.resqnet.mesh.simulator.json.JsonArray edges =
+                new dev.resqnet.mesh.simulator.json.JsonArray();
+        for (int[] edge : config.topology().edges()) {
+            dev.resqnet.mesh.simulator.json.JsonArray pair =
+                    new dev.resqnet.mesh.simulator.json.JsonArray();
+            pair.add(edge[0]);
+            pair.add(edge[1]);
+            edges.add(pair);
+        }
+        return edges;
     }
 
     /** A concise one-screen summary for a terminal. */
@@ -435,6 +505,60 @@ public final class SimulationReport {
         }
     }
 
+
+    /**
+     * One message that was composed during the run.
+     *
+     * @param messageId protocol message id
+     * @param originIndex node that composed the message
+     * @param destinationIndex node it was addressed to, {@code -1} for a broadcast
+     * @param broadcast true when the message named no destination
+     * @param originatedAtMillis simulated time the message was composed
+     */
+    public record MessageReport(
+            String messageId,
+            int originIndex,
+            int destinationIndex,
+            boolean broadcast,
+            long originatedAtMillis
+    ) {
+
+        public JsonObject toJson() {
+            return JsonObject.object()
+                    .put("id", messageId)
+                    .put("origin", originIndex)
+                    .put("destination", broadcast ? null : destinationIndex)
+                    .put("broadcast", broadcast)
+                    .put("originatedAt", originatedAtMillis);
+        }
+    }
+
+    /**
+     * One link transition.
+     *
+     * @param atEpochMillis simulated time of the change
+     * @param round simulation round, {@code -1} before the first round starts
+     * @param fromIndex first node index
+     * @param toIndex second node index
+     * @param up true when the link came back, false when it was cut
+     */
+    public record LinkChangeReport(
+            long atEpochMillis,
+            int round,
+            int fromIndex,
+            int toIndex,
+            boolean up
+    ) {
+
+        public JsonObject toJson() {
+            return JsonObject.object()
+                    .put("atEpochMillis", atEpochMillis)
+                    .put("round", round)
+                    .put("from", fromIndex)
+                    .put("to", toIndex)
+                    .put("up", up);
+        }
+    }
 
     /**
      * The JSON paths that cannot be byte-stable across runs of the same seed.

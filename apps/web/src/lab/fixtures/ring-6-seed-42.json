@@ -1,0 +1,8267 @@
+{
+  "simulation": {
+    "topology": "RING",
+    "nodeCount": 6,
+    "linkCount": 6,
+    "degree": 3,
+    "seed": 42,
+    "messageCount": 10,
+    "rounds": 30,
+    "stepMillis": 250,
+    "hopLimit": 8,
+    "linkDropProbability": 0.05,
+    "broadcastRatio": 0.4,
+    "churnEveryRounds": 8,
+    "messageLifetimeSeconds": 900,
+    "startEpochSeconds": 1760000000,
+    "startPartitioned": false,
+    "edges": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        5
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        4,
+        5
+      ]
+    ]
+  },
+  "outcome": {
+    "originated": 10,
+    "directedOriginated": 6,
+    "broadcastOriginated": 4,
+    "acknowledged": 6,
+    "deliveredRecords": 32,
+    "expired": 0,
+    "failed": 0,
+    "stillQueued": 44,
+    "duplicatesSuppressed": 157,
+    "rejected": 201,
+    "forwards": 197
+  },
+  "deliveryRate": 1,
+  "amplificationFactor": 4.690476190476191,
+  "latencyMillis": {
+    "median": 375,
+    "p95": 375,
+    "p99": 375,
+    "max": 375
+  },
+  "hopDistribution": {
+    "1": 25,
+    "2": 49,
+    "3": 63,
+    "4": 38,
+    "5": 19,
+    "6": 3
+  },
+  "radio": {
+    "framesSent": 272,
+    "framesDelivered": 265,
+    "framesDropped": 7,
+    "linkChanges": 9,
+    "partitions": 1
+  },
+  "timing": {
+    "simulatedMillis": 7500,
+    "wallClockMillis": 220,
+    "throughputPerSecond": 45.45454545454545
+  },
+  "eventWindow": {
+    "retained": 558,
+    "total": 558,
+    "truncated": false
+  },
+  "linkChanges": [
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "from": 0,
+      "to": 1,
+      "up": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "from": 0,
+      "to": 5,
+      "up": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "from": 1,
+      "to": 2,
+      "up": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "from": 2,
+      "to": 3,
+      "up": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "from": 3,
+      "to": 4,
+      "up": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "from": 4,
+      "to": 5,
+      "up": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 8,
+      "from": 0,
+      "to": 1,
+      "up": false
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 16,
+      "from": 3,
+      "to": 4,
+      "up": false
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "from": 3,
+      "to": 4,
+      "up": true
+    }
+  ],
+  "messages": [
+    {
+      "id": "m199c82cc000-1-ae860e5a",
+      "origin": 0,
+      "destination": 5,
+      "broadcast": false,
+      "originatedAt": 1760000000000
+    },
+    {
+      "id": "m199c82cc177-2-a31b1c30",
+      "origin": 5,
+      "destination": null,
+      "broadcast": true,
+      "originatedAt": 1760000000375
+    },
+    {
+      "id": "m199c82cc2ee-3-3e0904d9",
+      "origin": 5,
+      "destination": null,
+      "broadcast": true,
+      "originatedAt": 1760000000750
+    },
+    {
+      "id": "m199c82cc465-1-c2033cd9",
+      "origin": 4,
+      "destination": 1,
+      "broadcast": false,
+      "originatedAt": 1760000001125
+    },
+    {
+      "id": "m199c82cc5dc-4-63a44c78",
+      "origin": 5,
+      "destination": 3,
+      "broadcast": false,
+      "originatedAt": 1760000001500
+    },
+    {
+      "id": "m199c82cc753-2-6ec8f8e2",
+      "origin": 1,
+      "destination": 4,
+      "broadcast": false,
+      "originatedAt": 1760000001875
+    },
+    {
+      "id": "m199c82cc8ca-1-4bc1d419",
+      "origin": 2,
+      "destination": null,
+      "broadcast": true,
+      "originatedAt": 1760000002250
+    },
+    {
+      "id": "m199c82cca41-2-3d442dd7",
+      "origin": 3,
+      "destination": 4,
+      "broadcast": false,
+      "originatedAt": 1760000002625
+    },
+    {
+      "id": "m199c82ccbb8-3-5565e1ff",
+      "origin": 1,
+      "destination": null,
+      "broadcast": true,
+      "originatedAt": 1760000003000
+    },
+    {
+      "id": "m199c82ccd2f-4-38c6c90e",
+      "origin": 1,
+      "destination": 0,
+      "broadcast": false,
+      "originatedAt": 1760000003375
+    }
+  ],
+  "nodes": [
+    {
+      "index": 0,
+      "label": "node-0",
+      "deviceId": "rqn1_945049173822c8951c1590ca54fd29c79f89535c6bc6be6e3f209eb9e5c8792f",
+      "keyFingerprint": "945049173822c8951c1590ca54fd29c79f89535c6bc6be6e3f209eb9e5c8792f",
+      "originated": 1,
+      "accepted": 8,
+      "forwarded": 31,
+      "delivered": 5,
+      "duplicatesSuppressed": 19,
+      "rejected": 23,
+      "untrustedDrops": 3,
+      "rateLimitDrops": 0,
+      "hopLimitDrops": 0,
+      "stillQueued": 7,
+      "medianLatencyMillis": 375,
+      "p95LatencyMillis": 375,
+      "degreeAtEnd": 1,
+      "stateCounts": {
+        "RELAYED": 7,
+        "DELIVERED": 5,
+        "ACKNOWLEDGED": 1
+      }
+    },
+    {
+      "index": 1,
+      "label": "node-1",
+      "deviceId": "rqn1_630d27b8ae4cf7c9d5a45c2d3b69149f1899114676dfcec05ce03d5aa87cbb20",
+      "keyFingerprint": "630d27b8ae4cf7c9d5a45c2d3b69149f1899114676dfcec05ce03d5aa87cbb20",
+      "originated": 3,
+      "accepted": 5,
+      "forwarded": 23,
+      "delivered": 4,
+      "duplicatesSuppressed": 20,
+      "rejected": 33,
+      "untrustedDrops": 11,
+      "rateLimitDrops": 0,
+      "hopLimitDrops": 0,
+      "stillQueued": 5,
+      "medianLatencyMillis": 375,
+      "p95LatencyMillis": 375,
+      "degreeAtEnd": 1,
+      "stateCounts": {
+        "SENT_TO_PEER": 1,
+        "RELAYED": 4,
+        "DELIVERED": 4,
+        "ACKNOWLEDGED": 2
+      }
+    },
+    {
+      "index": 2,
+      "label": "node-2",
+      "deviceId": "rqn1_d4d11d38b85f32280e5c95f0046def449c5ff461d45aac87e0db97cf6e3fa47d",
+      "keyFingerprint": "d4d11d38b85f32280e5c95f0046def449c5ff461d45aac87e0db97cf6e3fa47d",
+      "originated": 1,
+      "accepted": 7,
+      "forwarded": 44,
+      "delivered": 3,
+      "duplicatesSuppressed": 29,
+      "rejected": 31,
+      "untrustedDrops": 0,
+      "rateLimitDrops": 0,
+      "hopLimitDrops": 0,
+      "stillQueued": 11,
+      "medianLatencyMillis": -1,
+      "p95LatencyMillis": -1,
+      "degreeAtEnd": 2,
+      "stateCounts": {
+        "SENT_TO_PEER": 1,
+        "RELAYED": 10,
+        "DELIVERED": 3
+      }
+    },
+    {
+      "index": 3,
+      "label": "node-3",
+      "deviceId": "rqn1_6d567d2fcac22469d9cb09f22dac91a91dc15d2293e36b866cb9543f3ddc3978",
+      "keyFingerprint": "6d567d2fcac22469d9cb09f22dac91a91dc15d2293e36b866cb9543f3ddc3978",
+      "originated": 1,
+      "accepted": 8,
+      "forwarded": 37,
+      "delivered": 5,
+      "duplicatesSuppressed": 32,
+      "rejected": 36,
+      "untrustedDrops": 3,
+      "rateLimitDrops": 0,
+      "hopLimitDrops": 0,
+      "stillQueued": 7,
+      "medianLatencyMillis": 375,
+      "p95LatencyMillis": 375,
+      "degreeAtEnd": 2,
+      "stateCounts": {
+        "RELAYED": 7,
+        "DELIVERED": 5,
+        "ACKNOWLEDGED": 1
+      }
+    },
+    {
+      "index": 4,
+      "label": "node-4",
+      "deviceId": "rqn1_ff402b98e3d490befdc9d98ef943b2ecaeda94575fa315eb2cb0127058cf28f5",
+      "keyFingerprint": "ff402b98e3d490befdc9d98ef943b2ecaeda94575fa315eb2cb0127058cf28f5",
+      "originated": 1,
+      "accepted": 8,
+      "forwarded": 26,
+      "delivered": 6,
+      "duplicatesSuppressed": 31,
+      "rejected": 46,
+      "untrustedDrops": 14,
+      "rateLimitDrops": 0,
+      "hopLimitDrops": 0,
+      "stillQueued": 5,
+      "medianLatencyMillis": 375,
+      "p95LatencyMillis": 375,
+      "degreeAtEnd": 2,
+      "stateCounts": {
+        "RELAYED": 5,
+        "DELIVERED": 6,
+        "ACKNOWLEDGED": 1
+      }
+    },
+    {
+      "index": 5,
+      "label": "node-5",
+      "deviceId": "rqn1_10a0142d3f01da81577e89593a48e4196f5fadff678671a2b1bdb24490d98069",
+      "keyFingerprint": "10a0142d3f01da81577e89593a48e4196f5fadff678671a2b1bdb24490d98069",
+      "originated": 3,
+      "accepted": 6,
+      "forwarded": 36,
+      "delivered": 3,
+      "duplicatesSuppressed": 26,
+      "rejected": 32,
+      "untrustedDrops": 5,
+      "rateLimitDrops": 0,
+      "hopLimitDrops": 0,
+      "stillQueued": 9,
+      "medianLatencyMillis": 375,
+      "p95LatencyMillis": 375,
+      "degreeAtEnd": 2,
+      "stateCounts": {
+        "SENT_TO_PEER": 2,
+        "RELAYED": 7,
+        "DELIVERED": 3,
+        "ACKNOWLEDGED": 1
+      }
+    }
+  ],
+  "events": [
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n0",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n0",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": 0,
+      "node": "n0",
+      "kind": "state",
+      "messageId": "m199c82cc000-1-ae860e5a",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": 0,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc000-1-ae860e5a",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n0",
+      "kind": "acknowledged",
+      "messageId": "m199c82cc000-1-ae860e5a",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirmed by n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n0",
+      "kind": "state",
+      "messageId": "m199c82cc000-1-ae860e5a",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "SENT_TO_PEER -> ACKNOWLEDGED: acknowledged end-to-end by the intended recipient",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n0",
+      "kind": "accepted",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n0",
+      "kind": "delivered",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n0",
+      "kind": "triage",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n0",
+      "kind": "accepted",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n0",
+      "kind": "delivered",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n0",
+      "kind": "triage",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Fire (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n0",
+      "kind": "accepted",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n0",
+      "kind": "triage",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (62%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001625,
+      "round": 4,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001625,
+      "round": 4,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n0",
+      "kind": "accepted",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n0",
+      "kind": "triage",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 39%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002000,
+      "round": 5,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002000,
+      "round": 5,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n0",
+      "kind": "accepted",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n0",
+      "kind": "triage",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002375,
+      "round": 6,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002375,
+      "round": 6,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n0",
+      "kind": "accepted",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n0",
+      "kind": "delivered",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n0",
+      "kind": "triage",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Missing person (advisory, 38%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "MALFORMED",
+      "detail": "acknowledgement references a message this device does not hold (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 8,
+      "node": "n0",
+      "kind": "peer-disconnected",
+      "messageId": null,
+      "peers": [
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003125,
+      "round": 8,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n0",
+      "kind": "accepted",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n0",
+      "kind": "delivered",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n0",
+      "kind": "triage",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Trapped / unable to escape (advisory, 42%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n0",
+      "kind": "accepted",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n0",
+      "kind": "delivered",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n0",
+      "kind": "acknowledgement-sent",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirming to n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n0",
+      "kind": "triage",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "5",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "5",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "5",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "5",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006250,
+      "round": 19,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006500,
+      "round": 20,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "5",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "5",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008000,
+      "round": 26,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008500,
+      "round": 28,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000009250,
+      "round": 29,
+      "node": "n0",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000009500,
+      "round": 29,
+      "node": "n0",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n1",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n1",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "2"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n2",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "MALFORMED",
+      "detail": "acknowledgement references a message this device does not hold (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000500,
+      "round": 1,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n1",
+      "kind": "accepted",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n1",
+      "kind": "delivered",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n1",
+      "kind": "triage",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n1",
+      "kind": "accepted",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n1",
+      "kind": "delivered",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n1",
+      "kind": "triage",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Fire (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n1",
+      "kind": "accepted",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "from n2",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n1",
+      "kind": "delivered",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n1",
+      "kind": "acknowledgement-sent",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirming to n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n1",
+      "kind": "triage",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (62%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "0",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n0, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n1",
+      "kind": "accepted",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n1",
+      "kind": "triage",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 39%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 5,
+      "node": "n1",
+      "kind": "state",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 5,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "0",
+        "2"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 5,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "0",
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 5,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "0",
+        "2"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "0",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "2",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n1",
+      "kind": "acknowledged",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirmed by n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n1",
+      "kind": "state",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "SENT_TO_PEER -> ACKNOWLEDGED: acknowledged end-to-end by the intended recipient",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "accepted",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n2",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "delivered",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "triage",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Missing person (advisory, 38%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "0",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n0, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "0",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n0, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "MALFORMED",
+      "detail": "acknowledgement references a message this device does not hold (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 8,
+      "node": "n1",
+      "kind": "peer-disconnected",
+      "messageId": null,
+      "peers": [
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 8,
+      "node": "n1",
+      "kind": "state",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 8,
+      "node": "n1",
+      "kind": "delivered",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": 0,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 8,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 8,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "2",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 9,
+      "node": "n1",
+      "kind": "state",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 9,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n1",
+      "kind": "acknowledged",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirmed by n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n1",
+      "kind": "state",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "SENT_TO_PEER -> ACKNOWLEDGED: acknowledged end-to-end by the intended recipient",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "2",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "2",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005500,
+      "round": 16,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005500,
+      "round": 16,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "2",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006500,
+      "round": 20,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007750,
+      "round": 25,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008750,
+      "round": 29,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000009250,
+      "round": 29,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "2",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000009750,
+      "round": 29,
+      "node": "n1",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000010250,
+      "round": 29,
+      "node": "n1",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n2",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n2",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "MALFORMED",
+      "detail": "acknowledgement references a message this device does not hold (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000500,
+      "round": 1,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n2",
+      "kind": "accepted",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "from n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n2",
+      "kind": "delivered",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n2",
+      "kind": "triage",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n2",
+      "kind": "accepted",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "from n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n2",
+      "kind": "delivered",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n2",
+      "kind": "triage",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Fire (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n2",
+      "kind": "accepted",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n2",
+      "kind": "triage",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (62%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001625,
+      "round": 4,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001625,
+      "round": 4,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n2",
+      "kind": "accepted",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "from n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n2",
+      "kind": "triage",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 39%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002000,
+      "round": 5,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002000,
+      "round": 5,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n2",
+      "kind": "accepted",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n2",
+      "kind": "triage",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 6,
+      "node": "n2",
+      "kind": "state",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 6,
+      "node": "n2",
+      "kind": "delivered",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": 0,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 6,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 6,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 6,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "1",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "MALFORMED",
+      "detail": "acknowledgement references a message this device does not hold (via n1, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003125,
+      "round": 8,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "1",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n2",
+      "kind": "accepted",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n2",
+      "kind": "delivered",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n2",
+      "kind": "triage",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Trapped / unable to escape (advisory, 42%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "1",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n2",
+      "kind": "accepted",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n2",
+      "kind": "triage",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "3",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "1",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005500,
+      "round": 16,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005500,
+      "round": 16,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005750,
+      "round": 17,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006000,
+      "round": 18,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "3",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006500,
+      "round": 20,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007000,
+      "round": 22,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "3",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007750,
+      "round": 25,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008500,
+      "round": 28,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008750,
+      "round": 29,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008750,
+      "round": 29,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "1",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000009250,
+      "round": 29,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "1"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000009750,
+      "round": 29,
+      "node": "n2",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n1, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000010250,
+      "round": 29,
+      "node": "n2",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "1",
+        "3"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n3",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "2"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n2",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n3",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "MALFORMED",
+      "detail": "acknowledgement references a message this device does not hold (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000500,
+      "round": 1,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n3",
+      "kind": "accepted",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n3",
+      "kind": "delivered",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n3",
+      "kind": "triage",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n3",
+      "kind": "accepted",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "from n2",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n3",
+      "kind": "delivered",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n3",
+      "kind": "triage",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Fire (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n3",
+      "kind": "accepted",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n3",
+      "kind": "triage",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (62%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001625,
+      "round": 4,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001625,
+      "round": 4,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n3",
+      "kind": "accepted",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n3",
+      "kind": "delivered",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n3",
+      "kind": "acknowledgement-sent",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirming to n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n3",
+      "kind": "triage",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 39%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "2",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n3",
+      "kind": "accepted",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n2",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n3",
+      "kind": "triage",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002375,
+      "round": 6,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002375,
+      "round": 6,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n3",
+      "kind": "accepted",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n2",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n3",
+      "kind": "delivered",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n3",
+      "kind": "triage",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Missing person (advisory, 38%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 7,
+      "node": "n3",
+      "kind": "state",
+      "messageId": "m199c82cca41-2-3d442dd7",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 7,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cca41-2-3d442dd7",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n3",
+      "kind": "acknowledged",
+      "messageId": "m199c82cca41-2-3d442dd7",
+      "peers": [
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirmed by n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n3",
+      "kind": "state",
+      "messageId": "m199c82cca41-2-3d442dd7",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "SENT_TO_PEER -> ACKNOWLEDGED: acknowledged end-to-end by the intended recipient",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "2",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n3",
+      "kind": "accepted",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n2",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n3",
+      "kind": "delivered",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n3",
+      "kind": "triage",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Trapped / unable to escape (advisory, 42%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n3",
+      "kind": "accepted",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n2",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n3",
+      "kind": "triage",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "2"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n2)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "4",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "4",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "4",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 16,
+      "node": "n3",
+      "kind": "peer-disconnected",
+      "messageId": null,
+      "peers": [
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005500,
+      "round": 16,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "2",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n2, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005750,
+      "round": 17,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006000,
+      "round": 18,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007000,
+      "round": 22,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n3",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n3",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "4",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "4",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007750,
+      "round": 25,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "2",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008500,
+      "round": 28,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "2",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008750,
+      "round": 29,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000010250,
+      "round": 29,
+      "node": "n3",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "2",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n2, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n4",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n4",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "MALFORMED",
+      "detail": "acknowledgement references a message this device does not hold (via n5, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000500,
+      "round": 1,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n4",
+      "kind": "accepted",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n4",
+      "kind": "delivered",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n4",
+      "kind": "triage",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n4",
+      "kind": "accepted",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n4",
+      "kind": "delivered",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n4",
+      "kind": "triage",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Fire (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 2,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 3,
+      "node": "n4",
+      "kind": "state",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001125,
+      "round": 3,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n4",
+      "kind": "acknowledged",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirmed by n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n4",
+      "kind": "state",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "SENT_TO_PEER -> ACKNOWLEDGED: acknowledged end-to-end by the intended recipient",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "5",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n4",
+      "kind": "accepted",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n4",
+      "kind": "triage",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 39%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002000,
+      "round": 5,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002000,
+      "round": 5,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n4",
+      "kind": "accepted",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "from n5",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n4",
+      "kind": "delivered",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n4",
+      "kind": "acknowledgement-sent",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirming to n1",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n4",
+      "kind": "triage",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "5",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "5",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "accepted",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "delivered",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "triage",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Missing person (advisory, 38%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "5",
+        "2"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n2)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n4",
+      "kind": "accepted",
+      "messageId": "m199c82cca41-2-3d442dd7",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n4",
+      "kind": "delivered",
+      "messageId": "m199c82cca41-2-3d442dd7",
+      "peers": [],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n4",
+      "kind": "acknowledgement-sent",
+      "messageId": "m199c82cca41-2-3d442dd7",
+      "peers": [
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirming to n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n4",
+      "kind": "triage",
+      "messageId": "m199c82cca41-2-3d442dd7",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Unclassified - needs human review",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n4",
+      "kind": "accepted",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "from n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n4",
+      "kind": "delivered",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n4",
+      "kind": "triage",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Trapped / unable to escape (advisory, 42%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n4",
+      "kind": "accepted",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "from n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n4",
+      "kind": "triage",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "3",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "5",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "5",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "5",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 16,
+      "node": "n4",
+      "kind": "peer-disconnected",
+      "messageId": null,
+      "peers": [
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005750,
+      "round": 17,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006250,
+      "round": 19,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006250,
+      "round": 19,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006500,
+      "round": 20,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "5",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "5",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n4",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "3"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "5"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 24,
+      "node": "n4",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "3",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "3",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n3, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "3",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "3",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n3, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000009500,
+      "round": 29,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "5",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n5, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000010250,
+      "round": 29,
+      "node": "n4",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "5",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n5, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n5",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000000,
+      "round": -1,
+      "node": "n5",
+      "kind": "peer-connected",
+      "messageId": null,
+      "peers": [
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "peer n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n5",
+      "kind": "accepted",
+      "messageId": "m199c82cc000-1-ae860e5a",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n5",
+      "kind": "delivered",
+      "messageId": "m199c82cc000-1-ae860e5a",
+      "peers": [],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n5",
+      "kind": "acknowledgement-sent",
+      "messageId": "m199c82cc000-1-ae860e5a",
+      "peers": [
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirming to n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 0,
+      "node": "n5",
+      "kind": "triage",
+      "messageId": "m199c82cc000-1-ae860e5a",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Trapped / unable to escape (advisory, 42%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 1,
+      "node": "n5",
+      "kind": "state",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 1,
+      "node": "n5",
+      "kind": "delivered",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [],
+      "hopCount": 0,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000375,
+      "round": 1,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 1,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 2,
+      "node": "n5",
+      "kind": "state",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 2,
+      "node": "n5",
+      "kind": "delivered",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [],
+      "hopCount": 0,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000000750,
+      "round": 2,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n5",
+      "kind": "accepted",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "from n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n5",
+      "kind": "triage",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (62%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 3,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 4,
+      "node": "n5",
+      "kind": "state",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "CREATED -> QUEUED: composed on this device",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 4,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 4,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001500,
+      "round": 4,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "0",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n5",
+      "kind": "acknowledged",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "confirmed by n3",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n5",
+      "kind": "state",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "SENT_TO_PEER -> ACKNOWLEDGED: acknowledged end-to-end by the intended recipient",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000001875,
+      "round": 4,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "0",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "4",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n5",
+      "kind": "accepted",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "from n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n5",
+      "kind": "triage",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Medical emergency (advisory, 40%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002250,
+      "round": 5,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002375,
+      "round": 6,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002375,
+      "round": 6,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "0",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "0",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "accepted",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "from n0",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "delivered",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "triage",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Missing person (advisory, 38%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000002625,
+      "round": 6,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-1-4bc1d419",
+      "peers": [
+        "4",
+        "2"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n2)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "MALFORMED",
+      "detail": "acknowledgement references a message this device does not hold (via n4, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003000,
+      "round": 7,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003125,
+      "round": 8,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "0",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n5",
+      "kind": "accepted",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "from n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n5",
+      "kind": "delivered",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "arrived at destination",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003375,
+      "round": 8,
+      "node": "n5",
+      "kind": "triage",
+      "messageId": "m199c82ccbb8-3-5565e1ff",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Trapped / unable to escape (advisory, 42%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n5",
+      "kind": "accepted",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "from n4",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 5,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n5",
+      "kind": "triage",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [],
+      "hopCount": -1,
+      "reason": null,
+      "detail": "Food, water or medication (advisory, 23%)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000003750,
+      "round": 9,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 6,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "4",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004000,
+      "round": 10,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "4",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc177-2-a31b1c30",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 6,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "0",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "0",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004250,
+      "round": 11,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "4",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc2ee-3-3e0904d9",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 1,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004500,
+      "round": 12,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "0",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000004750,
+      "round": 13,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "0",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n0, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005000,
+      "round": 14,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "4",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005250,
+      "round": 15,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000005750,
+      "round": 17,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "4",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006250,
+      "round": 19,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc465-1-c2033cd9",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006250,
+      "round": 19,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "4",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000006500,
+      "round": 20,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc5dc-1-f36559f9",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 3,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007250,
+      "round": 23,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "0"
+      ],
+      "hopCount": 6,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc177-1-6e28879",
+      "peers": [
+        "4",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n4, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "4",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccd2f-4-38c6c90e",
+      "peers": [
+        "4",
+        "1"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n1)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000007500,
+      "round": 24,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccea6-2-a1b4700e",
+      "peers": [
+        "4",
+        "0"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n4, origin n0)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008000,
+      "round": 26,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc5dc-4-63a44c78",
+      "peers": [
+        "0",
+        "5"
+      ],
+      "hopCount": -1,
+      "reason": "UNTRUSTED_ORIGIN",
+      "detail": "no key on file for the claimed origin (via n0, origin n5)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000008500,
+      "round": 28,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82cc753-1-90a11fb9",
+      "peers": [
+        "0",
+        "3"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n3)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000009250,
+      "round": 29,
+      "node": "n5",
+      "kind": "rejected",
+      "messageId": "m199c82ccbb8-3-83e03c23",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": -1,
+      "reason": "DUPLICATE",
+      "detail": "already processed (via n0, origin n4)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000009500,
+      "round": 29,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc8ca-2-d606935d",
+      "peers": [
+        "0",
+        "4"
+      ],
+      "hopCount": 2,
+      "reason": null,
+      "detail": "relayed to 2 peer(s)",
+      "simulated": true
+    },
+    {
+      "atEpochMillis": 1760000010250,
+      "round": 29,
+      "node": "n5",
+      "kind": "forwarded",
+      "messageId": "m199c82cc753-2-6ec8f8e2",
+      "peers": [
+        "4"
+      ],
+      "hopCount": 4,
+      "reason": null,
+      "detail": "relayed to 1 peer(s)",
+      "simulated": true
+    }
+  ]
+}
