@@ -85,7 +85,7 @@ public record SimulationEvent(
         if (event instanceof MeshEvent.Forwarded forwarded) {
             return new SimulationEvent(forwarded.atEpochMillis(), round, nodeIndex, nodeShortId,
                     "forwarded", forwarded.messageId(),
-                    peersOf(resolver, forwarded.peerDeviceIds()),                    forwarded.hopCount(), null,
+                    peersOf(resolver, forwarded.peerDeviceIds()), forwarded.hopCount(), null,
                     "relayed to " + forwarded.peerDeviceIds().size() + " peer(s)", true);
         }
         if (event instanceof MeshEvent.Delivered delivered) {
