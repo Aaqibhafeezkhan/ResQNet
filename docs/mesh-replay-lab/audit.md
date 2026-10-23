@@ -120,6 +120,10 @@ centre, the gateway publisher — keeps working unchanged.
 | Addition | Where | Why it was needed |
 | --- | --- | --- |
 | `simulation.edges` | `SimulationReport` | The initial topology as `[[from, to], ...]`. Makes the graph *recorded* rather than drawn. |
+| `simulation.degree` | `SimulationReport` | The target degree the run was configured with, so a mesh/random report can be reproduced exactly. |
+| `simulation.messageLifetimeSeconds` | `SimulationReport` | The queue lifetime, otherwise absent from the report and therefore unreproducible. |
+| `simulation.startEpochSeconds` | `SimulationReport` | The manual clock's start, which fixes every `atEpochMillis` in the run. |
+| `simulation.startPartitioned` | `SimulationReport` | Whether the run started with the busiest relay offline. Without it a partitioned report could not be reproduced or compared honestly. |
 | `linkChanges` | `SimulationReport` | Every recorded cut and restore: `{ atEpochMillis, round, from, to, up }`. `radio.linkChanges` remains the count. |
 | `messages` | `SimulationReport` | Per originated message: `{ id, origin, destination, broadcast, originatedAt }`. Node indices, not identities. |
 | `eventWindow` | `SimulationReport` | `{ retained, total, truncated }` so a truncated history can say so. |
@@ -130,6 +134,12 @@ generates a fresh key pair per node per run: identities differ between runs,
 indices do not. `SimulationReport#volatileJsonFields()` still lists the identity
 fields as volatile, and nothing new was added to it — every added field is
 reproducible.
+
+One serialization detail matters to any other consumer: `SimulationEvent`
+writes peer indices as JSON **strings** (`"peers": ["1", "5"]`), while every
+other index in the report is a number. The Lab's parser accepts both. A future
+change to numeric peers would be additive for the Lab but not for consumers that
+already parse the strings, so it has not been made.
 
 ### 4.1 What is still not reconstructable after the change
 
@@ -155,7 +165,8 @@ report before replaying it:
 3. then node index ascending,
 4. then event kind (alphabetical),
 5. then `messageId`,
-6. then the original array position as a final tie-break.
+6. then the event detail,
+7. then the original array position as a final tie-break.
 
 The last rule makes the order total even for two identical events, so the same
 report always replays identically. Timestamps are never altered and no
