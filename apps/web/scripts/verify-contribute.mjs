@@ -16,6 +16,8 @@ try {
     await page.getByRole('heading', { name: 'Your first contribution starts here.' }).waitFor();
     check(`${width}: page renders`, response.ok());
     check(`${width}: six cards`, await page.locator('article').count() === 6);
+    const issueLinks = await page.getByRole('link', { name: /^Explore issue #/ }).evaluateAll(links => links.map(link => link.href));
+    check(`${width}: exact issue destinations`, JSON.stringify(issueLinks) === JSON.stringify([75, 83, 78, 68, 56, 84].map(issue => `https://github.com/Gautam-aman/ResQNet/issues/${issue}`)));
     check(`${width}: no horizontal cropping`, await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     check(`${width}: status guidance`, await page.getByText(/Check GitHub for current scope, status and assignees/).isVisible());
     check(`${width}: live search`, (await page.getByRole('link', { name: 'See all current good first issues' }).getAttribute('href')).includes('is%3Aopen'));

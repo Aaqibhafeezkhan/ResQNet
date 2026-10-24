@@ -1,8 +1,8 @@
 ## Problem, benefit and current behavior
 
-Make discussions reproducible with a link to a bundled sample and replay position. The newer local Lab at `2d0f520` auto-loads the ring fixture through loadIfEmpty; GitHub main at `4986e284f8c4f1add60cb1e2568d0cdeadc29831` still requires explicit sample loading. In both versions, SAMPLE_REPORTS includes ring and two-cluster fixtures, and the store supports cursor seeking. No query-string sharing exists. scenario.ts generates Java commands, not replay links.
+Make discussions reproducible with a link to a bundled sample and replay position. On published main, users explicitly load bundled samples. `SAMPLE_REPORTS` includes ring and two-cluster fixtures, and the store supports cursor seeking. No query-string sharing exists. `scenario.ts` generates Java commands, not replay links.
 
-**Evidence:** source-confirmed in both GitHub main and the newer local checkout; proposed enhancement, not a reproduced runtime defect. Local UX work is not yet on GitHub: do not depend on loadIfEmpty existing when branching from remote main. Coordinate with maintainers if that UX work lands during implementation.
+**Evidence:** source-confirmed on published main at [4986e28](https://github.com/Gautam-aman/ResQNet/commit/4986e284f8c4f1add60cb1e2568d0cdeadc29831); proposed enhancement, not a reproduced runtime defect. Start from current GitHub main. No unpublished Lab UX work is required: use the existing sample-loading and seek actions rather than assuming a `loadIfEmpty` API or automatic sample loading exists.
 
 ## Scope and verified starting points
 

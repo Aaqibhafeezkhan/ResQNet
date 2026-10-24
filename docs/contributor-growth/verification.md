@@ -1,4 +1,6 @@
-# Local verification — 2026-10-24
+# Original campaign verification — 2026-10-24
+
+These results describe the original branch based on unpublished local Lab UX work, not the clean PR branch. See [clean-review.md](clean-review.md) for verification against fetched `origin/main`.
 
 ## Results
 

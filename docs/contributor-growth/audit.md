@@ -1,5 +1,7 @@
 # Contributor opportunity audit — 2026-10-24
 
+Historical campaign snapshot. The original branch included unpublished Lab UX ancestry; [clean-review.md](clean-review.md) records the isolated PR branch and current verification. Issue archives now use published-main evidence references.
+
 Initial checkout: local `main` at `2d0f520`, three pre-existing untracked web inspection scripts preserved. Work branch: `docs/contributor-growth`. GitHub main was separately checked at `4986e284f8c4f1add60cb1e2568d0cdeadc29831`; local main includes unpublished Lab UX changes. No unrelated history changed.
 
 ## Inventory
@@ -75,7 +77,7 @@ Reviewed Readme.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, all four i
 
 ## Remote/local source verification
 
-GitHub tree hashes match every feature starting point except the four Lab page/store files changed by the unpublished local UX work. Remote LabPage was separately inspected: no query decoding or share control exists; remote main requires manual sample loading while local main auto-loads through loadIfEmpty. #84 explicitly documents both versions and warns against assuming that local-only API exists.
+GitHub tree hashes match every feature starting point except the four Lab page/store files changed by the unpublished local UX work. Remote LabPage was separately inspected: no query decoding or share control exists; remote main requires manual sample loading while local main auto-loads through loadIfEmpty. #84 was subsequently simplified during clean-branch review to describe published main only and explicitly avoid depending on the local-only API.
 
 ## Scope and limits
 

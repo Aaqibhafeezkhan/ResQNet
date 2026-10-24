@@ -2,7 +2,7 @@
 
 Let visitors bypass the long scroll story and reach the next meaningful content. HeroSection currently renders a 420svh stage, a scroll-to-connection-lost anchor inside the story, and a separate static reduced-motion story. The existing anchor does not skip the entire sequence.
 
-**Evidence:** source-confirmed implementation at `2d0f520`; proposed enhancement, not a reproduced runtime defect.
+**Evidence:** source-confirmed on published main at [4986e28](https://github.com/Gautam-aman/ResQNet/commit/4986e284f8c4f1add60cb1e2568d0cdeadc29831); proposed enhancement, not a reproduced runtime defect. Start from current GitHub main; no unpublished local commits are required.
 
 ## Scope and verified starting points
 

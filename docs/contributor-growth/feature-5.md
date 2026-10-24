@@ -2,7 +2,7 @@
 
 Help beginners explore failure/recovery through reproducible named presets. MeshDemo uses meshDemoModel for sender selection, relay toggling, send, retry, advance and reset, but has no guided presets. The separate Replay Lab command builder is not this browser model.
 
-**Evidence:** source-confirmed implementation at `2d0f520`; proposed enhancement, not a reproduced runtime defect.
+**Evidence:** source-confirmed on published main at [4986e28](https://github.com/Gautam-aman/ResQNet/commit/4986e284f8c4f1add60cb1e2568d0cdeadc29831); proposed enhancement, not a reproduced runtime defect. Start from current GitHub main; no unpublished local commits are required.
 
 ## Scope and verified starting points
 

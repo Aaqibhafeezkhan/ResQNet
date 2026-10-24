@@ -2,7 +2,7 @@
 
 Help users discover shapes without starting a simulation. SimulatorCli USAGE lists six canonical names and Options.parseShape maps aliases; Topology.Shape defines supported shapes. There is no list-only flag.
 
-**Evidence:** source-confirmed implementation at `2d0f520`; proposed enhancement, not a reproduced runtime defect.
+**Evidence:** source-confirmed on published main at [4986e28](https://github.com/Gautam-aman/ResQNet/commit/4986e284f8c4f1add60cb1e2568d0cdeadc29831); proposed enhancement, not a reproduced runtime defect. Start from current GitHub main; no unpublished local commits are required.
 
 ## Scope and verified starting points
 
