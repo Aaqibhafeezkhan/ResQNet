@@ -23,6 +23,26 @@ Offline-first emergency messaging over a peer-to-peer device mesh.
 
 ---
 
+## Start contributing
+
+You don’t need mesh-networking expertise to make a useful first contribution.
+Start with documentation, Java, Android, frontend, or reproducible testing.
+
+**[Browse open Good First Issues](https://github.com/Gautam-aman/ResQNet/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)**
+· [Contributor quickstart](CONTRIBUTING.md#contributor-quickstart)
+· [Explore contributor opportunities](https://res-q-net-silk.vercel.app/contribute)
+
+Check the issue’s current assignees, comment `/assign`, and wait for confirmation.
+Then fork, build, run the relevant tests and open a focused PR. Ask for help in
+the issue; use `/unassign` if you need to release it.
+
+Real-device testing is especially valuable: start with the
+[Android hardware guide](apps/android/DEVICE_TESTING.md), even with one phone.
+Use dummy messages and report the build, device, steps, actual results and any
+blocked checks. Simulation is not evidence of real multi-hop radio performance.
+
+---
+
 ## 1. Introduction
 
 ResQNet is a mesh networking layer for phones. It carries emergency messages

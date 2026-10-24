@@ -7,6 +7,68 @@ matter more than speed.
 
 By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Contributor quickstart
+
+**[Find an open good first issue](https://github.com/Gautam-aman/ResQNet/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)**
+or browse the [contributor page](https://res-q-net-silk.vercel.app/contribute).
+GitHub is the authority for status and assignment. Check assignees, comment
+`/assign`, and wait for confirmation. If you are stuck, describe the command,
+error and what you tried in the issue; ask a maintainer for a smaller first step.
+
+1. Fork on GitHub, then clone **your fork** and create a branch:
+
+   ```bash
+   git clone https://github.com/YOUR-USERNAME/ResQNet.git
+   cd ResQNet
+   git switch -c contribution/short-description
+   ```
+
+2. Choose only the setup for your task; a public website change does not need
+   PostgreSQL or the Android SDK.
+
+   **Website (Node 24 LTS):**
+
+   ```bash
+   cd apps/web
+   npm ci
+   npm run dev
+   ```
+
+   Open the printed local URL and visit `/contribute`. Before a PR, run:
+
+   ```bash
+   npm run lint
+   npm run typecheck
+   npm run test
+   npm run build
+   ```
+
+   **Java simulator (JDK 21 and Maven 3.9+, from repository root):**
+
+   ```bash
+   mvn -pl packages/mesh-simulator -am test
+   ```
+
+   **Android (JDK 21, Android SDK API 34, from repository root):**
+
+   ```bash
+   cd apps/android
+   ./gradlew testDebugUnitTest lintDebug
+   ```
+
+   See the [hardware testing guide](apps/android/DEVICE_TESTING.md) for build,
+   install and physical-device checks. One-device UI testing is a useful start;
+   controlled multi-hop testing requires more setup. Use dummy messages.
+
+3. Make one focused change, run the checks for that area, and open a PR using
+   the template with `Closes #123`. Report the commit/build, environment, exact
+   commands, pass/fail/blocked results and redacted evidence. Distinguish what
+   you ran from source inspection and assumptions; never claim a hardware test
+   from a simulator result. Release work with `/unassign` if plans change.
+
+Guardian and CI provide feedback; they do not promise approval, merge or
+production readiness. The detailed policies below explain what reviewers need.
+
 ## Before you start
 
 - Read the [README](Readme.md), especially the sections on what is verified,
@@ -120,12 +182,12 @@ treating it as resolved.
 
 | Path | What it contains |
 |---|---|
-| `packages/mesh-core` | Protocol, validation, routing, durable queue interfaces, metrics |
+| `packages/mesh-core` | Protocol and routing; start here only with a scoped task and maintainer guidance |
 | `packages/mesh-simulator` | Deterministic simulated radio and report generation |
 | `services/backend` | Spring Boot gateway, Flyway migrations, REST and WebSocket API |
 | `apps/android` | Native Android app and Nearby Connections transport |
-| `apps/web` | Public site and responder command centre |
-| `docs` | Architecture, threat model, benchmarks, demo and routing notes |
+| `apps/web` | React/TypeScript public pages, accessible UI and component tests |
+| `docs` | Documentation, reproducible instructions and evidence; a useful first stop |
 | `.github/workflows` | CI for Java, backend, Android, instrumented Android and web |
 
 ## Setup
