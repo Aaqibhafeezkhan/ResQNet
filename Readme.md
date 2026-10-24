@@ -67,8 +67,6 @@ demonstration and failure scenarios, follow the [demo guide](docs/demo.md).
 
 ---
 
----
-
 ## 1. Introduction
 
 ResQNet is a mesh networking layer for phones. It carries emergency messages
