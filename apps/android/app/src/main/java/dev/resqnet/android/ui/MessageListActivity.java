@@ -62,7 +62,7 @@ abstract class MessageListActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
-        engine = MeshService.obtainEngine(this);
+        engine = createEngine();
 
         ((TextView) findViewById(R.id.listTitle)).setText(titleRes());
         list = findViewById(R.id.list);
@@ -76,6 +76,14 @@ abstract class MessageListActivity extends AppCompatActivity {
 
         refreshLayout = findViewById(R.id.refresh);
         refreshLayout.setOnRefreshListener(this::refresh);
+    }
+
+    /**
+     * Creates the engine used by this screen.
+     * Tests may override this to avoid initializing Android Keystore.
+     */
+    protected MeshEngine createEngine() {
+        return MeshService.obtainEngine(this);
     }
 
     /** Rows to show, already filtered. */

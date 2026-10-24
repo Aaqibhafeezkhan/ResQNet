@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dev.resqnet.android.R;
+import dev.resqnet.android.service.MeshEngine;
 import dev.resqnet.mesh.protocol.DeliveryState;
 import dev.resqnet.mesh.protocol.MessageType;
 import dev.resqnet.mesh.protocol.Priority;
@@ -84,6 +85,11 @@ public class MessageListActivityTest {
 
     public static class TestMessageListActivity extends MessageListActivity {
         final List<StoredMessage> records = new ArrayList<>();
+
+        @Override
+        protected MeshEngine createEngine() {
+            return null;
+        }
 
         @Override
         protected List<StoredMessage> loadRecords() {
