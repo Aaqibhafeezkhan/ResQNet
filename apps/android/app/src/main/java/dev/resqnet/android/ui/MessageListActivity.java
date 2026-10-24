@@ -1,3 +1,4 @@
+
 package dev.resqnet.android.ui;
 
 import android.os.Bundle;
@@ -13,6 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import dev.resqnet.android.R;
 import dev.resqnet.android.service.MeshEngine;
@@ -44,6 +46,7 @@ abstract class MessageListActivity extends AppCompatActivity {
     private RecyclerView list;
     private View emptyState;
     private TextView emptyText;
+    private SwipeRefreshLayout refreshLayout;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private MessageAdapter adapter;
 
@@ -59,7 +62,7 @@ abstract class MessageListActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
-        engine = MeshService.obtainEngine(this);
+        engine = createEngine();
 
         ((TextView) findViewById(R.id.listTitle)).setText(titleRes());
         list = findViewById(R.id.list);
@@ -71,8 +74,16 @@ abstract class MessageListActivity extends AppCompatActivity {
         list.setLayoutManager(new LinearLayoutManager(this));
         list.setAdapter(adapter);
 
-        ((androidx.swiperefreshlayout.widget.SwipeRefreshLayout) findViewById(R.id.refresh))
-                .setOnRefreshListener(this::refresh);
+        refreshLayout = findViewById(R.id.refresh);
+        refreshLayout.setOnRefreshListener(this::refresh);
+    }
+
+    /**
+     * Creates the engine used by this screen.
+     * Tests may override this to avoid initializing Android Keystore.
+     */
+    protected MeshEngine createEngine() {
+        return MeshService.obtainEngine(this);
     }
 
     /** Rows to show, already filtered. */
@@ -96,12 +107,23 @@ abstract class MessageListActivity extends AppCompatActivity {
         super.onStop();
     }
 
+    /**
+     * Updates the list and always clears the pull-to-refresh indicator.
+     *
+     * <p>This method is also called by periodic polling, which continues on its
+     * existing schedule independently of the refresh indicator.
+     */
     private void refresh() {
-        List<StoredMessage> records = loadRecords();
-        adapter.submit(records);
-        boolean empty = records.isEmpty();
-        emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
-        list.setVisibility(empty ? View.GONE : View.VISIBLE);
+        try {
+            List<StoredMessage> records = loadRecords();
+            adapter.submit(records);
+
+            boolean empty = records.isEmpty();
+            emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
+            list.setVisibility(empty ? View.GONE : View.VISIBLE);
+        } finally {
+            refreshLayout.setRefreshing(false);
+        }
     }
 
     /** Formatter shared by every list row. */
@@ -116,22 +138,21 @@ abstract class MessageListActivity extends AppCompatActivity {
     final class MessageAdapter extends RecyclerView.Adapter<MessageAdapter.Holder> {
 
         final class Holder extends RecyclerView.ViewHolder {
-                final TextView peer;
-                final TextView state;
-                final TextView body;
-                final TextView meta;
-                final TextView location;
+            final TextView peer;
+            final TextView state;
+            final TextView body;
+            final TextView meta;
+            final TextView location;
 
             Holder(@NonNull View itemView) {
-            super(itemView);
-            peer = itemView.findViewById(R.id.messagePeer);
-            state = itemView.findViewById(R.id.messageState);
-            body = itemView.findViewById(R.id.messageBody);
-            meta = itemView.findViewById(R.id.messageMeta);
-            location = itemView.findViewById(R.id.messageLocation);
+                super(itemView);
+                peer = itemView.findViewById(R.id.messagePeer);
+                state = itemView.findViewById(R.id.messageState);
+                body = itemView.findViewById(R.id.messageBody);
+                meta = itemView.findViewById(R.id.messageMeta);
+                location = itemView.findViewById(R.id.messageLocation);
+            }
         }
-    }
-
 
         interface OnClick {
             void onClick(StoredMessage record);
