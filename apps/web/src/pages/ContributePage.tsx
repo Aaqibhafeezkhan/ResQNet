@@ -13,6 +13,16 @@ import {
 } from '@/lib/links';
 import { usePageMeta } from '@/lib/seo';
 
+// Curated examples, not a live availability feed. GitHub owns assignment/status.
+const STARTERS = [
+  { issue: 75, title: 'A first simulator run', area: 'Documentation', difficulty: 'Beginner', body: 'Write a short, reproducible simulator quickstart for someone opening the repository for the first time.' },
+  { issue: 83, title: 'List simulator topologies', area: 'Java', difficulty: 'Beginner', body: 'Help users discover supported network shapes without running a simulation.' },
+  { issue: 78, title: 'Copy a device fingerprint', area: 'Android · Java', difficulty: 'Beginner', body: 'Add an accessible copy action for the public identity fingerprint, with clipboard tests.' },
+  { issue: 68, title: 'Keep map pins in view', area: 'Frontend · TypeScript', difficulty: 'Beginner', body: 'Correct longitude projection with a small, tested helper. Keep missing locations unknown.' },
+  { issue: 56, title: 'Test on a real Android phone', area: 'Hardware testing', difficulty: 'Beginner entry point', body: 'Start with installation, permissions and navigation on one phone. Multi-hop isolation is a separate, advanced test.' },
+  { issue: 84, title: 'Share a bundled replay', area: 'Frontend · TypeScript', difficulty: 'Intermediate', body: 'Share a known Lab sample and replay position while keeping imported private reports out of URLs.' },
+];
+
 const PATHS = [
   {
     icon: FlaskConical,
@@ -85,6 +95,60 @@ export function ContributePage() {
           <ArrowUpRight size={15} aria-hidden="true" />
         </a>
       </PageHero>
+
+      <section aria-labelledby="starter-heading" className="section-space border-b border-base-600 bg-base-900">
+        <div className="container-page">
+          <span className="eyebrow">Small steps, useful work</span>
+          <h2 id="starter-heading" className="display-balance mt-4 max-w-2xl text-3xl font-semibold leading-tight tracking-tightest text-ink-primary sm:text-5xl">
+            Your first contribution starts here.
+          </h2>
+          <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-secondary">
+            You don’t need to be an expert in mesh networking. Start with documentation, Java, Android, frontend, or reproducible testing.
+          </p>
+          <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ink-secondary">
+            These are curated starting points. Check GitHub for current scope, status and assignees before claiming an issue. If someone is already working on it, coordinate there or choose another task.
+          </p>
+          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {STARTERS.map((starter) => (
+              <article key={starter.issue} className="flex min-w-0 flex-col rounded-2xl border border-base-600 bg-base-850 p-6">
+                <div className="flex flex-wrap gap-2 text-[11px] text-network">
+                  <span>{starter.area}</span>
+                  <span className="text-ink-tertiary" aria-hidden="true">/</span>
+                  <span className="text-ink-secondary">{starter.difficulty}</span>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold tracking-tight text-ink-primary">{starter.title}</h3>
+                <p className="mt-3 flex-1 text-[13px] leading-relaxed text-ink-secondary">{starter.body}</p>
+                <a href={`${GITHUB_ISSUES}/${starter.issue}`} target="_blank" rel="noreferrer noopener"
+                  className="mt-5 inline-flex min-h-[44px] w-fit items-center gap-2 rounded text-xs font-medium text-network hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network"
+                  aria-label={`Explore issue #${starter.issue}: ${starter.title}`}>
+                  Explore issue #{starter.issue}<ArrowUpRight size={14} aria-hidden="true" />
+                </a>
+              </article>
+            ))}
+          </div>
+          <a href={GITHUB_GOOD_FIRST_ISSUES} target="_blank" rel="noreferrer noopener"
+            className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded text-sm font-medium text-network hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network">
+            See all current good first issues<ArrowUpRight size={15} aria-hidden="true" />
+          </a>
+          <div className="mt-10 rounded-2xl border border-base-600 p-6 sm:p-8">
+            <h3 className="text-xl font-semibold text-ink-primary">How to contribute</h3>
+            <ol className="mt-5 grid gap-4 text-sm text-ink-secondary sm:grid-cols-2 lg:grid-cols-5">
+              <li><span className="text-network">01</span> Find an issue</li>
+              <li><span className="text-network">02</span> Comment <code>/assign</code></li>
+              <li><span className="text-network">03</span> Fork and build</li>
+              <li><span className="text-network">04</span> Run tests</li>
+              <li><span className="text-network">05</span> Open a PR</li>
+            </ol>
+            <p className="mt-5 text-xs leading-relaxed text-ink-secondary">
+              Wait for assignment confirmation before starting. Ask for guidance in the issue, or comment <code>/unassign</code> if your plans change. Include exact test results and use dummy data. Guardian offers advisory feedback; a maintainer reviews your contribution.
+            </p>
+            <a href={GITHUB_CONTRIBUTING} target="_blank" rel="noreferrer noopener"
+              className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded text-sm font-medium text-network hover:text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-network">
+              Follow the contributor quickstart<ArrowUpRight size={15} aria-hidden="true" />
+            </a>
+          </div>
+        </div>
+      </section>
 
       <section className="section-space border-b border-base-600">
         <div className="container-page">
