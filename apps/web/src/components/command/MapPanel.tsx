@@ -16,6 +16,13 @@ interface MapPanelProps {
   onFocusChange?: (reference: string) => void;
 }
 
+function hasSharedCoordinates(incident: IncidentSummary): boolean {
+  const { locationShared, latitude, longitude } = incident;
+  return locationShared === true &&
+    typeof latitude === 'number' && Number.isFinite(latitude) && Math.abs(latitude) <= 90 &&
+    typeof longitude === 'number' && Number.isFinite(longitude) && Math.abs(longitude) <= 180;
+}
+
 /**
  * Incident locations.
  *
@@ -35,10 +42,8 @@ export function MapPanel({ incidents, selected, onSelect, onFocusChange }: MapPa
   const cursorRef = useRef(0);
   const [showGrid, setShowGrid] = useState(true);
 
-  const located = incidents.filter(
-    (incident) => incident.locationShared && incident.latitude !== null,
-  );
-  const unlocated = incidents.filter((incident) => !incident.locationShared);
+  const located = incidents.filter(hasSharedCoordinates);
+  const unlocated = incidents.filter((incident) => !hasSharedCoordinates(incident));
 
   useEffect(() => {
     const canvas = canvasRef.current;
