@@ -50,8 +50,20 @@ at the repository root, check the versions, then run:
 ```sh
 java -version
 mvn -version
-mvn -pl packages/mesh-simulator -am package
-java -jar packages/mesh-simulator/target/mesh-simulator-0.2.0-beta-runnable.jar --topology ring --nodes 10 --messages 15 --seed 50 --rounds 30 --out report.json
+mvn -pl packages/mesh-simulator -am clean package
+```
+
+On Windows PowerShell, select the JAR that Maven just built:
+
+```powershell
+$jar = (Get-ChildItem packages/mesh-simulator/target/*-runnable.jar).FullName
+java -jar $jar --topology ring --nodes 10 --messages 15 --seed 50 --rounds 30 --out report.json
+```
+
+On macOS or Linux, a POSIX shell expands the JAR path directly:
+
+```sh
+java -jar packages/mesh-simulator/target/*-runnable.jar --topology ring --nodes 10 --messages 15 --seed 50 --rounds 30 --out report.json
 ```
 
 The build should end with `BUILD SUCCESS`. The simulator prints a
